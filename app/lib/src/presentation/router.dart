@@ -14,6 +14,7 @@ import 'dashboard/dashboard_screen.dart';
 import 'entities/entities_screen.dart';
 import 'entities/entity_detail_screen.dart';
 import 'entities/entity_wizard_screen.dart';
+import 'references/references_screen.dart';
 import 'shell/app_shell.dart';
 
 /// Rafraîchit le routeur à chaque changement de session.
@@ -72,7 +73,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/saisie', builder: (_, _) => const PlaceholderScreen(title: 'Saisie')),
           GoRoute(path: '/consultation', builder: (_, _) => const PlaceholderScreen(title: 'Consultation')),
           GoRoute(path: '/pieces', builder: (_, _) => const PlaceholderScreen(title: 'Pièces justificatives')),
-          GoRoute(path: '/referentiels', builder: (_, _) => const PlaceholderScreen(title: 'Référentiels')),
+          GoRoute(path: '/referentiels', builder: (_, _) => const ReferencesScreen()),
           GoRoute(path: '/import', builder: (_, _) => const PlaceholderScreen(title: 'Import Perfecto')),
           GoRoute(path: '/cabinet', builder: (_, _) => const CabinetScreen()),
           GoRoute(path: '/utilisateurs', builder: (_, _) => const UsersScreen()),
