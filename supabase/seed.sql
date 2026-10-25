@@ -227,5 +227,38 @@ begin
   perform pg_temp.demo_entry(v_alpha, 'VT', '2026-01-20', 'Prestation MINFI janvier', 'ALPHA-2026-001', '[{"a":"4111000","tp":"MINFI","d":11800000},{"a":"7061000","c":10000000},{"a":"4431000","c":1800000}]', v_assistant);
   perform pg_temp.demo_entry(v_alpha, 'AC', '2026-01-25', 'Connexion Orange', 'OR-7788', '[{"a":"6281000","d":250000},{"a":"4452000","d":45000},{"a":"4011000","tp":"ORANGE","c":295000}]', v_assistant, false);
 
+  -- Lot 3 : SA Alpha Services — exercice 2026 entièrement clôturé et 2027 ouvert (parcours complet de démonstration)
+  perform set_config('request.jwt.claims', json_build_object('sub', v_partner, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  select id into v_fy from public.fiscal_years where entity_id = v_alpha;
+  -- valider le brouillard restant, immobilisation + dotation, résultat, IS, états, clôture provisoire, arrêté, à-nouveaux 2027
+  perform public.validate_entries(array(select id from public.entries where entity_id = v_alpha and status = 'draft'));
+  insert into public.fixed_assets (cabinet_id, entity_id, code, designation, asset_account_id, acquisition_date, service_date, gross_value, duration_months)
+    select v_cabinet, v_alpha, 'SRV-01', 'Serveur de production', id, '2026-01-01', '2026-01-01', 3000000, 36 from public.accounts where entity_id = v_alpha and code = '2441000';
+  perform public.validate_entry(public.generate_depreciation(v_alpha, v_fy));
+  for v_e in select id from public.entries where entity_id = v_alpha and status = 'validated' and review_status = 'not_reviewed' loop
+    perform public.review_entry(v_e, 'reviewed');
+  end loop;
+  -- Ordre de clôture : IS d''abord (891), puis détermination du résultat (6/7/8 → 131), puis états financiers
+  perform public.compute_income_tax(v_alpha, v_fy, '[]'::jsonb);
+  perform public.validate_entry((select id from public.entries where entity_id = v_alpha and generated_source = 'income_tax:' || v_fy));
+  perform public.validate_entry(public.generate_result_entry(v_alpha, v_fy));
+  perform public.generate_financial_statements(v_alpha, v_fy);
+  perform public.run_closing_checks(v_alpha, v_fy);
+  for v_e in select id from public.closing_checks where fiscal_year_id = v_fy and status = 'failed' and severity = 'warning' loop
+    update public.closing_checks set status = 'waived', waived_by = v_partner, waived_at = now(), waive_comment = 'Démonstration : alerte levée par l''associé' where id = v_e;
+  end loop;
+  perform public.close_provisional(v_alpha, v_fy);
+  perform public.close_final(v_alpha, v_fy, 'ARRETER 2026');
+  perform set_config('request.jwt.claims', '', true);
+  insert into public.fiscal_years (cabinet_id, entity_id, start_date, end_date, capital, headcount) values (v_cabinet, v_alpha, '2027-01-01', '2027-12-31', 50000000, 27);
+  perform set_config('request.jwt.claims', json_build_object('sub', v_partner, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  perform public.validate_entry(public.generate_opening_balances(v_alpha, v_fy));
+  -- Affectation du résultat 2026 (solde créditeur de 1300 au 1er janvier 2027) : 10 % en réserve légale, le reste en report à nouveau
+  v_amt := -public.account_balance((select id from public.accounts where entity_id = v_alpha and code = '1300000'), '2027-01-01');
+  if v_amt > 0 then
+    perform public.validate_entry(public.allocate_result(v_alpha, (select id from public.fiscal_years where entity_id = v_alpha and label = '2027'), '2027-03-31', round(v_amt * 0.10)::bigint, 0::bigint, 0::bigint, (v_amt - round(v_amt * 0.10))::bigint));
+  end if;
+  perform set_config('request.jwt.claims', '', true);
+
   raise notice 'Jeu de démonstration chargé : cabinet %, dossiers % et %', v_cabinet, v_demo, v_alpha;
 end $$;
