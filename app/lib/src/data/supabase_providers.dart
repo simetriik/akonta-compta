@@ -75,7 +75,10 @@ final entityDashboardProvider = FutureProvider<List<EntitySummary>>((ref) async 
 /// Dossier courant, toujours visible dans l'interface (conception §12.3).
 class CurrentEntityNotifier extends Notifier<EntitySummary?> {
   @override
-  EntitySummary? build() => null;
+  EntitySummary? build() {
+    ref.watch(currentUserIdProvider);   // changement d'utilisateur : le dossier courant est oublié
+    return null;
+  }
 
   void select(EntitySummary? entity) => state = entity;
 }

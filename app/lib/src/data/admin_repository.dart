@@ -65,7 +65,7 @@ class AdminRepository {
   final SupabaseClient _client;
 
   Future<List<Profile>> profiles() async {
-    final rows = await _client.from('profiles').select().order('full_name');
+    final rows = await _client.from('profiles').select().order('full_name', ascending: true);
     return rows.map(Profile.fromJson).toList();
   }
 
@@ -90,12 +90,12 @@ class AdminRepository {
   }
 
   Future<List<PermissionDef>> permissions() async {
-    final rows = await _client.from('permissions').select().order('sort_order');
+    final rows = await _client.from('permissions').select().order('sort_order', ascending: true);
     return [for (final r in rows) PermissionDef(code: r['code'] as String, label: r['label'] as String, category: r['category'] as String)];
   }
 
   Future<List<RoleDef>> roles() async {
-    final rows = await _client.from('roles').select('id, code, name, is_system, role_permissions(permission_code)').order('code');
+    final rows = await _client.from('roles').select('id, code, name, is_system, role_permissions(permission_code)').order('code', ascending: true);
     return [
       for (final r in rows)
         RoleDef(
@@ -120,7 +120,7 @@ class AdminRepository {
     final rows = await _client
         .from('assignments')
         .select('id, user_id, entity_id, role_id, profiles!assignments_user_id_fkey(full_name, email), roles(name, code), entities(name)')
-        .order('created_at');
+        .order('created_at', ascending: true);
     return [
       for (final r in rows)
         Assignment(
@@ -137,7 +137,7 @@ class AdminRepository {
   }
 
   Future<List<({String id, String name})>> entities() async {
-    final rows = await _client.from('entities').select('id, name').eq('is_active', true).order('name');
+    final rows = await _client.from('entities').select('id, name').eq('is_active', true).order('name', ascending: true);
     return [for (final r in rows) (id: r['id'] as String, name: r['name'] as String)];
   }
 

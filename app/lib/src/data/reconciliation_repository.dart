@@ -13,7 +13,7 @@ class ReconciliationRepository {
   static String _d(DateTime d) => d.toIso8601String().substring(0, 10);
 
   Future<List<StatementTemplate>> templates() async {
-    final rows = await _client.from('bank_statement_templates').select().order('bank_name');
+    final rows = await _client.from('bank_statement_templates').select().order('bank_name', ascending: true);
     return rows.map(StatementTemplate.fromJson).toList();
   }
 

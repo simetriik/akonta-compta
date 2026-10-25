@@ -152,7 +152,7 @@ class InventoryRepository {
   static String _d(DateTime d) => d.toIso8601String().substring(0, 10);
 
   Future<List<FixedAsset>> assets(String entityId) async {
-    final rows = await _client.from('fixed_assets').select('*, accounts!fixed_assets_asset_account_id_fkey(code)').eq('entity_id', entityId).order('code');
+    final rows = await _client.from('fixed_assets').select('*, accounts!fixed_assets_asset_account_id_fkey(code)').eq('entity_id', entityId).order('code', ascending: true);
     return rows.map(FixedAsset.fromJson).toList();
   }
 
@@ -176,7 +176,7 @@ class InventoryRepository {
       (await _client.rpc('dispose_asset', params: {'p_asset': assetId, 'p_date': _d(date), 'p_price': price, 'p_counterpart_account': counterpartAccountId, 'p_third_party': thirdPartyId, 'p_scrap': scrap})) as String?;
 
   Future<List<StockRow>> stocks(String fiscalYearId) async {
-    final rows = await _client.from('inventory_stocks').select('*, stock:accounts!inventory_stocks_stock_account_id_fkey(code), variation:accounts!inventory_stocks_variation_account_id_fkey(code)').eq('fiscal_year_id', fiscalYearId).order('created_at');
+    final rows = await _client.from('inventory_stocks').select('*, stock:accounts!inventory_stocks_stock_account_id_fkey(code), variation:accounts!inventory_stocks_variation_account_id_fkey(code)').eq('fiscal_year_id', fiscalYearId).order('created_at', ascending: true);
     return rows.map(StockRow.fromJson).toList();
   }
 
@@ -187,7 +187,7 @@ class InventoryRepository {
       (await _client.rpc('generate_stock_variations', params: {'p_entity': entityId, 'p_fiscal_year': fiscalYearId})) as String?;
 
   Future<List<ProvisionRow>> provisions(String fiscalYearId) async {
-    final rows = await _client.from('provisions').select('*, third_parties(code)').eq('fiscal_year_id', fiscalYearId).order('kind').order('created_at');
+    final rows = await _client.from('provisions').select('*, third_parties(code)').eq('fiscal_year_id', fiscalYearId).order('kind', ascending: true).order('created_at', ascending: true);
     return rows.map(ProvisionRow.fromJson).toList();
   }
 
@@ -203,7 +203,7 @@ class InventoryRepository {
       (await _client.rpc('generate_provision_entries', params: {'p_entity': entityId, 'p_fiscal_year': fiscalYearId})) as String?;
 
   Future<List<AccrualRow>> accruals(String fiscalYearId) async {
-    final rows = await _client.from('accruals').select('*, account:accounts!accruals_account_id_fkey(code), counterpart:accounts!accruals_counterpart_account_id_fkey(code)').eq('fiscal_year_id', fiscalYearId).order('created_at');
+    final rows = await _client.from('accruals').select('*, account:accounts!accruals_account_id_fkey(code), counterpart:accounts!accruals_counterpart_account_id_fkey(code)').eq('fiscal_year_id', fiscalYearId).order('created_at', ascending: true);
     return rows.map(AccrualRow.fromJson).toList();
   }
 

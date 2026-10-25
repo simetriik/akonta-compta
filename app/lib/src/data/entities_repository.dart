@@ -11,7 +11,7 @@ class EntitiesRepository {
   final SupabaseClient _client;
 
   Future<List<EntityDetail>> list() async {
-    final rows = await _client.from('entities').select().order('name');
+    final rows = await _client.from('entities').select().order('name', ascending: true);
     return rows.map(EntityDetail.fromJson).toList();
   }
 
@@ -27,7 +27,7 @@ class EntitiesRepository {
   Future<void> setActive(String id, bool active) => _client.from('entities').update({'is_active': active}).eq('id', id);
 
   Future<List<Director>> directors(String entityId) async {
-    final rows = await _client.from('entity_directors').select().eq('entity_id', entityId).order('sort_order');
+    final rows = await _client.from('entity_directors').select().eq('entity_id', entityId).order('sort_order', ascending: true);
     return rows.map(Director.fromJson).toList();
   }
 
@@ -37,7 +37,7 @@ class EntitiesRepository {
   Future<void> removeDirector(String id) => _client.from('entity_directors').delete().eq('id', id);
 
   Future<List<FiscalYear>> fiscalYears(String entityId) async {
-    final rows = await _client.from('fiscal_years').select().eq('entity_id', entityId).order('start_date');
+    final rows = await _client.from('fiscal_years').select().eq('entity_id', entityId).order('start_date', ascending: true);
     return rows.map(FiscalYear.fromJson).toList();
   }
 
@@ -58,7 +58,7 @@ class EntitiesRepository {
       _client.from('fiscal_years').update({'capital': capital, 'headcount': headcount}).eq('id', id);
 
   Future<List<FiscalYearPartner>> partners(String fiscalYearId) async {
-    final rows = await _client.from('fiscal_year_partners').select().eq('fiscal_year_id', fiscalYearId).order('created_at');
+    final rows = await _client.from('fiscal_year_partners').select().eq('fiscal_year_id', fiscalYearId).order('created_at', ascending: true);
     return rows.map(FiscalYearPartner.fromJson).toList();
   }
 
@@ -68,7 +68,7 @@ class EntitiesRepository {
   Future<void> removePartner(String id) => _client.from('fiscal_year_partners').delete().eq('id', id);
 
   Future<List<Period>> periods(String fiscalYearId) async {
-    final rows = await _client.from('periods').select().eq('fiscal_year_id', fiscalYearId).order('period_no');
+    final rows = await _client.from('periods').select().eq('fiscal_year_id', fiscalYearId).order('period_no', ascending: true);
     return rows.map(Period.fromJson).toList();
   }
 
@@ -82,7 +82,7 @@ class EntitiesRepository {
   }
 
   Future<List<JournalTemplate>> journalTemplates() async {
-    final rows = await _client.from('journal_templates').select().order('sort_order');
+    final rows = await _client.from('journal_templates').select().order('sort_order', ascending: true);
     return rows.map(JournalTemplate.fromJson).toList();
   }
 
@@ -95,7 +95,7 @@ class EntitiesRepository {
       _client.from('journals').insert({'cabinet_id': cabinetId, 'entity_id': entityId, 'code': code, 'label': label, 'type': type, 'treasury_account_id': accountId});
 
   Future<List<AccountRef>> treasuryAccounts(String entityId) async {
-    final rows = await _client.from('accounts').select('id, code, label').eq('entity_id', entityId).eq('class', 5).eq('allow_posting', true).eq('is_active', true).order('code');
+    final rows = await _client.from('accounts').select('id, code, label').eq('entity_id', entityId).eq('class', 5).eq('allow_posting', true).eq('is_active', true).order('code', ascending: true);
     return rows.map(AccountRef.fromJson).toList();
   }
 

@@ -15,7 +15,7 @@ class ReferencesRepository {
     if (prefix != null && prefix.isNotEmpty) q = q.like('code', '$prefix%');
     if (search != null && search.isNotEmpty) q = q.or('code.like.$search%,label.ilike.%$search%');
     if (onlyActive) q = q.eq('is_active', true);
-    final rows = await q.order('code').limit(2000);
+    final rows = await q.order('code', ascending: true).limit(2000);
     return rows.map(Account.fromJson).toList();
   }
 
@@ -42,7 +42,7 @@ class ReferencesRepository {
   Future<List<ThirdParty>> thirdParties(String entityId, {String? search}) async {
     var q = _client.from('third_parties').select('*, third_party_accounts(accounts(code))').eq('entity_id', entityId);
     if (search != null && search.isNotEmpty) q = q.or('code.ilike.%$search%,name.ilike.%$search%');
-    final rows = await q.order('code');
+    final rows = await q.order('code', ascending: true);
     return rows.map(ThirdParty.fromJson).toList();
   }
 
@@ -64,7 +64,7 @@ class ReferencesRepository {
   Future<void> setThirdPartyActive(String id, bool active) => _client.from('third_parties').update({'is_active': active}).eq('id', id);
 
   Future<List<Journal>> journals(String entityId) async {
-    final rows = await _client.from('journals').select('*, accounts(code)').eq('entity_id', entityId).order('code');
+    final rows = await _client.from('journals').select('*, accounts(code)').eq('entity_id', entityId).order('code', ascending: true);
     return rows.map(Journal.fromJson).toList();
   }
 
@@ -80,7 +80,7 @@ class ReferencesRepository {
   Future<void> setJournalActive(String id, bool active) => _client.from('journals').update({'is_active': active}).eq('id', id);
 
   Future<List<EntryTemplate>> templates(String entityId) async {
-    final rows = await _client.from('entry_templates').select('*, entry_template_lines(*)').or('entity_id.is.null,entity_id.eq.$entityId').eq('is_active', true).order('code');
+    final rows = await _client.from('entry_templates').select('*, entry_template_lines(*)').or('entity_id.is.null,entity_id.eq.$entityId').eq('is_active', true).order('code', ascending: true);
     return rows.map(EntryTemplate.fromJson).toList();
   }
 
@@ -94,7 +94,7 @@ class ReferencesRepository {
   Future<void> deactivateTemplate(String id) => _client.from('entry_templates').update({'is_active': false}).eq('id', id);
 
   Future<List<TaxRate>> taxRates() async {
-    final rows = await _client.from('tax_rates').select().order('code').order('valid_from');
+    final rows = await _client.from('tax_rates').select().order('code', ascending: true).order('valid_from', ascending: true);
     return rows.map(TaxRate.fromJson).toList();
   }
 

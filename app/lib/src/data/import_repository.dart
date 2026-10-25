@@ -120,7 +120,7 @@ class ImportRepository {
   Future<List<AccountMapping>> mappings(String entityId, String batchId) async {
     final raw = await _client.from('import_lines').select('raw_account').eq('batch_id', batchId);
     final used = {for (final r in raw) r['raw_account'] as String};
-    final rows = await _client.from('import_account_mappings').select().eq('entity_id', entityId).inFilter('raw_account', used.toList()).order('raw_account');
+    final rows = await _client.from('import_account_mappings').select().eq('entity_id', entityId).inFilter('raw_account', used.toList()).order('raw_account', ascending: true);
     return rows.map(AccountMapping.fromJson).toList();
   }
 
