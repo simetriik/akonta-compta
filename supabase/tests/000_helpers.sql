@@ -42,6 +42,15 @@ begin
   return v_id;
 end $$;
 
+-- Crée une entité dans un cabinet (hors RLS) et renvoie son identifiant.
+create or replace function tests.create_entity(p_cabinet uuid, p_name text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_id uuid;
+begin
+  insert into public.entities (cabinet_id, name) values (p_cabinet, p_name) returning id into v_id;
+  return v_id;
+end $$;
+
 -- Affecte un rôle (par code) à un utilisateur, sur un dossier ou à l'échelle du cabinet.
 create or replace function tests.assign(p_user uuid, p_cabinet uuid, p_role_code text, p_entity uuid default null)
 returns uuid language plpgsql security definer set search_path = public as $$

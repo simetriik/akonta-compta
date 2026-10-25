@@ -26,3 +26,8 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 ## D-005 — 2026-10-25 — Organisation du dépôt
 - `supabase/` (config, migrations, seed, tests pgTAP, functions Edge) · `app/` (Flutter, une base de code desktop + mobile) · `service-documents/` (Python, PDF + Excel DGI) · `scripts/` · `docs/`.
 - Branche de travail `lot1` ; fusion dans `main` au point d'étape.
+
+## D-006 — 2026-10-25 — Permissions dérivées pour le verrouillage de période et la création de dossier
+- **Contexte** : la matrice §8 n'a pas de ligne « verrouiller une période ». §10.2 : verrouillage par l'associé, ou par le chef de mission si l'option de l'entité est active ; déverrouillage réservé à l'associé avec motif.
+- **Choix** : verrouillage = `cabinet.settings` (associé) ou `closing.provisional` sur le dossier (chef de mission) si `monthly_lock_enabled` ; déverrouillage = `cabinet.settings` + motif obligatoire. Création d'un dossier = `entities.manage` détenue sur au moins un périmètre ; le chef de mission créateur est affecté automatiquement au nouveau dossier (sinon il ne le verrait pas). Permission supplémentaire `roles.manage` (associé) pour « paquets ajustables par l'associé ».
+- **Raison** : respecte la matrice sans inventer de rôle ; traçable par test.

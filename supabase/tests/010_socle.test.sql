@@ -11,8 +11,8 @@ select tests.create_user('manager@a.test', :'a_id', 'Chef A')    as id \gset man
 select tests.create_user('assist@a.test',  :'a_id', 'Assistant A') as id \gset assist_
 select tests.create_user('trainee@a.test', :'a_id', 'Stagiaire A') as id \gset trainee_
 select tests.create_user('partner@b.test', :'b_id', 'Associé B') as id \gset partnerb_
-select gen_random_uuid() as id \gset dossier1_
-select gen_random_uuid() as id \gset dossier2_
+select tests.create_entity(:'a_id', 'Dossier 1') as id \gset dossier1_
+select tests.create_entity(:'a_id', 'Dossier 2') as id \gset dossier2_
 
 -- 1. Rôles par défaut créés avec le cabinet
 select is((select count(*) from public.roles where cabinet_id = :'a_id'), 5::bigint, '5 rôles par défaut créés pour un nouveau cabinet');
