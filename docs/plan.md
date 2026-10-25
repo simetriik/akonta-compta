@@ -29,9 +29,9 @@ Arborescence cible : `supabase/` (config, migrations, seed, tests pgTAP, functio
 - [x] **L1-17 Service de documents (Python)** — `service-documents/` (FastAPI, `uv`), endpoints PDF (grand livre, balance, journal) et Excel ; Edge Function `export-document` qui l'appelle et trace l'export dans la piste d'audit. *Fin : pytest vert ; export PDF réel d'une balance de démonstration.*
 - [x] **L1-18 Module 6 UI** — grand livre, balances, journal, centralisateur, période libre, comparaison N-1, liens vers écriture et pièce, exports. *Fin : tests widgets des filtres ; export tracé dans l'audit.*
 - [x] **L1-19 Module 10 UI + parseur** — Edge Function `import-perfecto` (texte tabulé Windows-1252, Excel), table de correspondance éditable, contrôles, mode essai, rapport, validation par le chef de mission. *Fin : `inputs/JOURNAL BANQUE.TXT` importé en essai sans erreur ; tests Deno du parseur.*
-- [ ] **L1-20 Jeu de démonstration** — `supabase/seed.sql` : cabinet de démonstration, 2 entités, exercice 2026 complet (achats, ventes, banque, caisse, OD, paie), tiers, pièces, utilisateurs des 5 rôles. *Fin : rejouable par `scripts/demo.sh` ; balance équilibrée.*
-- [ ] **L1-21 Prompt Claude Design** — `docs/prompt-claude-design.md` (écrans desktop et mobile par module, rôles, données, actions). *Fin : fichier relu, couvre modules 1 à 10.*
-- [ ] **L1-22 Livraison lot 1** — fusion `lot1` → `main`, `docs/livraison-lot1.md` (fonctionnalités, installation, lancement, décisions, questions, scénario de recette pas à pas). *Fin : suite complète verte sur `main`.*
+- [x] **L1-20 Jeu de démonstration** — `supabase/seed.sql` : cabinet de démonstration, 2 entités, exercice 2026 complet (achats, ventes, banque, caisse, OD, paie), tiers, pièces, utilisateurs des 5 rôles. *Fin : rejouable par `scripts/demo.sh` ; balance équilibrée.*
+- [x] **L1-21 Prompt Claude Design** — `docs/prompt-claude-design.md` (écrans desktop et mobile par module, rôles, données, actions). *Fin : fichier relu, couvre modules 1 à 10.*
+- [x] **L1-22 Livraison lot 1** — fusion `lot1` → `main`, `docs/livraison-lot1.md` (fonctionnalités, installation, lancement, décisions, questions, scénario de recette pas à pas). *Fin : suite complète verte sur `main`.*
 
 ## Lot 2 — module 7
 
