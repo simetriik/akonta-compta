@@ -29,7 +29,7 @@ run_python() {
   fi
 }
 run_edge() {
-  if ls supabase/functions/*/ >/dev/null 2>&1 && ls supabase/functions/**/*_test.ts >/dev/null 2>&1; then
+  if [ -n "$(find supabase/functions -name '*_test.ts' 2>/dev/null)" ]; then
     echo "== Deno : Edge Functions =="
     (cd supabase/functions && deno test --allow-all) || status=1
   else

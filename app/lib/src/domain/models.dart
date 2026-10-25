@@ -1,4 +1,5 @@
 /// Modèles du domaine (miroir des tables PostgreSQL utilisées par l'interface).
+library;
 
 class Profile {
   const Profile({
