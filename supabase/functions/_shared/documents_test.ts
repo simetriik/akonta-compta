@@ -28,3 +28,12 @@ Deno.test("rapprochement : journal requis, PDF seulement", () => {
   assertEquals(validateRequest({ entity_id: "e", kind: "reconciliation", format: "xlsx", from: "2026-01-01", to: "2026-01-31", journal_id: "j" }), "format xlsx indisponible pour reconciliation");
   assertEquals(servicePath("reconciliation", "pdf"), { path: "/pdf/reconciliation", filename: "rapprochement.pdf" });
 });
+
+Deno.test("liasse DGI : xlsm uniquement, charge utile = cellules", () => {
+  assertEquals(servicePath("dgi", "xlsm"), { path: "/excel/dgi", filename: "etats-financiers-dgi.xlsm" });
+  assertEquals(servicePath("dgi", "pdf"), null);
+  const p = buildPayload({ entity_id: "e", kind: "dgi", format: "xlsm", from: "2026-01-01", to: "2026-12-31" },
+    { cabinet_name: "", entity_name: "", entity_tax_id: null, fiscal_year_label: "2026", generated_by: null },
+    [{ sheet: "BILAN", cell: "F12", value: 10 }]) as { cells: unknown[] };
+  assertEquals(p.cells.length, 1);
+});

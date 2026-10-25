@@ -3,9 +3,9 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
 
-from . import excel, pdf
+from . import dgi, excel, pdf
 from .config import Settings, get_settings
-from .models import AgedBalanceDocument, JournalDocument, LedgerDocument, ReconciliationDocument, TrialBalanceDocument
+from .models import AgedBalanceDocument, FinancialStatementsDocument, JournalDocument, LedgerDocument, ReconciliationDocument, TrialBalanceDocument
 
 app = FastAPI(title="Akonta — service de documents", version="0.1.0")
 
@@ -72,3 +72,22 @@ def excel_general_ledger(doc: LedgerDocument, settings: Settings = Depends(get_s
 @app.post("/pdf/reconciliation", dependencies=[Depends(require_service_key)])
 def pdf_reconciliation(doc: ReconciliationDocument) -> Response:
     return _file(pdf.reconciliation_pdf(doc), PDF, f"rapprochement-{doc.journal_code}-{doc.as_of.isoformat()}.pdf")
+
+
+XLSM = "application/vnd.ms-excel.sheet.macroEnabled.12"
+
+
+@app.post("/excel/dgi", dependencies=[Depends(require_service_key)])
+def excel_dgi(doc: dgi.DgiDocument) -> Response:
+    try:
+        content, skipped = dgi.fill_dgi_workbook(doc)
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)) from e
+    response = _file(content, XLSM, f"etats-financiers-dgi-{doc.template_version}.xlsm")
+    response.headers["X-Akonta-Skipped-Cells"] = str(len(skipped))
+    return response
+
+
+@app.post("/pdf/financial-statements", dependencies=[Depends(require_service_key)])
+def pdf_financial_statements(doc: FinancialStatementsDocument) -> Response:
+    return _file(pdf.financial_statements_pdf(doc), PDF, f"etats-financiers-{doc.header.fiscal_year_label}.pdf")

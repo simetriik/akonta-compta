@@ -76,6 +76,22 @@ Deno.serve(async (req) => {
       rows = [];
       break;
     }
+    case "financial_statements": {
+      const { data: fs, error: fsError } = await caller.from("financial_statements").select("data").eq("entity_id", r.entity_id)
+        .eq("fiscal_year_id", (await caller.from("fiscal_years").select("id").eq("entity_id", r.entity_id).lte("start_date", r.from).gte("end_date", r.from).single()).data?.id ?? "")
+        .order("generated_at", { ascending: false }).limit(1).maybeSingle();
+      if (fsError || !fs) return error("Aucun état financier généré pour cet exercice", 404);
+      const d = fs.data as Record<string, unknown>;
+      const prev = (d.previous ?? {}) as Record<string, unknown>;
+      extra = { assets: d.assets ?? [], liabilities: d.liabilities ?? [], income: d.income ?? [],
+                previous_assets: prev.assets ?? [], previous_liabilities: prev.liabilities ?? [], previous_income: prev.income ?? [] };
+      break;
+    }
+    case "dgi": {
+      const fy = (await caller.from("fiscal_years").select("id").eq("entity_id", r.entity_id).lte("start_date", r.from).gte("end_date", r.from).single()).data;
+      const res = await caller.rpc("dgi_cells", { p_entity: r.entity_id, p_fiscal_year: fy?.id ?? null, p_version: "SN-2025" });
+      rows = res.data ?? []; rpcError = res.error; break;
+    }
   }
   if (rpcError) return error(rpcError.message, rpcError.message.includes("Permission") ? 403 : 500);
 

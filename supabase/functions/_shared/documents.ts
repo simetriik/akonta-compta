@@ -1,7 +1,7 @@
 // Construction des charges utiles du service de documents à partir des résultats des fonctions SQL de consultation.
 
-export type DocumentKind = "trial_balance" | "general_ledger" | "journal" | "aged_balance" | "reconciliation";
-export type DocumentFormat = "pdf" | "xlsx";
+export type DocumentKind = "trial_balance" | "general_ledger" | "journal" | "aged_balance" | "reconciliation" | "financial_statements" | "dgi";
+export type DocumentFormat = "pdf" | "xlsx" | "xlsm";
 
 export interface ExportRequest {
   entity_id: string;
@@ -30,6 +30,8 @@ const TITLES: Record<DocumentKind, string> = {
   journal: "Livre-journal",
   aged_balance: "Balance âgée",
   reconciliation: "État de rapprochement bancaire",
+  financial_statements: "États financiers SYSCOHADA",
+  dgi: "Liasse DGI",
 };
 
 /** Routes du service Python et nom de fichier par type et format. */
@@ -42,13 +44,15 @@ export function servicePath(kind: DocumentKind, format: DocumentFormat): { path:
     case "journal": return format === "pdf" ? { path: "/pdf/journal", filename: "journal.pdf" } : null;
     case "aged_balance": return format === "pdf" ? { path: "/pdf/aged-balance", filename: "balance-agee.pdf" } : null;
     case "reconciliation": return format === "pdf" ? { path: "/pdf/reconciliation", filename: "rapprochement.pdf" } : null;
+    case "financial_statements": return format === "pdf" ? { path: "/pdf/financial-statements", filename: "etats-financiers.pdf" } : null;
+    case "dgi": return format === "xlsm" ? { path: "/excel/dgi", filename: "etats-financiers-dgi.xlsm" } : null;
   }
 }
 
 export function validateRequest(r: Partial<ExportRequest>): string | null {
   if (!r.entity_id) return "entity_id requis";
   if (!r.kind || !(r.kind in TITLES)) return "kind invalide";
-  if (r.format !== "pdf" && r.format !== "xlsx") return "format invalide (pdf | xlsx)";
+  if (r.format !== "pdf" && r.format !== "xlsx" && r.format !== "xlsm") return "format invalide (pdf | xlsx | xlsm)";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(r.from ?? "") || !/^\d{4}-\d{2}-\d{2}$/.test(r.to ?? "")) return "from et to au format AAAA-MM-JJ";
   if ((r.kind === "journal" || r.kind === "reconciliation") && !r.journal_id) return "journal_id requis pour un livre-journal ou un rapprochement";
   if (!servicePath(r.kind, r.format)) return `format ${r.format} indisponible pour ${r.kind}`;
@@ -77,6 +81,9 @@ export function buildPayload(r: ExportRequest, header: HeaderInfo, rows: Record<
     case "journal":
       return { ...base, ...extra, lines: rows };
     case "reconciliation":
+    case "financial_statements":
       return { ...base, ...extra };
+    case "dgi":
+      return { template_version: "SN-2025", cells: rows };
   }
 }
