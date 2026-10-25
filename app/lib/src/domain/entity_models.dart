@@ -164,7 +164,7 @@ class Director {
 }
 
 class FiscalYear {
-  const FiscalYear({required this.id, required this.entityId, required this.label, required this.startDate, required this.endDate, required this.status, this.capital, this.headcount});
+  const FiscalYear({required this.id, required this.entityId, required this.label, required this.startDate, required this.endDate, required this.status, this.capital, this.headcount, this.finalClosedAt});
 
   final String id;
   final String entityId;
@@ -174,6 +174,8 @@ class FiscalYear {
   final String status;
   final int? capital;
   final int? headcount;
+  /// Date de l'arrêté définitif (exercice intangible).
+  final DateTime? finalClosedAt;
 
   factory FiscalYear.fromJson(Map<String, dynamic> j) => FiscalYear(
         id: j['id'] as String,
@@ -184,6 +186,7 @@ class FiscalYear {
         status: j['status'] as String,
         capital: (j['capital'] as num?)?.toInt(),
         headcount: (j['headcount'] as num?)?.toInt(),
+        finalClosedAt: j['final_closed_at'] == null ? null : DateTime.parse(j['final_closed_at'] as String).toLocal(),
       );
 
   String get statusLabel => switch (status) {

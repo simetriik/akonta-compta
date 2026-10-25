@@ -518,6 +518,21 @@ class _FinalStepState extends ConsumerState<FinalStep> {
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final can = perms.has('closing.final');
     final expected = 'ARRETER ${widget.fy.label}';
+    if (widget.fy.status == 'closed') {
+      final when = widget.fy.finalClosedAt;
+      return ListView(padding: const EdgeInsets.all(16), children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Exercice ${widget.fy.label} arrêté définitivement', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text('${when == null ? '' : 'Le ${Fmt.date(when)}. '}Aucune réouverture possible ; états financiers, grand livre et balance sont archivés avec leurs empreintes SHA-256.'),
+            ]),
+          ),
+        ),
+      ]);
+    }
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [

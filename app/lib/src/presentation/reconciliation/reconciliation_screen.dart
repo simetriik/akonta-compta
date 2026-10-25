@@ -217,8 +217,10 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
   }
 
   Future<void> _createEntry(StatementLine l) async {
-    final accounts = (ref.read(accountsProvider(widget.entity.id)).value ?? const <Account>[]).where((a) => a.allowPosting && a.isActive && a.classNo != 5).toList();
-    final thirdParties = ref.read(thirdPartiesProvider(widget.entity.id)).value ?? const <ThirdParty>[];
+    // Listes attendues (et non lues en cache) : l'écran peut être ouvert sans passage préalable par un module qui les charge.
+    final accounts = (await ref.read(accountsProvider(widget.entity.id).future)).where((a) => a.allowPosting && a.isActive && a.classNo != 5).toList();
+    final thirdParties = await ref.read(thirdPartiesProvider(widget.entity.id).future);
+    if (!mounted) return;
     final result = await showDialog<(Account, ThirdParty?, String, DateTime)>(context: context, builder: (_) => _EntryFromLineDialog(line: l, accounts: accounts, thirdParties: thirdParties));
     if (result == null) return;
     try {
@@ -362,7 +364,7 @@ class _EntryFromLineDialogState extends State<_EntryFromLineDialog> {
               controller: c,
               focusNode: f,
               autofocus: true,
-              decoration: const InputDecoration(labelText: 'Compte de contrepartie (ex. 6318 autres frais bancaires)'),
+              decoration: const InputDecoration(labelText: 'Compte de contrepartie (ex. 6318)'),
               onChanged: (v) {
                 final typed = matchAccountCode(widget.accounts, v);
                 if (typed != _account) setState(() => _account = typed);
@@ -373,7 +375,7 @@ class _EntryFromLineDialogState extends State<_EntryFromLineDialog> {
           TextField(
             key: const Key('entry-from-line-date'),
             controller: _date,
-            decoration: const InputDecoration(labelText: 'Date de l\'écriture (période ouverte)', helperText: 'Par défaut la date de l\'opération ; à reporter dans une période ouverte si celle-ci est verrouillée.'),
+            decoration: const InputDecoration(labelText: 'Date de l\'écriture', helperText: 'Date d\'opération par défaut ; à reporter si sa période est verrouillée.'),
             onChanged: (_) => setState(() {}),
           ),
           if (_account?.isCollective ?? false) ...[

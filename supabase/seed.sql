@@ -9,7 +9,7 @@
 
 create or replace function pg_temp.demo_user(p_email text, p_cabinet uuid, p_full_name text, p_job text)
 returns uuid language plpgsql as $$
-declare v_id uuid := gen_random_uuid();
+declare v_id uuid := md5('akonta-demo:' || p_email)::uuid;   -- identifiant stable : une session reste valide après rechargement de la démo
 begin
   insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
                           raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change_token_new, email_change)
@@ -223,7 +223,7 @@ begin
   insert into public.third_party_accounts (third_party_id, account_id)
   select t.id, a.id from public.third_parties t join public.accounts a on a.entity_id = t.entity_id
    where t.entity_id = v_alpha and ((t.type = 'customer' and a.code = '4111000') or (t.type = 'supplier' and a.code = '4011000'));
-  perform pg_temp.demo_entry(v_alpha, 'AN', '2026-01-01', 'À-nouveaux 2026', null, '[{"a":"5210000","d":50000000},{"a":"1011000","c":50000000}]', v_manager);
+  perform pg_temp.demo_entry(v_alpha, 'AN', '2026-01-01', 'À-nouveaux 2026', null, '[{"a":"5210000","d":47000000},{"a":"2441000","d":3000000},{"a":"1011000","c":50000000}]', v_manager);   -- le serveur SRV-01 (3 000 000) figure au bilan d''ouverture
   perform pg_temp.demo_entry(v_alpha, 'VT', '2026-01-20', 'Prestation MINFI janvier', 'ALPHA-2026-001', '[{"a":"4111000","tp":"MINFI","d":11800000},{"a":"7061000","c":10000000},{"a":"4431000","c":1800000}]', v_assistant);
   perform pg_temp.demo_entry(v_alpha, 'AC', '2026-01-25', 'Connexion Orange', 'OR-7788', '[{"a":"6281000","d":250000},{"a":"4452000","d":45000},{"a":"4011000","tp":"ORANGE","c":295000}]', v_assistant, false);
 

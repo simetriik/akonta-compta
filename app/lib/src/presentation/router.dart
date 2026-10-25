@@ -60,14 +60,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!signedIn) return onLogin ? null : '/connexion';
       if (onLogin) return '/';
       // MFA : défi si un facteur est enrôlé ; enrôlement forcé pour les rôles qui l'exigent.
+      // Statut lu directement sur la session (synchrone) : passer par un provider asynchrone
+      // laissait la redirection initiale en attente au chargement à froid d'une URL profonde.
       final onMfa = state.matchedLocation.startsWith('/mfa');
-      final status = await ref.read(mfaStatusProvider.future);
-      if (status != null) {
-        if (status.challengeRequired) return onMfa ? null : '/mfa/verification';
-        if (!status.hasVerifiedTotp) {
-          final perms = await ref.read(permissionsProvider.future);
-          if (perms.requiresMfa) return state.matchedLocation == '/mfa/activation' ? null : '/mfa/activation';
-        }
+      final status = await ref.read(authRepositoryProvider).mfaStatus();
+      if (status.challengeRequired) return onMfa ? null : '/mfa/verification';
+      if (!status.hasVerifiedTotp) {
+        final perms = await ref.read(permissionsProvider.future);
+        if (perms.requiresMfa) return state.matchedLocation == '/mfa/activation' ? null : '/mfa/activation';
       }
       if (onMfa) return '/';
       return null;

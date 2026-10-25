@@ -1,7 +1,7 @@
 -- Module 9 — Clôture : contrôles bloquants / alertes levables, résultat et IS avec minimum, états financiers (postes, équilibre), clôture provisoire,
 -- réouverture, arrêté définitif avec archive, à-nouveaux N+1, affectation du résultat (§7, §10.9).
 begin;
-select plan(35);
+select plan(37);
 
 select tests.create_cabinet('Cabinet A') as id \gset a_
 select tests.create_user('partner@a.test', :'a_id') as id \gset partner_
@@ -73,6 +73,8 @@ select ok((select bool_and((c->>'passed')::boolean) from public.financial_statem
 select public.generate_result_entry(:'e1_id', :'fy_id') as id \gset res_
 select is((select credit from public.entry_lines l join public.accounts a on a.id = l.account_id where l.entry_id = :'res_id' and a.code = '1310000'), 2600000::bigint, 'bénéfice net 2 600 000 au crédit de 131');
 select public.validate_entry(:'res_id');
+select is((select amount from public.statement_posts(:'e1_id', :'fy_id', 'income_statement') where post_code = 'TA'), 10000000::bigint, 'compte de résultat inchangé après l''écriture de détermination du résultat');
+select is((select sum(amount)::bigint from public.statement_posts_full(:'e1_id', :'fy_id', 'balance_sheet_liabilities') where post_code = 'CJ'), 2600000::bigint, 'résultat net au passif après l''écriture de détermination du résultat');
 select public.review_entry(:'v1_id', 'reviewed');
 update public.closing_checks set status = 'waived', waive_comment = 'test' where fiscal_year_id = :'fy_id' and severity = 'warning' and status = 'failed';
 select public.run_closing_checks(:'e1_id', :'fy_id');

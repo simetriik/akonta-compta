@@ -32,6 +32,12 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Jeton encore valide mais compte disparu (supprimé, ou base de démo rechargée) : on déconnecte
+    // plutôt que d'afficher un gabarit vide.
+    final profileState = ref.watch(currentProfileProvider);
+    if (profileState.hasValue && profileState.value == null && ref.watch(currentUserProvider) != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(authRepositoryProvider).signOut());
+    }
     final location = GoRouterState.of(context).uri.path;
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final entity = ref.watch(currentEntityProvider);
