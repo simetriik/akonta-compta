@@ -41,3 +41,13 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Contexte** : l'export réel contient des subdivisions propres à Perfecto (`4452002`, `4478004`) absentes du plan SYSCOHADA copié dans l'entité.
 - **Choix** : l'analyse les signale (`unknown_accounts`) ; la table de correspondance éditable permet de les rediriger vers un compte existant ou l'utilisateur crée d'abord la subdivision dans le plan. Les tiers manquants, eux, sont créés à l'application (case « créer » cochée par défaut), rattachés au collectif, typés d'après la classe du collectif (41 client, 40 fournisseur, 42 salarié). Un compte de banque suffixé (`5210ECO`) est proposé scindé ; l'utilisateur retire le suffixe dans la correspondance puisque 5210 n'est pas collectif.
 - **Raison** : option la plus prudente (§prompt) : pas de compte créé à l'insu du chef de mission.
+
+## D-009 — 2026-10-25 — Propositions de lettrage et de pointage en SQL
+- **Contexte** : le plan prévoyait une Edge Function pour les propositions de lettrage (§11.1 cite les Edge Functions pour « propositions de lettrage »).
+- **Choix** : fonctions SQL `lettering_proposals` (règle 1 : même tiers et même montant ; règle 2 : facture = règlement net + retenue constatée par une écriture débitant 447x / 445x) et `reconciliation_proposals` (même montant, date ± 5 jours), testées par pgTAP. L'application les appelle directement.
+- **Raison** : aucune donnée externe ni traitement lourd ; la logique reste dans la base, testable et sous RLS.
+
+## D-010 — 2026-10-25 — À-nouveaux exclus du pointage bancaire
+- **Contexte** : la ligne de banque du journal des à-nouveaux n'a pas de contrepartie dans un relevé ; elle correspond au solde d'ouverture du premier relevé.
+- **Choix** : les lignes du journal AN ne figurent pas parmi les lignes comptables à pointer ; les suspens antérieurs au premier relevé se saisissent comme écritures de l'exercice (ou s'importent) et se pointent normalement.
+- **Raison** : évite un écart permanent égal au solde d'ouverture.

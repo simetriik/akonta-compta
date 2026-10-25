@@ -3,7 +3,7 @@ import { buildPayload, servicePath, validateRequest } from "./documents.ts";
 
 Deno.test("validation des demandes d'export", () => {
   assertEquals(validateRequest({}), "entity_id requis");
-  assertEquals(validateRequest({ entity_id: "e", kind: "journal", format: "pdf", from: "2026-01-01", to: "2026-01-31" }), "journal_id requis pour un livre-journal");
+  assertEquals(validateRequest({ entity_id: "e", kind: "journal", format: "pdf", from: "2026-01-01", to: "2026-01-31" }), "journal_id requis pour un livre-journal ou un rapprochement");
   assertEquals(validateRequest({ entity_id: "e", kind: "aged_balance", format: "xlsx", from: "2026-01-01", to: "2026-01-31" }), "format xlsx indisponible pour aged_balance");
   assertEquals(validateRequest({ entity_id: "e", kind: "trial_balance", format: "xlsx", from: "2026-01-01", to: "2026-12-31" }), null);
 });
@@ -21,4 +21,10 @@ Deno.test("charge utile d'une balance", () => {
   ) as { header: { title: string }; rows: unknown[] };
   assertEquals(p.header.title, "Balance générale");
   assertEquals(p.rows.length, 1);
+});
+
+Deno.test("rapprochement : journal requis, PDF seulement", () => {
+  assertEquals(validateRequest({ entity_id: "e", kind: "reconciliation", format: "pdf", from: "2026-01-01", to: "2026-01-31" }), "journal_id requis pour un livre-journal ou un rapprochement");
+  assertEquals(validateRequest({ entity_id: "e", kind: "reconciliation", format: "xlsx", from: "2026-01-01", to: "2026-01-31", journal_id: "j" }), "format xlsx indisponible pour reconciliation");
+  assertEquals(servicePath("reconciliation", "pdf"), { path: "/pdf/reconciliation", filename: "rapprochement.pdf" });
 });

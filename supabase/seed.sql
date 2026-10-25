@@ -56,7 +56,7 @@ end $$;
 do $$
 declare
   v_cabinet uuid; v_partner uuid; v_admin uuid; v_manager uuid; v_assistant uuid; v_trainee uuid;
-  v_demo uuid; v_alpha uuid; v_fy uuid; v_e uuid; v_rev uuid; v_batch uuid; m int; d date;
+  v_demo uuid; v_alpha uuid; v_fy uuid; v_e uuid; v_rev uuid; v_batch uuid; m int; d date; v_sl bigint; v_bq uuid; v_prop record;
   v_tp text; v_amt bigint; v_ht bigint; v_tva bigint;
 begin
   -- Cabinet et collaborateurs
@@ -193,6 +193,29 @@ begin
   -- Verrouillage des périodes de janvier à mars par l''associé
   perform set_config('request.jwt.claims', json_build_object('sub', v_partner, 'role', 'authenticated', 'aal', 'aal2')::text, true);
   update public.periods set is_locked = true where fiscal_year_id = v_fy and period_no <= 3;
+  perform set_config('request.jwt.claims', '', true);
+
+  -- Lot 2 : relevé bancaire de janvier (Ecobank) et pointage partiel, lettrage des factures CHU réglées
+  perform set_config('request.jwt.claims', json_build_object('sub', v_assistant, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+  insert into public.bank_statement_templates (cabinet_id, bank_name, label, delimiter, has_header, date_column, label_column, debit_column, credit_column, reference_column)
+  values (v_cabinet, 'Ecobank Bénin', 'Export CSV Ecobank', ';', true, 1, 2, 3, 4, 5);
+  select id into v_bq from public.journals where entity_id = v_demo and code = 'BQ';
+  perform public.import_bank_statement(v_bq, '2026-01-01', '2026-01-31', jsonb_build_array(
+      jsonb_build_object('date', '2026-01-28', 'label', 'VIR SALAIRES JANVIER', 'debit', 2400000 - 86400 - 180000),
+      jsonb_build_object('date', '2026-01-31', 'label', 'FRAIS TENUE DE COMPTE', 'debit', 16500),
+      jsonb_build_object('date', '2026-02-02', 'label', 'AGIOS DECOUVERT', 'debit', 4200)),
+    8450000, null, (select id from public.bank_statement_templates where cabinet_id = v_cabinet limit 1), 'ecobank-2026-01.csv');
+  -- Pointage des deux lignes de janvier d''après les propositions
+  for v_sl in select statement_line_id from public.reconciliation_proposals(v_bq, '2026-01-31') loop
+    perform public.match_bank_lines(v_bq, array[v_sl],
+      array[(select entry_line_id from public.reconciliation_proposals(v_bq, '2026-01-31') where statement_line_id = v_sl)], 'proposition');
+  end loop;
+  -- Lettrage : factures CHU de janvier à septembre réglées le mois suivant (propositions règle 1)
+  -- (instantané des propositions ; une ligne déjà consommée par un lettrage précédent est ignorée)
+  for v_prop in select debit_line_id, credit_line_ids from public.lettering_proposals(v_demo, (select id from public.accounts where entity_id = v_demo and code = '4111000')) loop
+    continue when exists (select 1 from public.entry_lines where id = any (array[v_prop.debit_line_id] || v_prop.credit_line_ids) and lettering_id is not null);
+    perform public.letter_lines(array[v_prop.debit_line_id] || v_prop.credit_line_ids);
+  end loop;
   perform set_config('request.jwt.claims', '', true);
 
   -- SA Alpha : quelques écritures de démarrage

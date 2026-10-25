@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
 
 from . import excel, pdf
 from .config import Settings, get_settings
-from .models import AgedBalanceDocument, JournalDocument, LedgerDocument, TrialBalanceDocument
+from .models import AgedBalanceDocument, JournalDocument, LedgerDocument, ReconciliationDocument, TrialBalanceDocument
 
 app = FastAPI(title="Akonta — service de documents", version="0.1.0")
 
@@ -67,3 +67,8 @@ def excel_trial_balance(doc: TrialBalanceDocument, settings: Settings = Depends(
 def excel_general_ledger(doc: LedgerDocument, settings: Settings = Depends(get_settings)) -> Response:
     _check_size(len(doc.lines), settings)
     return _file(excel.general_ledger_xlsx(doc), XLSX, "grand-livre.xlsx")
+
+
+@app.post("/pdf/reconciliation", dependencies=[Depends(require_service_key)])
+def pdf_reconciliation(doc: ReconciliationDocument) -> Response:
+    return _file(pdf.reconciliation_pdf(doc), PDF, f"rapprochement-{doc.journal_code}-{doc.as_of.isoformat()}.pdf")

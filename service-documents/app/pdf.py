@@ -9,7 +9,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import LongTable, Paragraph, SimpleDocTemplate, Spacer, TableStyle
 
 from .formatting import fcfa, fcfa_total, fr_date
-from .models import AgedBalanceDocument, DocumentHeader, JournalDocument, LedgerDocument, TrialBalanceDocument
+from .models import AgedBalanceDocument, DocumentHeader, JournalDocument, LedgerDocument, ReconciliationDocument, TrialBalanceDocument
 
 INK = colors.HexColor("#1A1A18")
 TERRACOTTA = colors.HexColor("#B5472A")
@@ -148,3 +148,38 @@ def aged_balance_pdf(d: AgedBalanceDocument) -> bytes:
     widths = [22 * mm, 20 * mm, 70 * mm] + [26 * mm] * 6
     story = _header_block(d.header) + [_table(rows, widths, 3, True)]
     return _build(story, f"{d.header.entity_name} — {d.header.title}")
+
+
+def reconciliation_pdf(d: ReconciliationDocument) -> bytes:
+    """État de rapprochement bancaire : solde banque ± suspens = solde comptable, listes détaillées, écart."""
+    story = _header_block(d.header)
+    story.append(Paragraph(f"Journal <b>{d.journal_code}</b> — {d.journal_label} · état au {fr_date(d.as_of)}", META))
+    story.append(Spacer(1, 3 * mm))
+
+    def total(items):
+        return sum(i.amount for i in items)
+
+    summary = [
+        ["Solde du relevé bancaire", fcfa_total(d.bank_balance)],
+        ["+ Encaissements comptabilisés non crédités", fcfa_total(total(d.deposits_in_transit))],
+        ["- Décaissements comptabilisés non débités", fcfa_total(total(d.outstanding_payments))],
+        ["+ Débits bancaires non comptabilisés", fcfa_total(total(d.unmatched_bank_debits))],
+        ["- Crédits bancaires non comptabilisés", fcfa_total(total(d.unmatched_bank_credits))],
+        ["= Solde comptable attendu", fcfa_total(d.bank_balance + total(d.deposits_in_transit) - total(d.outstanding_payments) + total(d.unmatched_bank_debits) - total(d.unmatched_bank_credits))],
+        ["Solde comptable (grand livre)", fcfa_total(d.book_balance)],
+        ["Écart", fcfa_total(d.difference)],
+    ]
+    story.append(_table(summary, [120 * mm, 40 * mm], 1, True))
+    story.append(Spacer(1, 5 * mm))
+    for title, items in [("Encaissements comptabilisés non crédités", d.deposits_in_transit), ("Décaissements comptabilisés non débités", d.outstanding_payments),
+                         ("Débits bancaires non comptabilisés", d.unmatched_bank_debits), ("Crédits bancaires non comptabilisés", d.unmatched_bank_credits)]:
+        if not items:
+            continue
+        story.append(Paragraph(f"<b>{title}</b>", META))
+        rows = [["Date", "Référence", "Libellé", "Montant"]] + [[fr_date(i.date), i.reference or "", Paragraph(i.label, CELL), fcfa(i.amount)] for i in items]
+        rows.append(["", "", "Total", fcfa_total(total(items))])
+        story.append(_table(rows, [24 * mm, 30 * mm, 140 * mm, 36 * mm], 3, True))
+        story.append(Spacer(1, 3 * mm))
+    status = "Écart nul : état rapproché." if d.difference == 0 else "Écart non nul : état provisoire."
+    story.append(Paragraph(status, META))
+    return _build(story, f"{d.header.entity_name} — Rapprochement {d.journal_code} au {fr_date(d.as_of)}")
