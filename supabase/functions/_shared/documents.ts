@@ -1,0 +1,78 @@
+// Construction des charges utiles du service de documents à partir des résultats des fonctions SQL de consultation.
+
+export type DocumentKind = "trial_balance" | "general_ledger" | "journal" | "aged_balance";
+export type DocumentFormat = "pdf" | "xlsx";
+
+export interface ExportRequest {
+  entity_id: string;
+  kind: DocumentKind;
+  format: DocumentFormat;
+  from: string;      // AAAA-MM-JJ
+  to: string;
+  journal_id?: string;
+  account_from?: string;
+  account_to?: string;
+  class?: number;
+  side?: "debit" | "credit";
+}
+
+export interface HeaderInfo {
+  cabinet_name: string;
+  entity_name: string;
+  entity_tax_id: string | null;
+  fiscal_year_label: string;
+  generated_by: string | null;
+}
+
+const TITLES: Record<DocumentKind, string> = {
+  trial_balance: "Balance générale",
+  general_ledger: "Grand livre",
+  journal: "Livre-journal",
+  aged_balance: "Balance âgée",
+};
+
+/** Routes du service Python et nom de fichier par type et format. */
+export function servicePath(kind: DocumentKind, format: DocumentFormat): { path: string; filename: string } | null {
+  const ext = format === "pdf" ? "pdf" : "xlsx";
+  const prefix = format === "pdf" ? "/pdf" : "/excel";
+  switch (kind) {
+    case "trial_balance": return { path: `${prefix}/trial-balance`, filename: `balance.${ext}` };
+    case "general_ledger": return { path: `${prefix}/general-ledger`, filename: `grand-livre.${ext}` };
+    case "journal": return format === "pdf" ? { path: "/pdf/journal", filename: "journal.pdf" } : null;
+    case "aged_balance": return format === "pdf" ? { path: "/pdf/aged-balance", filename: "balance-agee.pdf" } : null;
+  }
+}
+
+export function validateRequest(r: Partial<ExportRequest>): string | null {
+  if (!r.entity_id) return "entity_id requis";
+  if (!r.kind || !(r.kind in TITLES)) return "kind invalide";
+  if (r.format !== "pdf" && r.format !== "xlsx") return "format invalide (pdf | xlsx)";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(r.from ?? "") || !/^\d{4}-\d{2}-\d{2}$/.test(r.to ?? "")) return "from et to au format AAAA-MM-JJ";
+  if (r.kind === "journal" && !r.journal_id) return "journal_id requis pour un livre-journal";
+  if (!servicePath(r.kind, r.format)) return `format ${r.format} indisponible pour ${r.kind}`;
+  return null;
+}
+
+export function buildPayload(r: ExportRequest, header: HeaderInfo, rows: Record<string, unknown>[], extra: Record<string, unknown> = {}): Record<string, unknown> {
+  const base = {
+    header: {
+      cabinet_name: header.cabinet_name,
+      entity_name: header.entity_name,
+      entity_tax_id: header.entity_tax_id,
+      fiscal_year_label: header.fiscal_year_label,
+      period_from: r.from,
+      period_to: r.to,
+      title: TITLES[r.kind] + (r.kind === "aged_balance" ? (r.side === "credit" ? " fournisseurs" : " clients") : ""),
+      generated_by: header.generated_by,
+    },
+  };
+  switch (r.kind) {
+    case "trial_balance":
+    case "aged_balance":
+      return { ...base, ...extra, rows };
+    case "general_ledger":
+      return { ...base, lines: rows.map((l) => ({ ...l, reference: l.reference ?? null, third_party_code: l.third_party_code ?? null, letter_code: l.letter_code ?? null })) };
+    case "journal":
+      return { ...base, ...extra, lines: rows };
+  }
+}
