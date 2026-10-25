@@ -1,0 +1,33 @@
+{
+  "brand": "Akonta",
+  "tagline": "La comptabilité OHADA, sans rien oublier",
+  "brief": "Logiciel de comptabilité conforme OHADA/SYSCOHADA pour le Bénin et la zone UEMOA, pensé pour concurrencer les logiciels de bureau existants avec une expérience moderne, mobile-first et fiable.",
+  "adjectives": ["fiable", "rigoureux", "mémoire infaillible", "local", "moderne"],
+  "criteria": "Reconnaissable à 16 px, fonctionne en une couleur, sobre pour un usage professionnel, distinct des clichés bancaires (bouclier, flèche, globe).",
+  "industry": "finance",
+  "brand_color": "#B5472A",
+  "tile_color": "#B5472A",
+  "greyscale": false,
+  "final": true,
+  "designer": "Akonta",
+  "concepts": [
+    {
+      "name": "Tête d'éléphant",
+      "symbol": "akonta-symbol-black.svg",
+      "lockup": "akonta-lockup-horizontal.svg",
+      "stacked": "akonta-lockup-stacked.svg",
+      "avatar": "akonta-symbol-square.svg",
+      "symbol_on_tile": "akonta-symbol-white.svg",
+      "lockup_on_tile": "akonta-lockup-horizontal-white.svg",
+      "symbol_on_dark": "akonta-symbol-white.svg",
+      "lockup_on_dark": "akonta-lockup-horizontal-white.svg",
+      "idea": "Un éléphant n'oublie jamais : la tête réduite à l'oreille et la trompe, pour une mémoire comptable infaillible.",
+      "rationale": [
+        "Aucune écriture perdue — la mémoire de l'éléphant comme promesse produit",
+        "Silhouette géométrique réduite, pas une mascotte illustrée",
+        "Tient en une couleur, lisible dès 32 px",
+        "S'éloigne des clichés bancaires (bouclier, flèche de croissance, globe)"
+      ]
+    }
+  ]
+}

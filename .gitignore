@@ -1,0 +1,7 @@
+# Contextes bruts déposés par l'utilisateur : jamais versionnés
+inputs/
+
+# Secrets et environnement local
+.env
+.env.*
+!.env.example

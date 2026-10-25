@@ -1,0 +1,8 @@
+<svg fill="#ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="titleSym"><title>Akonta logo</title>
+  <title id="titleSym">Akonta — symbole tête d'éléphant</title>
+  <g fill="#ffffff">
+    <path d="M130 143 C110 165 100 190 108 212 C111 221 123 223 129 215 C125 195 119 174 151 143 Z"/>
+    <path d="M122 61 C70 43 34 68 38 103 C40 131 72 153 118 149 C110 123 108 88 122 61 Z"/>
+    <path fill-rule="evenodd" d="M160 43 A54 58 0 1 1 159.9 43 Z M148 88 A5 5 0 1 0 148.1 88 Z"/>
+  </g>
+</svg>
