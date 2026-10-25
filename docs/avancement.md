@@ -48,3 +48,18 @@ Une entrée par itération : date, tâche, résultat, tests, commit.
 
 ## Revue visuelle (25 oct. 2026, soir)
 - Lancement desktop Linux et web (`flutter run -d web-server`, cible web ajoutée au projet). **Bogue corrigé** : `listFactors()` de Supabase rafraîchit le jeton à chaque appel, ce qui émettait un événement d'authentification, relançait la redirection du routeur et rappelait `listFactors()` : boucle de requêtes après connexion. Correction : facteurs TOTP lus sur l'utilisateur courant, routeur insensible aux rafraîchissements de jeton, profil et permissions rechargés seulement quand l'utilisateur change. Vérifié dans le navigateur intégré : connexion de l'assistant, tableau de bord des deux dossiers.
+
+## Revue visuelle web, suite (26 oct. 2026)
+Parcours dans le navigateur intégré (`flutter run -d web-server`, fenêtre 1440 px) avec le chef de mission puis l'associé (enrôlement TOTP réel, code calculé localement). Chaque anomalie vue a été corrigée, testée et commitée (`a854678`, `064dfcd`, `9201245`).
+- **Vu conforme** : tableau de bord, lettrage (propositions, « Voir », « Confirmer »), rapprochement (état, pointage, création d'écriture depuis le relevé, écart nul), inventaire (immobilisation reprise), contrôles de clôture (bloquants/alertes, « Lever »), états financiers et onglet d'arrêté de l'exercice 2026, administration (cabinet, collaborateurs, dossiers).
+- **Corrigé — listes** : `supabase-dart` trie en descendant par défaut ; tous les `order()` sont désormais explicitement croissants (comptes, journaux, écritures…).
+- **Corrigé — chargement à froid d'une URL profonde** : page blanche ; la redirection du routeur attendait un provider asynchrone ; le statut MFA est lu directement sur la session.
+- **Corrigé — sélecteur de dossier** : dossier courant réinitialisé au changement d'utilisateur, valeur absente de la liste tolérée (plus d'assertion Flutter).
+- **Corrigé — contrôles de clôture** : `delete` sans `where` refusé par l'API (safeupdate) → migration 0016.
+- **Corrigé — écriture depuis le relevé** : la ligne peut dater d'une période verrouillée ; nouveau paramètre `p_entry_date` (migration 0017, D-013), champ date dans la boîte, listes de comptes attendues avant ouverture.
+- **Corrigé — saisie des comptes** : un code complet (ou court, complété par des zéros) tapé au clavier vaut sélection dans tous les champs de compte (grille, inventaire, rapprochement) ; test unitaire ajouté.
+- **Corrigé — états financiers** : l'écriture de détermination du résultat vidait le compte de résultat et faussait le contrôle « résultat = grand livre » ; états, résultat comptable et impôt sont calculés hors de cette écriture (migration 0018, 2 assertions pgTAP). Jeu de démo : le serveur SRV-01 (3 000 000) figure au bilan d'ouverture de SA Alpha (le poste AM montrait un net négatif).
+- **Corrigé — session orpheline** : jeton valide dont l'utilisateur a disparu (démo rechargée) → déconnexion au lieu d'un gabarit vide ; identifiants des utilisateurs de démo stables (`md5` de l'e-mail).
+- **Écran de clôture** : l'onglet Arrêté définitif d'un exercice arrêté affiche la date au lieu du formulaire grisé.
+- Suites : pgTAP 333, Flutter 35, pytest 11, Deno 8.
+- **Reste observé, non corrigé** : le premier clic sur une liste déroulante juste après l'affichage d'un écran est parfois ignoré sur le web (rendu logiciel lent, non reproduit sur desktop) ; la liste des comptes lettrables présente tout le plan (filtrer sur les comptes mouvementés serait plus confortable) ; le dossier courant n'est pas mémorisé entre deux rechargements de page web.
