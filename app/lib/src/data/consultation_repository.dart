@@ -179,7 +179,7 @@ class ConsultationRepository {
       'side': p.side,
     });
     if (res.status != 200) throw Exception('Export refusé (${res.status}) : ${res.data}');
-    final base = switch (kind) { 'trial_balance' => 'balance', 'general_ledger' => 'grand-livre', 'journal' => 'journal', _ => 'balance-agee' };
+    final base = switch (kind) { 'trial_balance' => 'balance', 'general_ledger' => 'grand-livre', 'journal' => 'journal', 'reconciliation' => 'rapprochement', 'financial_statements' => 'etats-financiers', 'dgi' => 'liasse-dgi', _ => 'balance-agee' };
     final name = '$base-${p.entityId.substring(0, 8)}-${_d(p.from)}-${_d(p.to)}.$format';
     return (name, res.data as Uint8List);
   }

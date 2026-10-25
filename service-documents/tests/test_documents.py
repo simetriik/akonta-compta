@@ -98,3 +98,41 @@ def test_reconciliation_pdf(client, auth, header):
     }
     r = client.post("/pdf/reconciliation", json=doc, headers=auth)
     assert r.status_code == 200 and r.content.startswith(b"%PDF")
+
+
+def test_dgi_fill_keeps_macros(client, auth, monkeypatch, tmp_path):
+    import os
+    from pathlib import Path
+    template = Path(__file__).resolve().parents[2] / "inputs" / "Modèle DGI-Etats-Financiers-SN.xlsm"
+    if not template.exists():
+        import pytest
+        pytest.skip("modèle DGI absent (inputs/ non versionné)")
+    monkeypatch.setenv("AKONTA_DGI_TEMPLATE", str(template))
+    r = client.post("/excel/dgi", json={"template_version": "SN-2025", "cells": [
+        {"sheet": "BILAN", "cell": "F12", "value": 1500000},
+        {"sheet": "BILAN", "cell": "F36", "value": 21300000},
+        {"sheet": "BILAN", "cell": "H36", "value": 1},
+        {"sheet": "INCONNUE", "cell": "A1", "value": 1},
+    ]}, headers=auth)
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/vnd.ms-excel.sheet.macroEnabled")
+    assert r.headers["X-Akonta-Skipped-Cells"] == "2", "feuille inconnue + formule H36 conservée"
+    out = tmp_path / "out.xlsm"
+    out.write_bytes(r.content)
+    from openpyxl import load_workbook
+    wb = load_workbook(out, keep_vba=True)
+    assert wb["BILAN"]["F12"].value == 1500000
+    assert wb["BILAN"]["F36"].value == 21300000
+    assert str(wb["BILAN"]["H36"].value).startswith("="), "les formules du modèle ne sont pas écrasées"
+    assert wb.vba_archive is not None, "les macros doivent être conservées"
+
+
+def test_financial_statements_pdf(client, auth, header):
+    doc = {
+        "header": {**header, "title": "États financiers SYSCOHADA"},
+        "assets": [{"post_code": "BS", "post_label": "Banques", "column_role": "gross", "amount": 21300000}, {"post_code": "AN", "post_label": "Matériel de transport", "column_role": "gross", "amount": 12000000}, {"post_code": "AN", "post_label": "Matériel de transport", "column_role": "depreciation", "amount": 1800000}],
+        "liabilities": [{"post_code": "CA", "post_label": "Capital", "amount": 10000000}, {"post_code": "CJ", "post_label": "Résultat net", "amount": 2600000}],
+        "income": [{"post_code": "TA", "post_label": "Ventes de marchandises", "amount": 10000000}, {"post_code": "RA", "post_label": "Achats de marchandises", "amount": -6000000}],
+    }
+    r = client.post("/pdf/financial-statements", json=doc, headers=auth)
+    assert r.status_code == 200 and r.content.startswith(b"%PDF")

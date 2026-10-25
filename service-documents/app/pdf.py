@@ -9,7 +9,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import LongTable, Paragraph, SimpleDocTemplate, Spacer, TableStyle
 
 from .formatting import fcfa, fcfa_total, fr_date
-from .models import AgedBalanceDocument, DocumentHeader, JournalDocument, LedgerDocument, ReconciliationDocument, TrialBalanceDocument
+from .models import AgedBalanceDocument, DocumentHeader, FinancialStatementsDocument, JournalDocument, LedgerDocument, ReconciliationDocument, StatementPostRow, TrialBalanceDocument
 
 INK = colors.HexColor("#1A1A18")
 TERRACOTTA = colors.HexColor("#B5472A")
@@ -183,3 +183,56 @@ def reconciliation_pdf(d: ReconciliationDocument) -> bytes:
     status = "Écart nul : état rapproché." if d.difference == 0 else "Écart non nul : état provisoire."
     story.append(Paragraph(status, META))
     return _build(story, f"{d.header.entity_name} — Rapprochement {d.journal_code} au {fr_date(d.as_of)}")
+
+
+def _posts_by_code(rows: list[StatementPostRow]) -> dict:
+    out: dict = {}
+    for r in rows:
+        e = out.setdefault(r.post_code, {"label": r.post_label, "gross": 0, "dep": 0, "amount": 0})
+        if r.column_role == "gross":
+            e["gross"] = r.amount
+        elif r.column_role == "depreciation":
+            e["dep"] = r.amount
+        else:
+            e["amount"] = r.amount
+    return out
+
+
+def financial_statements_pdf(d: FinancialStatementsDocument) -> bytes:
+    """Bilan (actif / passif) et compte de résultat SYSCOHADA système normal, avec colonne N-1."""
+    story = _header_block(d.header)
+    assets, prev_assets = _posts_by_code(d.assets), _posts_by_code(d.previous_assets)
+    rows = [["Réf", "Actif", "Brut", "Amort. / dépréc.", "Net", "Net N-1"]]
+    ta = [0, 0, 0, 0]
+    for code, e in assets.items():
+        net = e["gross"] - e["dep"]
+        prev = prev_assets.get(code, {"gross": 0, "dep": 0})
+        pn = prev["gross"] - prev["dep"]
+        ta = [ta[0] + e["gross"], ta[1] + e["dep"], ta[2] + net, ta[3] + pn]
+        rows.append([code, Paragraph(e["label"], CELL), fcfa(e["gross"]), fcfa(e["dep"]), fcfa_total(net), fcfa(pn)])
+    rows.append(["", "TOTAL ACTIF", fcfa_total(ta[0]), fcfa_total(ta[1]), fcfa_total(ta[2]), fcfa_total(ta[3])])
+    story.append(Paragraph("<b>Bilan — Actif</b>", META))
+    story.append(_table(rows, [14 * mm, 110 * mm, 36 * mm, 36 * mm, 36 * mm, 36 * mm], 2, True))
+    story.append(Spacer(1, 5 * mm))
+    liab, prev_liab = _posts_by_code(d.liabilities), _posts_by_code(d.previous_liabilities)
+    rows = [["Réf", "Passif", "Net", "Net N-1"]]
+    tl = [0, 0]
+    for code, e in liab.items():
+        pn = prev_liab.get(code, {"amount": 0})["amount"]
+        tl = [tl[0] + e["amount"], tl[1] + pn]
+        rows.append([code, Paragraph(e["label"], CELL), fcfa_total(e["amount"]), fcfa(pn)])
+    rows.append(["", "TOTAL PASSIF", fcfa_total(tl[0]), fcfa_total(tl[1])])
+    story.append(Paragraph("<b>Bilan — Passif</b>", META))
+    story.append(_table(rows, [14 * mm, 182 * mm, 36 * mm, 36 * mm], 2, True))
+    story.append(Spacer(1, 5 * mm))
+    inc, prev_inc = _posts_by_code(d.income), _posts_by_code(d.previous_income)
+    rows = [["Réf", "Compte de résultat", "Exercice N", "Exercice N-1"]]
+    ti = [0, 0]
+    for code, e in inc.items():
+        pn = prev_inc.get(code, {"amount": 0})["amount"]
+        ti = [ti[0] + e["amount"], ti[1] + pn]
+        rows.append([code, Paragraph(e["label"], CELL), fcfa_total(e["amount"]), fcfa(pn)])
+    rows.append(["XI", "RÉSULTAT NET", fcfa_total(ti[0]), fcfa_total(ti[1])])
+    story.append(Paragraph("<b>Compte de résultat</b> (produits positifs, charges négatives)", META))
+    story.append(_table(rows, [14 * mm, 182 * mm, 36 * mm, 36 * mm], 2, True))
+    return _build(story, f"{d.header.entity_name} — États financiers {d.header.fiscal_year_label}")

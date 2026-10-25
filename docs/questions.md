@@ -15,3 +15,7 @@
 ## Q-004 — Formats des relevés bancaires des clients
 - **Question** : Ecobank, BOA, UBA, Orabank… fournissent-ils des exports CSV, Excel natif ou PDF seulement ?
 - **Hypothèse appliquée** : CSV / texte tabulé, gabarit de colonnes mémorisé par banque. Les relevés `.xlsx` sont à exporter en CSV depuis le tableur ; les PDF restent hors V1 (§10.7).
+
+## Q-005 — Tableau des flux de trésorerie (TFT) et notes annexes dans la liasse DGI
+- **Question** : ABC souhaite-t-il que le TFT et les notes 1 à 35 soient calculés automatiquement dès la première clôture, ou complétés dans le modèle Excel ?
+- **Hypothèse appliquée** : la liasse DGI est remplie automatiquement pour la fiche R1/R2 (identification), le bilan (actif, passif, N et N-1) et le compte de résultat ; le TFT et les notes restent à compléter dans le classeur (macros conservées). Les cellules correspondantes sont cartographiées (version `SN-2025`) pour une automatisation ultérieure.

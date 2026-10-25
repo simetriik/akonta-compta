@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/formatting.dart';
 import '../../core/theme.dart';
 import '../../data/closing_repository.dart';
+import '../../data/consultation_repository.dart';
 import '../../data/entities_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
@@ -291,6 +295,23 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
     });
   }
 
+  Future<void> _export(BuildContext context, String kind, String format) async {
+    setState(() => _busy = true);
+    try {
+      final p = ConsultationParams(entityId: widget.entity.id, from: widget.fy.startDate, to: widget.fy.endDate);
+      final (name, bytes) = await ref.read(consultationRepositoryProvider).export(p: p, kind: kind, format: format);
+      final uri = await FilePicker.saveFile(dialogTitle: 'Enregistrer', fileName: name, bytes: bytes);
+      if (uri != null && uri.scheme == 'file') {
+        final f = File(uri.toFilePath());
+        if (!await f.exists() || await f.length() == 0) await f.writeAsBytes(bytes);
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final fs = _fs;
@@ -333,7 +354,12 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
                     Expanded(child: Text('${c['label']}')),
                   ]),
                 const SizedBox(height: 8),
-                const Text('Export : modèle Excel DGI (macros conservées) et PDF via Consultation → Exporter → États financiers (lot 3, service de documents).', style: TextStyle(fontSize: 12)),
+                Wrap(spacing: 8, children: [
+                  OutlinedButton.icon(onPressed: () => _export(context, 'financial_statements', 'pdf'), icon: const Icon(Icons.picture_as_pdf_outlined), label: const Text('États financiers PDF')),
+                  OutlinedButton.icon(onPressed: () => _export(context, 'dgi', 'xlsm'), icon: const Icon(Icons.table_view_outlined), label: const Text('Liasse DGI (Excel, macros conservées)')),
+                ]),
+                const SizedBox(height: 4),
+                const Text('La liasse DGI reprend fiche R1/R2, bilan et compte de résultat (N et N-1) ; TFT et notes se complètent dans le classeur.', style: TextStyle(fontSize: 12)),
               ]),
             ),
           ),

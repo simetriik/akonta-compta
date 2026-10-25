@@ -109,3 +109,20 @@ class ReconciliationDocument(BaseModel):
     unmatched_bank_credits: list[ReconciliationItem] = Field(default_factory=list)   # crédités par la banque, non comptabilisés
     unmatched_bank_debits: list[ReconciliationItem] = Field(default_factory=list)    # débités par la banque, non comptabilisés
     difference: int = 0
+
+
+class StatementPostRow(BaseModel):
+    post_code: str
+    post_label: str
+    column_role: str = "amount"
+    amount: int = 0
+
+
+class FinancialStatementsDocument(BaseModel):
+    header: DocumentHeader
+    assets: list[StatementPostRow] = Field(default_factory=list)
+    liabilities: list[StatementPostRow] = Field(default_factory=list)
+    income: list[StatementPostRow] = Field(default_factory=list)
+    previous_assets: list[StatementPostRow] = Field(default_factory=list)
+    previous_liabilities: list[StatementPostRow] = Field(default_factory=list)
+    previous_income: list[StatementPostRow] = Field(default_factory=list)
