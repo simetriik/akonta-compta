@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../data/auth_repository.dart';
 import '../data/supabase_providers.dart';
+import 'admin/cabinet_screen.dart';
+import 'admin/users_screen.dart';
 import 'auth/login_screen.dart';
 import 'auth/mfa_screens.dart';
 import 'dashboard/dashboard_screen.dart';
@@ -66,8 +68,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/pieces', builder: (_, _) => const PlaceholderScreen(title: 'Pièces justificatives')),
           GoRoute(path: '/referentiels', builder: (_, _) => const PlaceholderScreen(title: 'Référentiels')),
           GoRoute(path: '/import', builder: (_, _) => const PlaceholderScreen(title: 'Import Perfecto')),
-          GoRoute(path: '/cabinet', builder: (_, _) => const PlaceholderScreen(title: 'Cabinet et dossiers')),
-          GoRoute(path: '/utilisateurs', builder: (_, _) => const PlaceholderScreen(title: 'Utilisateurs et sécurité')),
+          GoRoute(path: '/cabinet', builder: (_, _) => const CabinetScreen()),
+          GoRoute(path: '/utilisateurs', builder: (_, _) => const UsersScreen()),
         ],
       ),
     ],
