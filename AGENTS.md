@@ -4,15 +4,16 @@ Akonta : logiciel comptable conforme au SYSCOHADA révisé pour le cabinet ABC E
 
 ## État du dépôt
 
-Le dépôt ne contient pour l'instant **aucun code** (aucun commit) : uniquement `inputs/` (lecture seule, non versionné).
-- `inputs/conception.md` : **référence unique** des décisions (données, règles, permissions, phasage). Ne pas rouvrir une décision qui y figure ; sur un point non tranché, choisir l'option la plus prudente et la consigner dans `docs/decisions-dev.md`.
-- `inputs/prompt-claude-code.md` : prompt de lancement en boucle autonome (audit → lots 1 à 3). Il prévoit de copier `conception.md` vers `docs/conception.md` et le modèle DGI vers `docs/ressources/`.
-- `inputs/plan-comptable-syscohada-revise.csv` (`Code;Libellé`, séparateur `;`) : source du seed du plan de référence.
-- `inputs/JOURNAL BANQUE.TXT` : export Perfecto réel (format décrit en conception §10.10, tabulations, Windows-1252).
-- `inputs/Modèle DGI-Etats-Financiers-SN.xlsm` : modèle Excel DGI à remplir (macros conservées).
-- `inputs/ohada/` : textes de référence OHADA (PDF).
+Les trois lots sont construits (tags `lot1`, `lot2`, `lot3` sur `main`) ; la recette avec ABC reste à organiser.
+- `inputs/` (lecture seule, non versionné) : `conception.md` est la **référence unique** des décisions. Ne pas rouvrir une décision qui y figure ; sur un point non tranché, choisir l'option la plus prudente et la consigner dans `docs/decisions-dev.md`. On référence `inputs/`, on ne le copie pas dans `docs/` (D-001).
+- `supabase/` : migrations SQL versionnées (règles comptables, RLS, fonctions), `seed.sql` (démonstration), `tests/` pgTAP, `functions/` Edge (Deno).
+- `app/` : application Flutter desktop + mobile (couches core / domain / data / presentation, Riverpod, go_router).
+- `service-documents/` : service Python FastAPI (PDF, Excel, liasse DGI avec `keep_vba`).
+- `scripts/` : `setup.sh`, `start.sh`, `stop.sh`, `reset-db.sh`, `demo.sh`, `test.sh` (toute la suite), générateurs de seed.
+- `docs/` : `plan.md`, `avancement.md`, `decisions-dev.md`, `questions.md`, `audit.md`, `environnement.md`, `livraison-lot{1,2,3}.md`, `prompt-claude-design.md`.
+- `outputs/logo-akonta/` : kit logo validé.
 
-Les fichiers de pilotage prévus par le prompt (`docs/plan.md`, `docs/avancement.md`, `docs/decisions-dev.md`, `docs/questions.md`) et les scripts reproductibles (`scripts/` : installation, démarrage, tests) restent à créer.
+Avant de déclarer une tâche terminée : `scripts/test.sh` (pgTAP, Flutter, pytest, Deno) doit être vert.
 
 ## Stack imposée (prévaut sur la stack par défaut globale)
 
