@@ -88,3 +88,24 @@ class AgedBalanceDocument(BaseModel):
     header: DocumentHeader
     side: Literal["debit", "credit"] = "debit"
     rows: list[AgedBalanceRow] = Field(default_factory=list)
+
+
+class ReconciliationItem(BaseModel):
+    date: date
+    label: str
+    reference: str | None = None
+    amount: int
+
+
+class ReconciliationDocument(BaseModel):
+    header: DocumentHeader
+    journal_code: str
+    journal_label: str
+    as_of: date
+    book_balance: int
+    bank_balance: int
+    deposits_in_transit: list[ReconciliationItem] = Field(default_factory=list)      # comptabilisés, non crédités par la banque
+    outstanding_payments: list[ReconciliationItem] = Field(default_factory=list)     # comptabilisés, non débités par la banque
+    unmatched_bank_credits: list[ReconciliationItem] = Field(default_factory=list)   # crédités par la banque, non comptabilisés
+    unmatched_bank_debits: list[ReconciliationItem] = Field(default_factory=list)    # débités par la banque, non comptabilisés
+    difference: int = 0

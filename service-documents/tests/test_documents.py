@@ -85,3 +85,16 @@ def test_too_many_rows(client, auth, header, monkeypatch):
     r = client.post("/pdf/trial-balance", json={"header": header, "rows": rows}, headers=auth)
     assert r.status_code == 413
     config.get_settings.cache_clear()
+
+
+def test_reconciliation_pdf(client, auth, header):
+    doc = {
+        "header": {**header, "title": "État de rapprochement bancaire"},
+        "journal_code": "BQ", "journal_label": "Ecobank", "as_of": "2026-01-31",
+        "book_balance": 1100000, "bank_balance": 1283500,
+        "outstanding_payments": [{"date": "2026-01-25", "label": "Chèque 112", "reference": "112", "amount": 200000}],
+        "unmatched_bank_debits": [{"date": "2026-01-31", "label": "Frais de tenue de compte", "amount": 16500}],
+        "difference": 0,
+    }
+    r = client.post("/pdf/reconciliation", json=doc, headers=auth)
+    assert r.status_code == 200 and r.content.startswith(b"%PDF")
