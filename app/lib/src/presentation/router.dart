@@ -11,7 +11,10 @@ import 'admin/users_screen.dart';
 import 'auth/login_screen.dart';
 import 'auth/mfa_screens.dart';
 import 'dashboard/dashboard_screen.dart';
+import 'documents/documents_screen.dart';
 import 'entities/entities_screen.dart';
+import 'entries/entries_screen.dart';
+import 'entries/entry_editor_screen.dart';
 import 'entities/entity_detail_screen.dart';
 import 'entities/entity_wizard_screen.dart';
 import 'references/references_screen.dart';
@@ -70,9 +73,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/dossiers', builder: (_, _) => const EntitiesScreen()),
           GoRoute(path: '/dossiers/nouveau', builder: (_, _) => const EntityWizardScreen()),
           GoRoute(path: '/dossiers/:id', builder: (_, state) => EntityDetailScreen(entityId: state.pathParameters['id']!)),
-          GoRoute(path: '/saisie', builder: (_, _) => const PlaceholderScreen(title: 'Saisie')),
+          GoRoute(path: '/saisie', builder: (_, _) => const EntriesScreen()),
+          GoRoute(path: '/saisie/nouvelle', builder: (_, _) => const EntryEditorScreen()),
+          GoRoute(path: '/saisie/:id', builder: (_, state) => EntryEditorScreen(entryId: state.pathParameters['id']!)),
           GoRoute(path: '/consultation', builder: (_, _) => const PlaceholderScreen(title: 'Consultation')),
-          GoRoute(path: '/pieces', builder: (_, _) => const PlaceholderScreen(title: 'Pièces justificatives')),
+          GoRoute(path: '/pieces', builder: (_, _) => const DocumentsScreen()),
           GoRoute(path: '/referentiels', builder: (_, _) => const ReferencesScreen()),
           GoRoute(path: '/import', builder: (_, _) => const PlaceholderScreen(title: 'Import Perfecto')),
           GoRoute(path: '/cabinet', builder: (_, _) => const CabinetScreen()),
