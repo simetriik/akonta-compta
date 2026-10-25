@@ -45,15 +45,15 @@ Arborescence cible : `supabase/` (config, migrations, seed, tests pgTAP, functio
 
 ## Lot 3 — modules 8 et 9
 
-- [ ] **L3-01 Immobilisations** — fiches, composants, linéaire (dégressif option), prorata temporis, tableau, dotations générées en brouillard « générée », cessions / rebuts, reprise de l'existant. *Fin : pgTAP sur un cas calculé à la main ; UI.*
-- [ ] **L3-02 Stocks** — stock final par compte, variations générées. *Fin : pgTAP ; UI.*
-- [ ] **L3-03 Provisions** — balance âgée → taux par tiers, dotation/reprise par différence, provisions pour risques, tableau. *Fin : pgTAP ; UI.*
-- [ ] **L3-04 Régularisations** — CAP, PAR, CCA, PCA, prorata au jour, écriture 31/12 et extourne 01/01. *Fin : pgTAP ; UI.*
-- [ ] **L3-05 Écarts de conversion** — lignes en devises non lettrées, cours de clôture, 478/479 + provision, extourne. *Fin : pgTAP ; UI.*
-- [ ] **L3-06 Contrôles de clôture** — bloquants et alertes levables avec commentaire ; assistant. *Fin : pgTAP ; UI.*
-- [ ] **L3-07 Fiscalité** — tableau de passage paramétrable, IS = max(taux × résultat fiscal, minimum), acomptes 4492, écriture d'IS. *Fin : pgTAP.*
-- [ ] **L3-08 États financiers** — moteur comptes → postes (plages, sens, versionné), bilan, compte de résultat, TFT, notes, fiches R, contrôles de cohérence, PDF. *Fin : pgTAP (bilan équilibré sur la démo) ; pytest PDF.*
+- [x] **L3-01 Immobilisations** — fiches, composants, linéaire (dégressif option), prorata temporis, tableau, dotations générées en brouillard « générée », cessions / rebuts, reprise de l'existant. *Fin : pgTAP sur un cas calculé à la main ; UI.*
+- [x] **L3-02 Stocks** — stock final par compte, variations générées. *Fin : pgTAP ; UI.*
+- [x] **L3-03 Provisions** — balance âgée → taux par tiers, dotation/reprise par différence, provisions pour risques, tableau. *Fin : pgTAP ; UI.*
+- [x] **L3-04 Régularisations** — CAP, PAR, CCA, PCA, prorata au jour, écriture 31/12 et extourne 01/01. *Fin : pgTAP ; UI.*
+- [x] **L3-05 Écarts de conversion** — lignes en devises non lettrées, cours de clôture, 478/479 + provision, extourne. *Fin : pgTAP ; UI.*
+- [x] **L3-06 Contrôles de clôture** — bloquants et alertes levables avec commentaire ; assistant. *Fin : pgTAP ; UI.*
+- [x] **L3-07 Fiscalité** — tableau de passage paramétrable, IS = max(taux × résultat fiscal, minimum), acomptes 4492, écriture d'IS. *Fin : pgTAP.*
+- [x] **L3-08 États financiers** — moteur comptes → postes (plages, sens, versionné), bilan, compte de résultat, TFT, notes, fiches R, contrôles de cohérence, PDF. *Fin : pgTAP (bilan équilibré sur la démo) ; pytest PDF.*
 - [ ] **L3-09 Modèle Excel DGI** — cartographie des cellules (table versionnée), remplissage `openpyxl keep_vba`, test sur la démo. *Fin : pytest ; fichier produit ouvrable, macros présentes.*
-- [ ] **L3-10 Arrêté et N+1** — clôture provisoire / réouverture, arrêté définitif (double confirmation, archivage avec empreintes, lecture seule), à-nouveaux (provisoires recalculés), affectation du résultat. *Fin : pgTAP ; UI.*
+- [x] **L3-10 Arrêté et N+1** — clôture provisoire / réouverture, arrêté définitif (double confirmation, archivage avec empreintes, lecture seule), à-nouveaux (provisoires recalculés), affectation du résultat. *Fin : pgTAP ; UI.*
 - [ ] **L3-11 Démo clôturée** — exercice 2026 de démo arrêté, 2027 ouvert. *Fin : parcours complet rejouable.*
 - [ ] **L3-12 Livraison finale** — `docs/livraison-lot3.md`, scénario de recette global, fusion.

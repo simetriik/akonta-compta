@@ -51,3 +51,8 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Contexte** : la ligne de banque du journal des à-nouveaux n'a pas de contrepartie dans un relevé ; elle correspond au solde d'ouverture du premier relevé.
 - **Choix** : les lignes du journal AN ne figurent pas parmi les lignes comptables à pointer ; les suspens antérieurs au premier relevé se saisissent comme écritures de l'exercice (ou s'importent) et se pointent normalement.
 - **Raison** : évite un écart permanent égal au solde d'ouverture.
+
+## D-011 — 2026-10-25 — Prorata temporis sur base 360 jours
+- **Contexte** : §6 et §10.8 exigent le prorata temporis des amortissements et le prorata « au jour » des régularisations, sans préciser la base.
+- **Choix** : base 360 jours (mois de 30 jours), fonction `days360` ; première annuité = base × taux × jours/360 ; dernier exercice = solde. Dégressif : taux linéaire × coefficient (1,5 par défaut) sur la valeur nette, bascule en linéaire sur la durée restante dès qu'il devient supérieur. Les extournes (régularisations, écarts de conversion) sont générées au 1er janvier N+1 en brouillard dès que l'écriture de N est validée et que N+1 existe.
+- **Raison** : convention la plus répandue dans les cabinets de la zone et conforme au guide SYSCOHADA (prorata en jours ou en mois admis) ; modifiable en un point.

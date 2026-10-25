@@ -11,6 +11,7 @@ import 'admin/users_screen.dart';
 import 'auth/login_screen.dart';
 import 'auth/mfa_screens.dart';
 import 'consultation/consultation_screen.dart';
+import 'closing/closing_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'documents/documents_screen.dart';
 import 'entities/entities_screen.dart';
@@ -19,6 +20,7 @@ import 'entries/entry_editor_screen.dart';
 import 'entities/entity_detail_screen.dart';
 import 'entities/entity_wizard_screen.dart';
 import 'imports/import_screen.dart';
+import 'inventory/inventory_screen.dart';
 import 'lettering/lettering_screen.dart';
 import 'reconciliation/reconciliation_screen.dart';
 import 'references/references_screen.dart';
@@ -84,6 +86,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/pieces', builder: (_, _) => const DocumentsScreen()),
           GoRoute(path: '/lettrage', builder: (_, _) => const LetteringScreen()),
           GoRoute(path: '/rapprochement', builder: (_, _) => const ReconciliationScreen()),
+          GoRoute(path: '/inventaire', builder: (_, _) => const InventoryScreen()),
+          GoRoute(path: '/cloture', builder: (_, _) => const ClosingScreen()),
           GoRoute(path: '/referentiels', builder: (_, _) => const ReferencesScreen()),
           GoRoute(path: '/import', builder: (_, _) => const ImportScreen()),
           GoRoute(path: '/cabinet', builder: (_, _) => const CabinetScreen()),

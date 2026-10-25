@@ -22,6 +22,8 @@ class AppShell extends ConsumerWidget {
     (route: '/pieces', icon: Icons.attach_file_outlined, label: 'Pièces', perm: 'documents.attach'),
     (route: '/lettrage', icon: Icons.link_outlined, label: 'Lettrage', perm: 'lettering.manage'),
     (route: '/rapprochement', icon: Icons.account_balance_outlined, label: 'Rapprochement', perm: 'reconciliation.manage'),
+    (route: '/inventaire', icon: Icons.inventory_2_outlined, label: 'Inventaire', perm: 'inventory.prepare'),
+    (route: '/cloture', icon: Icons.lock_clock_outlined, label: 'Clôture', perm: 'closing.provisional'),
     (route: '/referentiels', icon: Icons.account_tree_outlined, label: 'Référentiels', perm: 'references.manage'),
     (route: '/import', icon: Icons.upload_file_outlined, label: 'Import Perfecto', perm: 'import.perfecto'),
     (route: '/cabinet', icon: Icons.business_outlined, label: 'Cabinet', perm: 'cabinet.settings'),
