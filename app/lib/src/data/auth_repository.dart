@@ -47,14 +47,14 @@ class AuthRepository {
 
   Future<void> updatePassword(String newPassword) => _auth.updateUser(UserAttributes(password: newPassword));
 
+  /// Facteurs lus sur l'utilisateur courant : `listFactors()` rafraîchirait le jeton à chaque appel,
+  /// ce qui émet un événement d'authentification et relancerait la redirection en boucle.
+  List<Factor> get _verifiedTotpFactors =>
+      (_auth.currentUser?.factors ?? const <Factor>[]).where((f) => f.factorType == FactorType.totp && f.status == FactorStatus.verified).toList();
+
   Future<MfaStatus> mfaStatus() async {
     final aal = _auth.mfa.getAuthenticatorAssuranceLevel();
-    final factors = await _auth.mfa.listFactors();
-    return MfaStatus(
-      currentLevel: aal.currentLevel,
-      nextLevel: aal.nextLevel,
-      hasVerifiedTotp: factors.totp.any((f) => f.status == FactorStatus.verified),
-    );
+    return MfaStatus(currentLevel: aal.currentLevel, nextLevel: aal.nextLevel, hasVerifiedTotp: _verifiedTotpFactors.isNotEmpty);
   }
 
   /// Démarre l'enrôlement TOTP : renvoie l'identifiant du facteur, le secret et l'URI otpauth.
@@ -65,18 +65,13 @@ class AuthRepository {
   Future<void> verifyTotp({required String factorId, required String code}) =>
       _auth.mfa.challengeAndVerify(factorId: factorId, code: code.trim());
 
-  Future<String?> firstVerifiedTotpFactorId() async {
-    final factors = await _auth.mfa.listFactors();
-    for (final f in factors.totp) {
-      if (f.status == FactorStatus.verified) return f.id;
-    }
-    return null;
-  }
+  Future<String?> firstVerifiedTotpFactorId() async => _verifiedTotpFactors.firstOrNull?.id;
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => AuthRepository(ref.watch(supabaseClientProvider)));
 
 final mfaStatusProvider = FutureProvider<MfaStatus?>((ref) async {
+  ref.watch(authStateProvider);   // niveau aal : recalculé après vérification TOTP
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
   return ref.watch(authRepositoryProvider).mfaStatus();

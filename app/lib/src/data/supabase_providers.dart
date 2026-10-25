@@ -16,11 +16,15 @@ final currentUserProvider = Provider<User?>((ref) {
   return ref.watch(supabaseClientProvider).auth.currentUser;
 });
 
+/// Identifiant de l'utilisateur connecté : ne change qu'à la connexion / déconnexion, pas à chaque
+/// rafraîchissement de jeton (évite de recharger profil et permissions en boucle).
+final currentUserIdProvider = Provider<String?>((ref) => ref.watch(currentUserProvider)?.id);
+
 /// Profil du collaborateur connecté (table profiles, RLS : son cabinet).
 final currentProfileProvider = FutureProvider<Profile?>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return null;
-  final row = await ref.watch(supabaseClientProvider).from('profiles').select().eq('id', user.id).maybeSingle();
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == null) return null;
+  final row = await ref.watch(supabaseClientProvider).from('profiles').select().eq('id', userId).maybeSingle();
   return row == null ? null : Profile.fromJson(row);
 });
 
@@ -33,13 +37,13 @@ final currentCabinetProvider = FutureProvider<Cabinet?>((ref) async {
 
 /// Permissions de l'utilisateur : affectations → rôles → permissions unitaires.
 final permissionsProvider = FutureProvider<PermissionSet>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return PermissionSet.empty;
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == null) return PermissionSet.empty;
   final client = ref.watch(supabaseClientProvider);
   final assignments = await client
       .from('assignments')
       .select('role_id, entity_id, roles(code, name, requires_mfa, grants_all_entities, accounting_access)')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
   final roles = assignments.map((j) => AssignedRole.fromJson(j)).toList();
   if (roles.isEmpty) return PermissionSet.empty;
   final roleIds = roles.map((r) => r.roleId).toSet().toList();
@@ -63,7 +67,7 @@ final permissionsProvider = FutureProvider<PermissionSet>((ref) async {
 
 /// Dossiers accessibles avec leurs indicateurs (fonction SQL entity_dashboard).
 final entityDashboardProvider = FutureProvider<List<EntitySummary>>((ref) async {
-  ref.watch(currentUserProvider);
+  ref.watch(currentUserIdProvider);
   final rows = await ref.watch(supabaseClientProvider).rpc('entity_dashboard') as List<dynamic>;
   return rows.map((j) => EntitySummary.fromJson(j as Map<String, dynamic>)).toList();
 });

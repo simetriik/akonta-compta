@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/auth_repository.dart';
 import '../data/supabase_providers.dart';
@@ -26,10 +27,13 @@ import 'reconciliation/reconciliation_screen.dart';
 import 'references/references_screen.dart';
 import 'shell/app_shell.dart';
 
-/// Rafraîchit le routeur à chaque changement de session.
+/// Rafraîchit le routeur quand la session change de nature (connexion, déconnexion, TOTP vérifié),
+/// pas à chaque rafraîchissement de jeton.
 class _AuthListenable extends ChangeNotifier {
-  _AuthListenable(Stream<dynamic> stream) {
-    _sub = stream.listen((_) => notifyListeners());
+  _AuthListenable(Stream<AuthState> stream) {
+    _sub = stream.listen((state) {
+      if (state.event != AuthChangeEvent.tokenRefreshed) notifyListeners();
+    });
   }
 
   late final StreamSubscription<dynamic> _sub;
