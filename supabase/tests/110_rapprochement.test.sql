@@ -1,6 +1,6 @@
 -- Module 7 — Rapprochement bancaire : import de relevé, propositions ± 5 jours, pointage n-n, état, écriture depuis le relevé, état figé (§5, §10.7).
 begin;
-select plan(18);
+select plan(19);
 
 select tests.create_cabinet('Cabinet A') as id \gset a_
 select tests.create_user('assist@a.test', :'a_id') as id \gset assist_
@@ -52,6 +52,13 @@ select is((select bank_balance from public.reconciliation_state(:'bq_id', '2026-
 select is((select outstanding_payments from public.reconciliation_state(:'bq_id', '2026-01-31')), 200000::bigint, 'décaissement non débité : chèque 200 000');
 select is((select unmatched_bank_debits from public.reconciliation_state(:'bq_id', '2026-01-31')), 16500::bigint, 'frais bancaires non comptabilisés 16 500');
 select is((select difference from public.reconciliation_state(:'bq_id', '2026-01-31')), 0::bigint, 'écart nul : banque + encaissements non crédités - décaissements non débités + débits banque non comptabilisés = comptabilité');
+
+-- 3 bis. Sans solde de clôture : reconstitution depuis le solde d'ouverture et les lignes
+select tests.clear_auth();
+update public.bank_statements set closing_balance = null where id = :'st_id';
+select is((select bank_balance from public.reconciliation_state(:'bq_id', '2026-01-31')), 1283500::bigint, 'solde banque reconstitué : ouverture + lignes (1 000 000 + 500 000 - 200 000 - 16 500)');
+update public.bank_statements set closing_balance = 1283500 where id = :'st_id';
+select tests.authenticate_as(:'assist_id');
 
 -- 4. Écriture depuis la ligne de frais, validée et pointée
 select public.entry_from_statement_line((select id from public.bank_statement_lines where statement_id = :'st_id' and line_no = 3), (select id from public.accounts where entity_id = :'e1_id' and code = '6311000'), null, 'Frais de tenue de compte janvier', true) as id \gset fee_

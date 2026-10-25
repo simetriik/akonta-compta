@@ -40,8 +40,8 @@ Arborescence cible : `supabase/` (config, migrations, seed, tests pgTAP, functio
 - [x] **L2-03 UI lettrage** — écran par compte de tiers, sélection, propositions à confirmer, délettrage. *Fin : tests widgets.*
 - [x] **L2-04 Import de relevés** — gabarits de colonnes mémorisés par banque, import CSV/Excel. *Fin : pgTAP + tests Deno.*
 - [x] **L2-05 Rapprochement** — pointage 1-1 et n-n, propositions (montant, date ± 5 j), état mensuel écart 0, création d'écriture depuis une ligne, état figé archivé en PDF. *Fin : pgTAP + widgets + PDF.*
-- [ ] **L2-06 Démo enrichie** — relevés, factures, règlements avec retenues. *Fin : rapprochement de démo à écart 0.*
-- [ ] **L2-07 Livraison lot 2** — `docs/livraison-lot2.md`, fusion. 
+- [x] **L2-06 Démo enrichie** — relevés, factures, règlements avec retenues. *Fin : rapprochement de démo à écart 0.*
+- [x] **L2-07 Livraison lot 2** — `docs/livraison-lot2.md`, fusion. 
 
 ## Lot 3 — modules 8 et 9
 

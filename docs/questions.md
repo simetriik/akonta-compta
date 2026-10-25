@@ -11,3 +11,7 @@
 ## Q-003 — Numérotation Perfecto
 - **Question** : les numéros de pièce Perfecto sont à 6 chiffres dans l'export fourni (`000001`), les comptes à 6 chiffres aussi ; la conception parle de 7 chiffres. Quelle longueur de compte pour les dossiers d'ABC ?
 - **Hypothèse appliquée** : longueur par défaut 7 au niveau cabinet, modifiable par entité (§3.3) ; l'import complète à droite (D-004).
+
+## Q-004 — Formats des relevés bancaires des clients
+- **Question** : Ecobank, BOA, UBA, Orabank… fournissent-ils des exports CSV, Excel natif ou PDF seulement ?
+- **Hypothèse appliquée** : CSV / texte tabulé, gabarit de colonnes mémorisé par banque. Les relevés `.xlsx` sont à exporter en CSV depuis le tableur ; les PDF restent hors V1 (§10.7).

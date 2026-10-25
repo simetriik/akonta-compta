@@ -124,10 +124,19 @@ declare v_j public.journals%rowtype; v_book bigint; v_bank bigint; v_dep bigint;
 begin
   select * into v_j from public.journals where id = p_journal;
   v_book := public.account_balance(v_j.treasury_account_id, p_as_of);
+  -- Solde de clôture d''un relevé terminé à la date ; sinon reconstitué : dernier solde d''ouverture connu + lignes jusqu''à la date
   select s.closing_balance into v_bank from public.bank_statements s where s.journal_id = p_journal and s.period_to <= p_as_of and s.closing_balance is not null order by s.period_to desc limit 1;
   if v_bank is null then
-    select coalesce(sum(l.credit - l.debit), 0) into v_bank from public.bank_statement_lines l join public.bank_statements s on s.id = l.statement_id
-     where s.journal_id = p_journal and l.operation_date <= p_as_of;
+    select coalesce(s.opening_balance, 0) + coalesce((select sum(l.credit - l.debit) from public.bank_statement_lines l join public.bank_statements s2 on s2.id = l.statement_id
+                                                        where s2.journal_id = p_journal and s2.period_from >= s.period_from and l.operation_date <= p_as_of), 0)
+      into v_bank
+      from public.bank_statements s
+     where s.journal_id = p_journal and s.period_from <= p_as_of and s.opening_balance is not null
+     order by s.period_from desc limit 1;
+    if v_bank is null then
+      select coalesce(sum(l.credit - l.debit), 0) into v_bank from public.bank_statement_lines l join public.bank_statements s on s.id = l.statement_id
+       where s.journal_id = p_journal and l.operation_date <= p_as_of;
+    end if;
   end if;
   -- Encaissements comptabilisés non crédités par la banque / décaissements non débités
   select coalesce(sum(debit), 0), coalesce(sum(credit), 0) into v_dep, v_out from public.unmatched_book_lines(p_journal, p_as_of);
