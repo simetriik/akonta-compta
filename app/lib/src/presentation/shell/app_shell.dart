@@ -16,6 +16,7 @@ class AppShell extends ConsumerWidget {
 
   static const destinations = [
     (route: '/', icon: Icons.dashboard_outlined, label: 'Tableau de bord', perm: null),
+    (route: '/dossiers', icon: Icons.folder_copy_outlined, label: 'Dossiers', perm: 'entities.manage'),
     (route: '/saisie', icon: Icons.edit_note_outlined, label: 'Saisie', perm: 'entries.draft'),
     (route: '/consultation', icon: Icons.menu_book_outlined, label: 'Consultation', perm: 'ledger.read'),
     (route: '/pieces', icon: Icons.attach_file_outlined, label: 'Pièces', perm: 'documents.attach'),

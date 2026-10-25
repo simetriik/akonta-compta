@@ -11,6 +11,9 @@ import 'admin/users_screen.dart';
 import 'auth/login_screen.dart';
 import 'auth/mfa_screens.dart';
 import 'dashboard/dashboard_screen.dart';
+import 'entities/entities_screen.dart';
+import 'entities/entity_detail_screen.dart';
+import 'entities/entity_wizard_screen.dart';
 import 'shell/app_shell.dart';
 
 /// Rafraîchit le routeur à chaque changement de session.
@@ -63,6 +66,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _, child) => AppShell(child: child),
         routes: [
           GoRoute(path: '/', builder: (_, _) => const DashboardScreen()),
+          GoRoute(path: '/dossiers', builder: (_, _) => const EntitiesScreen()),
+          GoRoute(path: '/dossiers/nouveau', builder: (_, _) => const EntityWizardScreen()),
+          GoRoute(path: '/dossiers/:id', builder: (_, state) => EntityDetailScreen(entityId: state.pathParameters['id']!)),
           GoRoute(path: '/saisie', builder: (_, _) => const PlaceholderScreen(title: 'Saisie')),
           GoRoute(path: '/consultation', builder: (_, _) => const PlaceholderScreen(title: 'Consultation')),
           GoRoute(path: '/pieces', builder: (_, _) => const PlaceholderScreen(title: 'Pièces justificatives')),
