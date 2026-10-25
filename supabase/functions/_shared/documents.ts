@@ -1,6 +1,6 @@
 // Construction des charges utiles du service de documents à partir des résultats des fonctions SQL de consultation.
 
-export type DocumentKind = "trial_balance" | "general_ledger" | "journal" | "aged_balance";
+export type DocumentKind = "trial_balance" | "general_ledger" | "journal" | "aged_balance" | "reconciliation";
 export type DocumentFormat = "pdf" | "xlsx";
 
 export interface ExportRequest {
@@ -29,6 +29,7 @@ const TITLES: Record<DocumentKind, string> = {
   general_ledger: "Grand livre",
   journal: "Livre-journal",
   aged_balance: "Balance âgée",
+  reconciliation: "État de rapprochement bancaire",
 };
 
 /** Routes du service Python et nom de fichier par type et format. */
@@ -40,6 +41,7 @@ export function servicePath(kind: DocumentKind, format: DocumentFormat): { path:
     case "general_ledger": return { path: `${prefix}/general-ledger`, filename: `grand-livre.${ext}` };
     case "journal": return format === "pdf" ? { path: "/pdf/journal", filename: "journal.pdf" } : null;
     case "aged_balance": return format === "pdf" ? { path: "/pdf/aged-balance", filename: "balance-agee.pdf" } : null;
+    case "reconciliation": return format === "pdf" ? { path: "/pdf/reconciliation", filename: "rapprochement.pdf" } : null;
   }
 }
 
@@ -48,7 +50,7 @@ export function validateRequest(r: Partial<ExportRequest>): string | null {
   if (!r.kind || !(r.kind in TITLES)) return "kind invalide";
   if (r.format !== "pdf" && r.format !== "xlsx") return "format invalide (pdf | xlsx)";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(r.from ?? "") || !/^\d{4}-\d{2}-\d{2}$/.test(r.to ?? "")) return "from et to au format AAAA-MM-JJ";
-  if (r.kind === "journal" && !r.journal_id) return "journal_id requis pour un livre-journal";
+  if ((r.kind === "journal" || r.kind === "reconciliation") && !r.journal_id) return "journal_id requis pour un livre-journal ou un rapprochement";
   if (!servicePath(r.kind, r.format)) return `format ${r.format} indisponible pour ${r.kind}`;
   return null;
 }
@@ -74,5 +76,7 @@ export function buildPayload(r: ExportRequest, header: HeaderInfo, rows: Record<
       return { ...base, lines: rows.map((l) => ({ ...l, reference: l.reference ?? null, third_party_code: l.third_party_code ?? null, letter_code: l.letter_code ?? null })) };
     case "journal":
       return { ...base, ...extra, lines: rows };
+    case "reconciliation":
+      return { ...base, ...extra };
   }
 }

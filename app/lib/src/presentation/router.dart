@@ -19,6 +19,8 @@ import 'entries/entry_editor_screen.dart';
 import 'entities/entity_detail_screen.dart';
 import 'entities/entity_wizard_screen.dart';
 import 'imports/import_screen.dart';
+import 'lettering/lettering_screen.dart';
+import 'reconciliation/reconciliation_screen.dart';
 import 'references/references_screen.dart';
 import 'shell/app_shell.dart';
 
@@ -80,6 +82,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/saisie/:id', builder: (_, state) => EntryEditorScreen(entryId: state.pathParameters['id']!)),
           GoRoute(path: '/consultation', builder: (_, _) => const ConsultationScreen()),
           GoRoute(path: '/pieces', builder: (_, _) => const DocumentsScreen()),
+          GoRoute(path: '/lettrage', builder: (_, _) => const LetteringScreen()),
+          GoRoute(path: '/rapprochement', builder: (_, _) => const ReconciliationScreen()),
           GoRoute(path: '/referentiels', builder: (_, _) => const ReferencesScreen()),
           GoRoute(path: '/import', builder: (_, _) => const ImportScreen()),
           GoRoute(path: '/cabinet', builder: (_, _) => const CabinetScreen()),

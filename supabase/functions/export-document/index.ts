@@ -56,6 +56,26 @@ Deno.serve(async (req) => {
       const res = await caller.rpc("aged_balance", { p_entity: r.entity_id, p_as_of: r.to, p_side: r.side ?? "debit" });
       rows = res.data ?? []; rpcError = res.error; extra = { side: r.side ?? "debit" }; break;
     }
+    case "reconciliation": {
+      const state = await caller.rpc("reconciliation_state", { p_journal: r.journal_id, p_as_of: r.to });
+      rpcError = state.error;
+      const st = (state.data as Record<string, number>[] | null)?.[0];
+      const book = await caller.rpc("unmatched_book_lines", { p_journal: r.journal_id, p_until: r.to });
+      const bank = await caller.rpc("unmatched_statement_lines", { p_journal: r.journal_id, p_until: r.to });
+      const { data: j } = await caller.from("journals").select("code, label").eq("id", r.journal_id!).single();
+      const bookLines = (book.data ?? []) as Record<string, unknown>[];
+      const bankLines = (bank.data ?? []) as Record<string, unknown>[];
+      extra = {
+        journal_code: j?.code ?? "", journal_label: j?.label ?? "", as_of: r.to,
+        book_balance: st?.book_balance ?? 0, bank_balance: st?.bank_balance ?? 0, difference: st?.difference ?? 0,
+        deposits_in_transit: bookLines.filter((l) => (l.debit as number) > 0).map((l) => ({ date: l.entry_date, label: l.label, reference: l.reference ?? null, amount: l.debit })),
+        outstanding_payments: bookLines.filter((l) => (l.credit as number) > 0).map((l) => ({ date: l.entry_date, label: l.label, reference: l.reference ?? null, amount: l.credit })),
+        unmatched_bank_credits: bankLines.filter((l) => (l.credit as number) > 0).map((l) => ({ date: l.operation_date, label: l.label, reference: l.reference ?? null, amount: l.credit })),
+        unmatched_bank_debits: bankLines.filter((l) => (l.debit as number) > 0).map((l) => ({ date: l.operation_date, label: l.label, reference: l.reference ?? null, amount: l.debit })),
+      };
+      rows = [];
+      break;
+    }
   }
   if (rpcError) return error(rpcError.message, rpcError.message.includes("Permission") ? 403 : 500);
 
