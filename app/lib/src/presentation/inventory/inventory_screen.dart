@@ -171,7 +171,7 @@ class _AssetDialogState extends ConsumerState<AssetDialog> {
                 displayStringForOption: (a) => '${a.code} ${a.label}',
                 optionsBuilder: (v) => accounts.where((a) => v.text.isNotEmpty && (a.code.startsWith(v.text) || a.label.toLowerCase().contains(v.text.toLowerCase()))).take(12),
                 onSelected: (a) => _accountId = a.id,
-                fieldViewBuilder: (c, ctrl, f, _) => TextField(controller: ctrl, focusNode: f, decoration: const InputDecoration(labelText: 'Compte d\'immobilisation (classe 2, ex. 2451)')),
+                fieldViewBuilder: (c, ctrl, f, _) => TextField(controller: ctrl, focusNode: f, onChanged: (v) => _accountId = matchAccountCode(accounts, v)?.id ?? _accountId, decoration: const InputDecoration(labelText: 'Compte d\'immobilisation (classe 2, ex. 2451)')),
               ),
             const SizedBox(height: 8),
             Row(children: [
@@ -599,7 +599,7 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
             displayStringForOption: (a) => '${a.code} ${a.label}',
             optionsBuilder: (v) => accounts.where((a) => v.text.isNotEmpty && (a.classNo == 6 || a.classNo == 7) && (a.code.startsWith(v.text) || a.label.toLowerCase().contains(v.text.toLowerCase()))).take(12),
             onSelected: (a) => _account = a.id,
-            fieldViewBuilder: (c, ctrl, f, _) => TextField(controller: ctrl, focusNode: f, decoration: const InputDecoration(labelText: 'Compte de charge ou de produit')),
+            fieldViewBuilder: (c, ctrl, f, _) => TextField(controller: ctrl, focusNode: f, onChanged: (v) => _account = matchAccountCode(accounts, v)?.id ?? _account, decoration: const InputDecoration(labelText: 'Compte de charge ou de produit')),
           ),
           const SizedBox(height: 8),
           Autocomplete<Account>(
@@ -607,7 +607,7 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
             initialValue: TextEditingValue(text: accounts.where((a) => a.code.startsWith(defaultCounterpart)).firstOrNull?.code ?? ''),
             optionsBuilder: (v) => accounts.where((a) => v.text.isNotEmpty && a.classNo == 4 && (a.code.startsWith(v.text) || a.label.toLowerCase().contains(v.text.toLowerCase()))).take(12),
             onSelected: (a) => _counterpart = a.id,
-            fieldViewBuilder: (c, ctrl, f, _) => TextField(controller: ctrl, focusNode: f, decoration: InputDecoration(labelText: 'Compte de régularisation (défaut $defaultCounterpart)')),
+            fieldViewBuilder: (c, ctrl, f, _) => TextField(controller: ctrl, focusNode: f, onChanged: (v) => _counterpart = matchAccountCode(accounts, v)?.id ?? _counterpart, decoration: InputDecoration(labelText: 'Compte de régularisation (défaut $defaultCounterpart)')),
           ),
           const SizedBox(height: 8),
           Row(children: [

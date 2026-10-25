@@ -51,8 +51,10 @@ class ReconciliationRepository {
     return ReconciliationStateModel.fromJson(rows.first as Map<String, dynamic>);
   }
 
-  Future<String> entryFromLine(int lineId, {required String accountId, String? thirdPartyId, String? label, bool validate = true}) async =>
-      (await _client.rpc('entry_from_statement_line', params: {'p_line': lineId, 'p_account': accountId, 'p_third_party': thirdPartyId, 'p_label': label, 'p_validate': validate})) as String;
+  /// Crée (et valide puis pointe) l'écriture d'une ligne de relevé ; [entryDate] permet de la dater
+  /// dans une période ouverte quand celle de l'opération est verrouillée.
+  Future<String> entryFromLine(int lineId, {required String accountId, String? thirdPartyId, String? label, DateTime? entryDate, bool validate = true}) async =>
+      (await _client.rpc('entry_from_statement_line', params: {'p_line': lineId, 'p_account': accountId, 'p_third_party': thirdPartyId, 'p_label': label, 'p_validate': validate, 'p_entry_date': entryDate == null ? null : _d(entryDate)})) as String;
 
   Future<String> finalize(String journalId, DateTime asOf) async =>
       (await _client.rpc('finalize_reconciliation', params: {'p_journal': journalId, 'p_as_of': _d(asOf)})) as String;

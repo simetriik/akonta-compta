@@ -219,10 +219,10 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
   Future<void> _createEntry(StatementLine l) async {
     final accounts = (ref.read(accountsProvider(widget.entity.id)).value ?? const <Account>[]).where((a) => a.allowPosting && a.isActive && a.classNo != 5).toList();
     final thirdParties = ref.read(thirdPartiesProvider(widget.entity.id)).value ?? const <ThirdParty>[];
-    final result = await showDialog<(Account, ThirdParty?, String)>(context: context, builder: (_) => _EntryFromLineDialog(line: l, accounts: accounts, thirdParties: thirdParties));
+    final result = await showDialog<(Account, ThirdParty?, String, DateTime)>(context: context, builder: (_) => _EntryFromLineDialog(line: l, accounts: accounts, thirdParties: thirdParties));
     if (result == null) return;
     try {
-      await ref.read(reconciliationRepositoryProvider).entryFromLine(l.id, accountId: result.$1.id, thirdPartyId: result.$2?.id, label: result.$3, validate: true);
+      await ref.read(reconciliationRepositoryProvider).entryFromLine(l.id, accountId: result.$1.id, thirdPartyId: result.$2?.id, label: result.$3, entryDate: result.$4, validate: true);
       ref.invalidate(entityDashboardProvider);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_french(e)), backgroundColor: AkColors.toCorrect));
@@ -338,6 +338,7 @@ class _EntryFromLineDialogState extends State<_EntryFromLineDialog> {
   Account? _account;
   ThirdParty? _tp;
   late final _label = TextEditingController(text: widget.line.label);
+  late final _date = TextEditingController(text: Fmt.date(widget.line.date));
 
   @override
   Widget build(BuildContext context) {
@@ -357,7 +358,23 @@ class _EntryFromLineDialogState extends State<_EntryFromLineDialog> {
               return widget.accounts.where((a) => a.code.startsWith(q) || a.label.toLowerCase().contains(q)).take(12);
             },
             onSelected: (a) => setState(() => _account = a),
-            fieldViewBuilder: (context, c, f, _) => TextField(controller: c, focusNode: f, autofocus: true, decoration: const InputDecoration(labelText: 'Compte de contrepartie (ex. 6311 frais bancaires)')),
+            fieldViewBuilder: (context, c, f, _) => TextField(
+              controller: c,
+              focusNode: f,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Compte de contrepartie (ex. 6318 autres frais bancaires)'),
+              onChanged: (v) {
+                final typed = matchAccountCode(widget.accounts, v);
+                if (typed != _account) setState(() => _account = typed);
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: const Key('entry-from-line-date'),
+            controller: _date,
+            decoration: const InputDecoration(labelText: 'Date de l\'écriture (période ouverte)', helperText: 'Par défaut la date de l\'opération ; à reporter dans une période ouverte si celle-ci est verrouillée.'),
+            onChanged: (_) => setState(() {}),
           ),
           if (_account?.isCollective ?? false) ...[
             const SizedBox(height: 8),
@@ -376,7 +393,12 @@ class _EntryFromLineDialogState extends State<_EntryFromLineDialog> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-        FilledButton(onPressed: _account == null || ((_account!.isCollective) && _tp == null) ? null : () => Navigator.pop(context, (_account!, _tp, _label.text.trim())), child: const Text('Créer et pointer')),
+        FilledButton(
+          onPressed: _account == null || ((_account!.isCollective) && _tp == null) || Fmt.parseDate(_date.text) == null
+              ? null
+              : () => Navigator.pop(context, (_account!, _tp, _label.text.trim(), Fmt.parseDate(_date.text)!)),
+          child: const Text('Créer et pointer'),
+        ),
       ],
     );
   }

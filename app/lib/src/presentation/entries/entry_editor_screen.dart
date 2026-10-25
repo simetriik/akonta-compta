@@ -293,6 +293,19 @@ class _LineRowState extends ConsumerState<_LineRow> {
   late final _debit = TextEditingController(text: Fmt.fcfa(widget.line.debit));
   late final _credit = TextEditingController(text: Fmt.fcfa(widget.line.credit));
 
+  /// Applique le compte choisi (liste ou code tapé) à la ligne.
+  void _selectAccount(DraftLine l, Account a) {
+    l.accountId = a.id;
+    l.accountCode = a.code;
+    l.accountLabel = a.label;
+    l.isCollective = a.isCollective;
+    if (!a.isCollective) {
+      l.thirdPartyId = null;
+      l.thirdPartyCode = '';
+    }
+    widget.onChanged();
+  }
+
   @override
   Widget build(BuildContext context) {
     final accounts = (ref.watch(accountsProvider(widget.entityId)).value ?? const <Account>[]).where((a) => a.isActive && a.allowPosting).toList();
@@ -313,24 +326,17 @@ class _LineRowState extends ConsumerState<_LineRow> {
               if (q.isEmpty) return const Iterable<Account>.empty();
               return accounts.where((a) => a.code.startsWith(q) || a.label.toLowerCase().contains(q)).take(12);
             },
-            onSelected: (a) {
-              l.accountId = a.id;
-              l.accountCode = a.code;
-              l.accountLabel = a.label;
-              l.isCollective = a.isCollective;
-              if (!a.isCollective) {
-                l.thirdPartyId = null;
-                l.thirdPartyCode = '';
-              }
-              widget.onChanged();
-            },
+            onSelected: (a) => _selectAccount(l, a),
             fieldViewBuilder: (context, controller, focus, onSubmit) => TextField(
               controller: controller,
               focusNode: focus,
               enabled: !widget.readOnly,
               decoration: InputDecoration(isDense: true, hintText: 'Numéro ou intitulé', errorText: controller.text.isNotEmpty && l.accountId == null ? 'Choisir dans la liste' : null),
               onChanged: (v) {
-                if (v.isEmpty) {
+                final typed = matchAccountCode(accounts, v);
+                if (typed != null) {
+                  _selectAccount(l, typed);
+                } else if (l.accountId != null) {
                   l.accountId = null;
                   l.accountCode = '';
                   widget.onChanged();

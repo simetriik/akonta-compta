@@ -125,7 +125,7 @@ class _CurrentEntitySelector extends ConsumerWidget {
             child: DropdownButton<String>(
               key: const Key('current-entity'),
               isExpanded: true,
-              value: entity?.id,
+              value: entities.any((e) => e.id == entity?.id) ? entity?.id : null,   // dossier absent de la liste (changement d'utilisateur)
               hint: const Text('Choisir un dossier', style: TextStyle(fontSize: 14)),
               items: [
                 for (final e in entities)

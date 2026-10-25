@@ -1,6 +1,6 @@
 -- Module 7 — Rapprochement bancaire : import de relevé, propositions ± 5 jours, pointage n-n, état, écriture depuis le relevé, état figé (§5, §10.7).
 begin;
-select plan(19);
+select plan(21);
 
 select tests.create_cabinet('Cabinet A') as id \gset a_
 select tests.create_user('assist@a.test', :'a_id') as id \gset assist_
@@ -71,6 +71,14 @@ select public.finalize_reconciliation(:'bq_id', '2026-01-31', :'st_id') as id \g
 select is((select status::text from public.reconciliations where id = :'rec_id'), 'final', 'état de rapprochement de janvier figé');
 select tests.clear_auth();
 select throws_ok(format('update public.reconciliations set book_balance = 1 where id = %L', :'rec_id'), '42501', null, 'état figé : intangible');
+
+-- 6. Écriture depuis le relevé datée dans une autre période (ligne d'opération d'une période verrouillée)
+select tests.authenticate_as(:'assist_id');
+select public.import_bank_statement(:'bq_id', '2026-02-01', '2026-02-28', '[{"date":"2026-02-02","label":"AGIOS DECOUVERT","debit":4200}]', 1283500, 1279300, null, 'releve-fevrier.csv') as id \gset st2_
+select public.entry_from_statement_line((select id from public.bank_statement_lines where statement_id = :'st2_id' and line_no = 1), (select id from public.accounts where entity_id = :'e1_id' and code = '6318000'), null, 'Agios', false, '2026-03-05') as id \gset ag_
+select is((select entry_date from public.entries where id = :'ag_id'), '2026-03-05'::date, 'écriture depuis le relevé datée à la date choisie');
+select is((select p.period_no from public.entries e join public.periods p on p.id = e.period_id where e.id = :'ag_id'), 3::smallint, 'rattachée à la période de la date choisie');
+select tests.clear_auth();
 
 select * from finish();
 rollback;

@@ -1,6 +1,16 @@
 /// Modèles du module 3 : comptes, tiers, journaux, modèles d'écritures, taux.
 library;
 
+/// Compte dont le code correspond exactement au texte saisi, ou au texte complété par des zéros
+/// à la longueur du plan de l'entité (saisie clavier : « 6318 » désigne 6318000).
+Account? matchAccountCode(Iterable<Account> accounts, String input) {
+  final q = input.trim();
+  if (q.isEmpty || !RegExp(r'^\d+$').hasMatch(q)) return null;
+  final length = accounts.isEmpty ? q.length : accounts.first.code.length;
+  final code = q.length < length ? q.padRight(length, '0') : q;
+  return accounts.where((a) => a.code == code).firstOrNull;
+}
+
 class Account {
   const Account({required this.id, required this.code, required this.label, required this.classNo, required this.normalSide, required this.isCollective, required this.isLetterable, required this.allowPosting, required this.isActive, this.parentId});
 

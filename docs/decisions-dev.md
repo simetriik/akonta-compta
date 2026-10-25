@@ -61,3 +61,8 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Contexte** : §10.9 et §13 demandent une cartographie des cellules du modèle Excel DGI, versionnée.
 - **Choix** : le modèle contient une feuille « champs fixes » (3 008 champs : code tableau, code ligne, libellé, cellule) utilisée par ses propres macros d'export XML. `scripts/generate_dgi_mappings.py` la lit, suit les formules de renvoi (ACTIF/PASSIF → BILAN) jusqu'aux cellules de saisie, ignore les totaux calculés et produit la migration `…0014_dgi_mappings.sql` (table `dgi_cell_mappings`, version `SN-2025`). La fonction SQL `dgi_cells` associe les postes des états générés et les champs d'identification ; le service Python écrit les cellules avec `keep_vba` sans jamais écraser une formule.
 - **Raison** : fidèle au modèle officiel, rejouable quand la DGI publie une nouvelle version (nouveau numéro de version, régénération).
+
+## D-013 — 2026-10-26 — Écriture créée depuis une ligne de relevé : date au choix
+- **Contexte** : une ligne de relevé peut concerner une période déjà verrouillée (agios découverts au rapprochement suivant). La fonction `entry_from_statement_line` datait l'écriture à la date d'opération et la base la refusait, sans issue pour l'utilisateur.
+- **Choix** : paramètre `p_entry_date` (défaut : date d'opération). L'application propose la date d'opération et laisse la reporter dans une période ouverte ; la ligne de relevé reste pointée avec l'écriture quelle que soit sa date. Aucune réouverture de période.
+- **Raison** : respecte l'immutabilité des périodes verrouillées (§11.2) tout en permettant de solder le rapprochement.
