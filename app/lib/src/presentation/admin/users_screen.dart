@@ -4,8 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme.dart';
 import '../../data/admin_repository.dart';
 import '../../domain/models.dart';
+import '../widgets/ak_widgets.dart';
 import '../widgets/async_view.dart';
 
 /// Utilisateurs et sécurité (administrateur technique) : invitation, import CSV eABC, désactivation (§10.1).
@@ -15,56 +17,55 @@ class UsersScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profiles = ref.watch(profilesProvider);
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('invite-user'),
-        onPressed: () => showDialog(context: context, builder: (_) => const InviteUserDialog()),
-        icon: const Icon(Icons.person_add_alt),
-        label: const Text('Inviter'),
-      ),
-      body: AsyncView(
-        value: profiles,
-        onRetry: () => ref.invalidate(profilesProvider),
-        builder: (list) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Row(
+    final t = context.ak;
+    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
+    return AsyncView(
+      value: profiles,
+      onRetry: () => ref.invalidate(profilesProvider),
+      builder: (list) => ListView(
+        padding: EdgeInsets.all(pad),
+        children: [
+          AkPageHead(
+            title: 'Collaborateurs',
+            subtitle: '${list.where((p) => p.isActive).length} actif${list.where((p) => p.isActive).length > 1 ? 's' : ''} sur ${list.length}',
+            actions: [
+              OutlinedButton.icon(
+                onPressed: () => _importCsv(context, ref),
+                icon: const Icon(Icons.upload_file_outlined, size: 18),
+                label: const Text('Importer un CSV eABC'),
+              ),
+              FilledButton.icon(
+                key: const Key('invite-user'),
+                onPressed: () => showDialog(context: context, builder: (_) => const InviteUserDialog()),
+                icon: const Icon(Icons.person_add_alt, size: 18),
+                label: const Text('Inviter'),
+              ),
+            ],
+          ),
+          const SizedBox(height: AkSpace.s4),
+          AkCard(
+            padding: EdgeInsets.zero,
+            clip: true,
+            child: Column(
               children: [
-                Text('Collaborateurs', style: Theme.of(context).textTheme.titleLarge),
-                const Spacer(),
-                OutlinedButton.icon(
-                  onPressed: () => _importCsv(context, ref),
-                  icon: const Icon(Icons.upload_file_outlined),
-                  label: const Text('Importer un CSV eABC'),
-                ),
+                for (var i = 0; i < list.length; i++) ...[
+                  if (i > 0) Divider(height: 1, color: t.border),
+                  _UserRow(
+                    profile: list[i],
+                    onToggle: (v) async {
+                      final p = list[i];
+                      final ok = v || await _confirm(context, 'Désactiver ${p.fullName.isEmpty ? p.email : p.fullName} ? Le compte est conservé (aucune suppression), la connexion devient impossible.');
+                      if (!ok) return;
+                      await ref.read(adminRepositoryProvider).setActive(p.id, v);
+                      ref.invalidate(profilesProvider);
+                    },
+                  ),
+                ],
+                if (list.isEmpty) const Padding(padding: EdgeInsets.all(AkSpace.s4), child: Text('Aucun collaborateur.')),
               ],
             ),
-            const SizedBox(height: 12),
-            Card(
-              child: Column(
-                children: [
-                  for (final p in list)
-                    ListTile(
-                      leading: CircleAvatar(child: Text(p.fullName.isNotEmpty ? p.fullName[0].toUpperCase() : '?')),
-                      title: Text(p.fullName.isEmpty ? p.email : p.fullName, style: TextStyle(decoration: p.isActive ? null : TextDecoration.lineThrough)),
-                      subtitle: Text([p.email, if (p.jobTitle != null) p.jobTitle!].join(' · ')),
-                      trailing: Switch(
-                        value: p.isActive,
-                        onChanged: (v) async {
-                          final ok = v || await _confirm(context, 'Désactiver ${p.fullName.isEmpty ? p.email : p.fullName} ? Le compte est conservé (aucune suppression), la connexion devient impossible.');
-                          if (!ok) return;
-                          await ref.read(adminRepositoryProvider).setActive(p.id, v);
-                          ref.invalidate(profilesProvider);
-                        },
-                      ),
-                    ),
-                  if (list.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Aucun collaborateur.')),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -104,6 +105,41 @@ class UsersScreen extends ConsumerWidget {
           ].join('\n')),
         ),
       ),
+    );
+  }
+}
+
+/// Ligne d'un collaborateur : avatar, identité, statut (icône + mot) et interrupteur d'activation.
+class _UserRow extends StatelessWidget {
+  const _UserRow({required this.profile, required this.onToggle});
+
+  final Profile profile;
+  final ValueChanged<bool> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    final p = profile;
+    final name = p.fullName.isEmpty ? p.email : p.fullName;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s2),
+      child: Row(children: [
+        AkAvatar(name),
+        const SizedBox(width: AkSpace.s3),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name, style: AkText.bodyStrong.copyWith(color: p.isActive ? t.text : t.textMuted, decoration: p.isActive ? null : TextDecoration.lineThrough)),
+            Text([p.email, if (p.jobTitle != null) p.jobTitle!].join(' · '), style: AkText.caption.copyWith(color: t.textMuted)),
+          ]),
+        ),
+        const SizedBox(width: AkSpace.s2),
+        if (p.isActive)
+          AkBadge(label: 'Actif', color: t.success, tint: t.successTint, icon: Icons.check_circle_outline)
+        else
+          AkBadge(label: 'Désactivé', color: t.textMuted, tint: t.surfaceSunken, icon: Icons.block),
+        const SizedBox(width: AkSpace.s2),
+        Switch(value: p.isActive, onChanged: onToggle),
+      ]),
     );
   }
 }
@@ -171,7 +207,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
               TextFormField(controller: _email, key: const Key('invite-email'), decoration: const InputDecoration(labelText: 'Adresse e-mail'), validator: validateEmail, keyboardType: TextInputType.emailAddress),
               const SizedBox(height: 10),
               TextFormField(controller: _job, decoration: const InputDecoration(labelText: 'Fonction (facultatif)')),
-              if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+              if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: AkText.body.copyWith(color: context.ak.danger))),
             ],
           ),
         ),

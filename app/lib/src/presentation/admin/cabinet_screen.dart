@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../data/admin_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
+import '../widgets/ak_widgets.dart';
 import '../widgets/async_view.dart';
 
 /// Espace de l'associé : paramètres du cabinet, rôles et permissions, affectations, piste d'audit.
@@ -14,13 +15,15 @@ class CabinetScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
     return DefaultTabController(
       length: 4,
       child: Column(
         children: [
-          const Material(
-            color: Colors.white,
-            child: TabBar(tabs: [Tab(text: 'Paramètres'), Tab(text: 'Rôles'), Tab(text: 'Affectations'), Tab(text: 'Piste d\'audit')]),
+          Padding(padding: EdgeInsets.fromLTRB(pad, pad, pad, AkSpace.s2), child: const Align(alignment: Alignment.centerLeft, child: AkPageHead(title: 'Cabinet', subtitle: 'Paramètres, rôles, affectations et piste d\'audit'))),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: pad),
+            child: const Align(alignment: Alignment.centerLeft, child: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [Tab(text: 'Paramètres'), Tab(text: 'Rôles'), Tab(text: 'Affectations'), Tab(text: 'Piste d\'audit')])),
           ),
           const Expanded(child: TabBarView(children: [CabinetSettingsTab(), RolesTab(), AssignmentsTab(), AuditTab()])),
         ],
@@ -56,16 +59,14 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
           _loaded = true;
         }
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0),
           children: [
-            Text('Paramètres du cabinet', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
+            AkCard(
+              child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text('Identité et sécurité', style: AkText.heading.copyWith(color: context.ak.text)),
+                    const SizedBox(height: 12),
                     TextField(controller: _name, decoration: const InputDecoration(labelText: 'Raison sociale')),
                     const SizedBox(height: 12),
                     Row(
@@ -91,7 +92,6 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
                       child: const Text('Enregistrer'),
                     ),
                   ],
-                ),
               ),
             ),
           ],
@@ -115,29 +115,40 @@ class RolesTab extends ConsumerWidget {
         value: perms,
         builder: (permList) {
           final visibleRoles = roleList.where((r) => r.code != 'tech_admin').toList();
+          final t = context.ak;
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(AkColors.sand),
-                columns: [const DataColumn(label: Text('Permission')), for (final r in visibleRoles) DataColumn(label: Text(r.name))],
-                rows: [
-                  for (final p in permList)
-                    DataRow(cells: [
-                      DataCell(Text(p.label)),
-                      for (final r in visibleRoles)
-                        DataCell(Checkbox(
-                          value: r.permissions.contains(p.code),
-                          onChanged: (v) async {
-                            await ref.read(adminRepositoryProvider).setRolePermission(r.id, p.code, v ?? false);
-                            ref.invalidate(rolesProvider);
-                            ref.invalidate(permissionsProvider);
-                          },
-                        )),
-                    ]),
-                ],
-              ),
+            padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0),
+            child: AkCard(
+              padding: EdgeInsets.zero,
+              clip: true,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
+                  child: Text('Rôles et permissions', style: AkText.heading.copyWith(color: t.text)),
+                ),
+                Divider(height: 1, color: t.border),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: [const DataColumn(label: Text('Permission')), for (final r in visibleRoles) DataColumn(label: Text(r.name))],
+                    rows: [
+                      for (final p in permList)
+                        DataRow(cells: [
+                          DataCell(Text(p.label)),
+                          for (final r in visibleRoles)
+                            DataCell(Checkbox(
+                              value: r.permissions.contains(p.code),
+                              onChanged: (v) async {
+                                await ref.read(adminRepositoryProvider).setRolePermission(r.id, p.code, v ?? false);
+                                ref.invalidate(rolesProvider);
+                                ref.invalidate(permissionsProvider);
+                              },
+                            )),
+                        ]),
+                    ],
+                  ),
+                ),
+              ]),
             ),
           );
         },
@@ -153,50 +164,50 @@ class AssignmentsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(assignmentsProvider);
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: 'reassign',
-            onPressed: () => showDialog(context: context, builder: (_) => const ReassignDialog()),
-            icon: const Icon(Icons.swap_horiz),
-            label: const Text('Réaffecter en masse'),
-          ),
-          const SizedBox(width: 12),
-          FloatingActionButton.extended(
-            heroTag: 'assign',
-            onPressed: () => showDialog(context: context, builder: (_) => const AssignmentDialog()),
-            icon: const Icon(Icons.add),
-            label: const Text('Affecter'),
-          ),
-        ],
-      ),
-      body: AsyncView(
-        value: data,
-        onRetry: () => ref.invalidate(assignmentsProvider),
-        builder: (list) {
-          final byEntity = <String, List<Assignment>>{};
-          for (final a in list) {
-            byEntity.putIfAbsent(a.entityName ?? 'Portée cabinet', () => []).add(a);
-          }
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              for (final e in byEntity.entries)
-                Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Column(
+    final t = context.ak;
+    return AsyncView(
+      value: data,
+      onRetry: () => ref.invalidate(assignmentsProvider),
+      builder: (list) {
+        final byEntity = <String, List<Assignment>>{};
+        for (final a in list) {
+          byEntity.putIfAbsent(a.entityName ?? 'Portée cabinet', () => []).add(a);
+        }
+        return ListView(
+          padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0),
+          children: [
+            Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, alignment: WrapAlignment.end, children: [
+              OutlinedButton.icon(
+                onPressed: () => showDialog(context: context, builder: (_) => const ReassignDialog()),
+                icon: const Icon(Icons.swap_horiz, size: 18),
+                label: const Text('Réaffecter en masse'),
+              ),
+              FilledButton.icon(
+                onPressed: () => showDialog(context: context, builder: (_) => const AssignmentDialog()),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Affecter'),
+              ),
+            ]),
+            const SizedBox(height: AkSpace.s3),
+            for (final e in byEntity.entries)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AkSpace.s3),
+                child: AkCard(
+                  padding: EdgeInsets.zero,
+                  clip: true,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 4), child: Text(e.key, style: const TextStyle(fontWeight: FontWeight.w600))),
+                      Padding(padding: const EdgeInsets.fromLTRB(AkSpace.s4, AkSpace.s3, AkSpace.s4, AkSpace.s1), child: Text(e.key, style: AkText.heading.copyWith(color: t.text))),
                       for (final a in e.value)
                         ListTile(
                           dense: true,
-                          title: Text(a.userName),
-                          subtitle: Text(a.roleName),
+                          title: Text(a.userName, style: AkText.body.copyWith(color: t.text)),
+                          subtitle: Text(a.roleName, style: AkText.caption.copyWith(color: t.textMuted)),
                           trailing: IconButton(
+                            tooltip: 'Retirer l\'affectation',
                             icon: const Icon(Icons.delete_outline),
                             onPressed: () async {
                               await ref.read(adminRepositoryProvider).removeAssignment(a.id);
@@ -206,12 +217,13 @@ class AssignmentsTab extends ConsumerWidget {
                         ),
                     ],
                   ),
+                  ),
                 ),
-              if (list.isEmpty) const Text('Aucune affectation.'),
-            ],
-          );
-        },
-      ),
+              ),
+            if (list.isEmpty) const Text('Aucune affectation.'),
+          ],
+        );
+      },
     );
   }
 }
@@ -265,7 +277,7 @@ class _AssignmentDialogState extends ConsumerState<AssignmentDialog> {
                 items: [for (final e in entities) DropdownMenuItem(value: e.id, child: Text(e.name))],
                 onChanged: (v) => setState(() => _entity = v),
               ),
-            if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+            if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: AkText.body.copyWith(color: context.ak.danger))),
           ],
         ),
       ),
@@ -367,10 +379,12 @@ class _AuditTabState extends ConsumerState<AuditTab> {
   @override
   Widget build(BuildContext context) {
     final cabinet = ref.watch(currentCabinetProvider).value;
+    final t = context.ak;
+    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: EdgeInsets.fromLTRB(pad, AkSpace.s3, pad, 0),
           child: Row(
             children: [
               SizedBox(
@@ -405,7 +419,7 @@ class _AuditTabState extends ConsumerState<AuditTab> {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                           content: Text(broken == null ? 'Chaîne SHA-256 intègre.' : 'Rupture détectée à l\'événement n° $broken !'),
-                          backgroundColor: broken == null ? AkColors.validated : AkColors.toCorrect,
+                          backgroundColor: broken == null ? t.success : t.danger,
                         ));
                       },
               ),
@@ -419,23 +433,36 @@ class _AuditTabState extends ConsumerState<AuditTab> {
               if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
               if (snap.hasError) return Center(child: Text('Erreur : ${snap.error}'));
               final events = snap.data ?? const [];
-              return ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: events.length,
-                separatorBuilder: (_, _) => const Divider(),
-                itemBuilder: (_, i) {
-                  final e = events[i];
-                  return ListTile(
-                    dense: true,
-                    leading: Text('${e.id}', style: const TextStyle(fontFamily: 'monospace')),
-                    title: Text('${e.action}${e.tableName != null ? ' · ${e.tableName}' : ''}'),
-                    subtitle: Text('${Fmt.date(e.occurredAt)} ${e.occurredAt.hour.toString().padLeft(2, '0')}:${e.occurredAt.minute.toString().padLeft(2, '0')} · ${e.actorName ?? 'système'} · ${e.hash.substring(0, 12)}…'),
-                    onTap: () => showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(title: Text('Événement ${e.id}'), content: SingleChildScrollView(child: SelectableText(e.payload.toString()))),
+              return ListView(
+                padding: EdgeInsets.all(pad),
+                children: [
+                  AkCard(
+                    padding: EdgeInsets.zero,
+                    clip: true,
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Column(children: [
+                      for (var i = 0; i < events.length; i++) ...[
+                        if (i > 0) Divider(height: 1, color: t.border),
+                        ListTile(
+                          dense: true,
+                          leading: Text('${events[i].id}', style: AkText.code.copyWith(color: t.textMuted)),
+                          title: Text('${events[i].action}${events[i].tableName != null ? ' · ${events[i].tableName}' : ''}', style: AkText.bodyStrong.copyWith(color: t.text)),
+                          subtitle: Text(
+                            '${Fmt.date(events[i].occurredAt)} ${events[i].occurredAt.hour.toString().padLeft(2, '0')}:${events[i].occurredAt.minute.toString().padLeft(2, '0')} · ${events[i].actorName ?? 'système'} · ${events[i].hash.substring(0, 12)}…',
+                            style: AkText.caption.copyWith(color: t.textMuted),
+                          ),
+                          onTap: () => showDialog(
+                            context: context,
+                            builder: (_) => AlertDialog(title: Text('Événement ${events[i].id}'), content: SingleChildScrollView(child: SelectableText(events[i].payload.toString(), style: AkText.code))),
+                          ),
+                        ),
+                      ],
+                      if (events.isEmpty) const Padding(padding: EdgeInsets.all(AkSpace.s4), child: Text('Aucun événement.')),
+                    ]),
                     ),
-                  );
-                },
+                  ),
+                ],
               );
             },
           ),

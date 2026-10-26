@@ -7,6 +7,7 @@ import '../../data/entities_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import '../widgets/async_view.dart';
+import '../widgets/ak_widgets.dart';
 import 'entity_form.dart';
 
 /// Dossier : fiche, dirigeants, exercices et périodes (verrouillage), historique.
@@ -18,6 +19,7 @@ class EntityDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final entity = ref.watch(entityProvider(entityId));
+    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
     return AsyncView(
       value: entity,
       onRetry: () => ref.invalidate(entityProvider(entityId)),
@@ -25,15 +27,17 @@ class EntityDetailScreen extends ConsumerWidget {
         length: 4,
         child: Column(
           children: [
-            Material(
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: Text(e.name, style: Theme.of(context).textTheme.titleLarge)),
-                  const TabBar(tabs: [Tab(text: 'Fiche'), Tab(text: 'Dirigeants'), Tab(text: 'Exercices et périodes'), Tab(text: 'Historique')]),
-                ],
+            Padding(
+              padding: EdgeInsets.fromLTRB(pad, pad, pad, 0),
+              child: AkPageHead(
+                title: e.name,
+                subtitle: (e.taxId == null || e.taxId!.isEmpty) ? null : 'IFU ${e.taxId}',
               ),
+            ),
+            const SizedBox(height: AkSpace.s2),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: pad),
+              child: const Align(alignment: Alignment.centerLeft, child: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [Tab(text: 'Fiche'), Tab(text: 'Dirigeants'), Tab(text: 'Exercices et périodes'), Tab(text: 'Historique')])),
             ),
             Expanded(
               child: TabBarView(children: [
@@ -83,39 +87,48 @@ class _DirectorsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final directors = ref.watch(directorsProvider(entity.id));
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showDialog(context: context, builder: (_) => DirectorDialog(entity: entity)),
-        icon: const Icon(Icons.person_add_alt),
-        label: const Text('Ajouter'),
-      ),
-      body: AsyncView(
-        value: directors,
-        builder: (list) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text('Dirigeants et membres du conseil (R3)', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(children: [
-                for (final d in list)
-                  ListTile(
-                    title: Text(d.fullName),
-                    subtitle: Text([d.position, if (d.nationality != null) d.nationality!, if (d.isBoardMember) 'membre du CA'].join(' · ')),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () async {
-                        await ref.read(entitiesRepositoryProvider).removeDirector(d.id);
-                        ref.invalidate(directorsProvider(entity.id));
-                      },
-                    ),
-                  ),
-                if (list.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Aucun dirigeant renseigné.')),
-              ]),
+    final t = context.ak;
+    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
+    return AsyncView(
+      value: directors,
+      builder: (list) => ListView(
+        padding: EdgeInsets.all(pad),
+        children: [
+          Row(children: [
+            Expanded(child: Text('Dirigeants et membres du conseil (R3)', style: AkText.heading.copyWith(color: t.text))),
+            FilledButton.icon(
+              onPressed: () => showDialog(context: context, builder: (_) => DirectorDialog(entity: entity)),
+              icon: const Icon(Icons.person_add_alt, size: 18),
+              label: const Text('Ajouter'),
             ),
-          ],
-        ),
+          ]),
+          const SizedBox(height: AkSpace.s3),
+          AkCard(
+            padding: EdgeInsets.zero,
+            clip: true,
+            child: Material(
+              type: MaterialType.transparency,
+              child: Column(children: [
+              for (var i = 0; i < list.length; i++) ...[
+                if (i > 0) Divider(height: 1, color: t.border),
+                ListTile(
+                  title: Text(list[i].fullName, style: AkText.bodyStrong.copyWith(color: t.text)),
+                  subtitle: Text([list[i].position, if (list[i].nationality != null) list[i].nationality!, if (list[i].isBoardMember) 'membre du CA'].join(' · '), style: AkText.caption.copyWith(color: t.textMuted)),
+                  trailing: IconButton(
+                    tooltip: 'Retirer',
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () async {
+                      await ref.read(entitiesRepositoryProvider).removeDirector(list[i].id);
+                      ref.invalidate(directorsProvider(entity.id));
+                    },
+                  ),
+                ),
+              ],
+              if (list.isEmpty) const Padding(padding: EdgeInsets.all(AkSpace.s4), child: Text('Aucun dirigeant renseigné.')),
+            ]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -181,23 +194,25 @@ class FiscalYearsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fys = ref.watch(fiscalYearsProvider(entity.id));
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('new-fiscal-year'),
-        onPressed: () => showDialog(context: context, builder: (_) => FiscalYearDialog(entity: entity, previous: fys.value?.lastOrNull)),
-        icon: const Icon(Icons.add),
-        label: const Text('Nouvel exercice'),
-      ),
-      body: AsyncView(
-        value: fys,
-        builder: (list) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            for (final fy in list.reversed) _FiscalYearCard(entity: entity, fiscalYear: fy),
-            if (list.isEmpty) const Text('Aucun exercice : créez le premier.'),
-          ],
-        ),
+    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
+    return AsyncView(
+      value: fys,
+      builder: (list) => ListView(
+        padding: EdgeInsets.all(pad),
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              key: const Key('new-fiscal-year'),
+              onPressed: () => showDialog(context: context, builder: (_) => FiscalYearDialog(entity: entity, previous: fys.value?.lastOrNull)),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Nouvel exercice'),
+            ),
+          ),
+          const SizedBox(height: AkSpace.s3),
+          for (final fy in list.reversed) _FiscalYearCard(entity: entity, fiscalYear: fy),
+          if (list.isEmpty) const Text('Aucun exercice : créez le premier.'),
+        ],
       ),
     );
   }
@@ -215,47 +230,60 @@ class _FiscalYearCard extends ConsumerWidget {
     final perms = ref.watch(permissionsProvider).value;
     final canUnlock = perms?.has('cabinet.settings') ?? false;
     final canLock = canUnlock || (entity.monthlyLockEnabled && (perms?.has('closing.provisional', entityId: entity.id) ?? false));
-    final color = switch (fiscalYear.status) { 'open' => AkColors.validated, 'closing' => AkColors.draft, _ => AkColors.ink };
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    final t = context.ak;
+    final (color, tint, icon) = switch (fiscalYear.status) {
+      'open' => (t.statusDraft, t.statusDraftTint, Icons.edit_note),
+      'closing' => (t.statusReview, t.statusReviewTint, Icons.hourglass_empty),
+      _ => (t.textMuted, t.surfaceSunken, Icons.lock_outline),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AkSpace.s3),
+      child: AkCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Text('Exercice ${fiscalYear.label}', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(width: 12),
-              Chip(label: Text(fiscalYear.statusLabel), backgroundColor: color.withValues(alpha: 0.12), side: BorderSide(color: color)),
-              const Spacer(),
-              Text('du ${Fmt.date(fiscalYear.startDate)} au ${Fmt.date(fiscalYear.endDate)}'),
+            Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: AkSpace.s3, runSpacing: AkSpace.s1, children: [
+              Text('Exercice ${fiscalYear.label}', style: AkText.heading.copyWith(color: t.text)),
+              AkBadge(label: fiscalYear.statusLabel, color: color, tint: tint, icon: icon),
+              Text('du ${Fmt.date(fiscalYear.startDate)} au ${Fmt.date(fiscalYear.endDate)}', style: AkText.table.copyWith(color: t.textMuted)),
             ]),
-            const SizedBox(height: 4),
-            Text([
-              if (fiscalYear.capital != null) 'Capital ${Fmt.fcfa(fiscalYear.capital, showZero: true)} FCFA',
-              if (fiscalYear.headcount != null) 'Effectif ${fiscalYear.headcount}',
-            ].join(' · ')),
-            const SizedBox(height: 12),
+            if (fiscalYear.capital != null || fiscalYear.headcount != null) ...[
+              const SizedBox(height: AkSpace.s1),
+              Text([
+                if (fiscalYear.capital != null) 'Capital ${Fmt.fcfa(fiscalYear.capital, showZero: true)} FCFA',
+                if (fiscalYear.headcount != null) 'Effectif ${fiscalYear.headcount}',
+              ].join(' · '), style: AkText.table.copyWith(color: t.textMuted)),
+            ],
+            const SizedBox(height: AkSpace.s3),
             periods.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('Périodes : $e'),
-              data: (list) => Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final p in list)
-                    FilterChip(
-                      key: Key('period-${p.periodNo}'),
-                      label: Text(Fmt.month(p.startDate)),
-                      avatar: Icon(p.isLocked ? Icons.lock : Icons.lock_open, size: 16),
-                      selected: p.isLocked,
-                      selectedColor: AkColors.sandDark,
-                      onSelected: (fiscalYear.status != 'open' || (p.isLocked ? !canUnlock : !canLock))
-                          ? null
-                          : (lock) => _toggle(context, ref, p, lock),
-                    ),
-                ],
-              ),
+              data: (list) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Périodes · ${list.where((p) => p.isLocked).length} mois verrouillés sur ${list.length}', style: AkText.caption.copyWith(color: t.textMuted)),
+                const SizedBox(height: AkSpace.s2),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final p in list)
+                      FilterChip(
+                        key: Key('period-${p.periodNo}'),
+                        label: Text(Fmt.month(p.startDate)),
+                        avatar: Icon(p.isLocked ? Icons.lock : Icons.lock_open, size: 16),
+                        selected: p.isLocked,
+                        onSelected: (fiscalYear.status != 'open' || (p.isLocked ? !canUnlock : !canLock))
+                            ? null
+                            : (lock) => _toggle(context, ref, p, lock),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: AkSpace.s2),
+                Row(children: [
+                  Icon(Icons.info_outline, size: 14, color: t.textMuted),
+                  const SizedBox(width: 4),
+                  Expanded(child: Text('Déverrouillage réservé à l\'associé, avec motif obligatoire, consigné dans la piste d\'audit.', style: AkText.caption.copyWith(color: t.textMuted))),
+                ]),
+              ]),
             ),
           ],
         ),
@@ -364,8 +392,8 @@ class _FiscalYearDialogState extends ConsumerState<FiscalYearDialog> {
             const SizedBox(width: 8),
             Expanded(child: TextField(controller: _headcount, decoration: const InputDecoration(labelText: 'Effectif'), keyboardType: TextInputType.number)),
           ]),
-          if (widget.previous == null) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Le premier exercice peut être plus court ou plus long que 12 mois ; il se termine un 31 décembre.', style: TextStyle(fontSize: 12))),
-          if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, key: const Key('fy-error'), style: TextStyle(color: Theme.of(context).colorScheme.error))),
+          if (widget.previous == null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Le premier exercice peut être plus court ou plus long que 12 mois ; il se termine un 31 décembre.', style: AkText.caption.copyWith(color: context.ak.textMuted))),
+          if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, key: const Key('fy-error'), style: AkText.body.copyWith(color: context.ak.danger))),
         ]),
       ),
       actions: [
@@ -384,17 +412,22 @@ class _HistoryTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final history = ref.watch(entityHistoryProvider(entityId));
+    final t = context.ak;
+    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
     return AsyncView(
       value: history,
       builder: (items) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(pad),
         children: [
           for (final h in items)
-            Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                title: Text(Fmt.date(h.changedAt)),
-                subtitle: Text([for (final e in h.changes.entries) '${e.key} : ${(e.value as Map)['old'] ?? '—'} → ${(e.value as Map)['new'] ?? '—'}'].join('\n')),
+            Padding(
+              padding: const EdgeInsets.only(bottom: AkSpace.s2),
+              child: AkCard(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(Fmt.date(h.changedAt), style: AkText.bodyStrong.copyWith(color: t.text)),
+                  const SizedBox(height: AkSpace.s1),
+                  Text([for (final e in h.changes.entries) '${e.key} : ${(e.value as Map)['old'] ?? '—'} → ${(e.value as Map)['new'] ?? '—'}'].join('\n'), style: AkText.table.copyWith(color: t.textMuted)),
+                ]),
               ),
             ),
           if (items.isEmpty) const Text('Aucune modification enregistrée.'),

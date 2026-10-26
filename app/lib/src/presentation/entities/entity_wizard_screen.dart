@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme.dart';
 import '../../data/entities_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
+import '../widgets/ak_widgets.dart';
 import 'entity_detail_screen.dart';
 import 'entity_form.dart';
 
@@ -31,23 +33,32 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
   @override
   Widget build(BuildContext context) {
     final cabinet = ref.watch(currentCabinetProvider).value;
+    final t = context.ak;
+    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
     return Column(
       children: [
-        Material(
-          color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Row(children: [
-              for (var i = 0; i < titles.length; i++) ...[
-                CircleAvatar(radius: 12, backgroundColor: i <= _step ? Theme.of(context).colorScheme.primary : Colors.grey.shade300, child: Text('${i + 1}', style: const TextStyle(fontSize: 12, color: Colors.white))),
-                const SizedBox(width: 6),
-                Text(titles[i], style: TextStyle(fontWeight: i == _step ? FontWeight.w600 : FontWeight.normal)),
-                if (i < titles.length - 1) const Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Icon(Icons.chevron_right, size: 18)),
+        Padding(
+          padding: EdgeInsets.fromLTRB(pad, pad, pad, AkSpace.s3),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const AkPageHead(title: 'Ouvrir un dossier', subtitle: 'Assistant d\'ouverture'),
+            const SizedBox(height: AkSpace.s3),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AkSpace.s2,
+              runSpacing: AkSpace.s2,
+              children: [
+                for (var i = 0; i < titles.length; i++) ...[
+                  _StepDot(index: i, current: _step),
+                  Text(titles[i], style: (i == _step ? AkText.bodyStrong : AkText.body).copyWith(color: i <= _step ? t.text : t.textMuted)),
+                  if (i < titles.length - 1) Icon(Icons.chevron_right, size: 18, color: t.borderControl),
+                ],
               ],
-            ]),
-          ),
+            ),
+            const SizedBox(height: AkSpace.s2),
+            Text('Étape ${_step + 1} sur ${titles.length}', style: AkText.caption.copyWith(color: t.textMuted)),
+          ]),
         ),
-        if (_error != null) Padding(padding: const EdgeInsets.all(8), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+        if (_error != null) Padding(padding: EdgeInsets.symmetric(horizontal: pad), child: AkBanner(kind: AkBannerKind.danger, child: Text(_error!))),
         Expanded(child: _body(cabinet?.id)),
       ],
     );
@@ -121,7 +132,7 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
             for (final t in templates.where((t) => t.type != 'opening'))
               Row(children: [
                 Checkbox(value: _journalCodes.contains(t.code), onChanged: (v) => setState(() => v == true ? _journalCodes.add(t.code) : _journalCodes.remove(t.code))),
-                SizedBox(width: 60, child: Text(t.code, style: const TextStyle(fontWeight: FontWeight.w600))),
+                SizedBox(width: 60, child: Text(t.code, style: AkText.code.copyWith(fontWeight: FontWeight.w600))),
                 SizedBox(width: 180, child: Text(t.label)),
                 if (t.isTreasury && _journalCodes.contains(t.code))
                   Expanded(
@@ -170,10 +181,32 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
               OutlinedButton.icon(onPressed: () => context.go('/dossiers/${_entity!.id}'), icon: const Icon(Icons.schedule), label: const Text('Plus tard')),
             ]),
             const SizedBox(height: 8),
-            const Text('La reprise automatique depuis N-1 n\'est possible que pour les exercices suivants.', style: TextStyle(fontSize: 12)),
+            Text('La reprise automatique depuis N-1 n\'est possible que pour les exercices suivants.', style: AkText.caption.copyWith(color: context.ak.textMuted)),
           ]),
         );
     }
+  }
+}
+
+/// Pastille numérotée d'étape : terracotta pour l'étape courante, coche pour les étapes terminées.
+class _StepDot extends StatelessWidget {
+  const _StepDot({required this.index, required this.current});
+
+  final int index;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    final done = index < current;
+    final active = index <= current;
+    return Container(
+      width: 24,
+      height: 24,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: active ? t.brand : t.surfaceSunken, shape: BoxShape.circle, border: active ? null : Border.all(color: t.borderControl)),
+      child: done ? Icon(Icons.check, size: 16, color: t.surface) : Text('${index + 1}', style: AkText.label.copyWith(color: active ? t.surface : t.textMuted, letterSpacing: 0)),
+    );
   }
 }
 
@@ -185,18 +218,16 @@ class _StepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(pad, AkSpace.s2, pad, pad),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              child,
-            ]),
-          ),
+        AkCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: AkText.heading.copyWith(color: context.ak.text)),
+            const SizedBox(height: AkSpace.s3),
+            child,
+          ]),
         ),
       ],
     );

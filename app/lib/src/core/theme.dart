@@ -204,12 +204,13 @@ abstract final class AkText {
 }
 
 /// Thème clair Akonta.
-ThemeData buildAkontaTheme() => _buildTheme(AkTokens.light, Brightness.light);
+/// [touch] : contrôles de 44 px pour les écrans étroits (mobile).
+ThemeData buildAkontaTheme({bool touch = false}) => _buildTheme(AkTokens.light, Brightness.light, touch);
 
 /// Thème sombre Akonta.
-ThemeData buildAkontaDarkTheme() => _buildTheme(AkTokens.dark, Brightness.dark);
+ThemeData buildAkontaDarkTheme({bool touch = false}) => _buildTheme(AkTokens.dark, Brightness.dark, touch);
 
-ThemeData _buildTheme(AkTokens t, Brightness brightness) {
+ThemeData _buildTheme(AkTokens t, Brightness brightness, bool touch) {
   final scheme = ColorScheme(
     brightness: brightness,
     primary: t.brand,
@@ -260,7 +261,7 @@ ThemeData _buildTheme(AkTokens t, Brightness brightness) {
 
   const shape = RoundedRectangleBorder(borderRadius: AkRadius.mdAll);
   const buttonPadding = EdgeInsets.symmetric(horizontal: AkSpace.s3);
-  const buttonSize = Size(0, AkSpace.controlCompact);
+  final buttonSize = Size(0, touch ? AkSpace.controlTouch : AkSpace.controlCompact);
 
   return ThemeData(
     useMaterial3: true,
@@ -275,7 +276,7 @@ ThemeData _buildTheme(AkTokens t, Brightness brightness) {
     focusColor: t.focus.withValues(alpha: 0.12),
     hoverColor: t.surfaceHover,
     splashFactory: NoSplash.splashFactory,
-    visualDensity: VisualDensity.compact,
+    visualDensity: touch ? VisualDensity.standard : VisualDensity.compact,
     appBarTheme: AppBarTheme(
       backgroundColor: t.surface,
       foregroundColor: t.text,
@@ -289,7 +290,7 @@ ThemeData _buildTheme(AkTokens t, Brightness brightness) {
       isDense: true,
       filled: true,
       fillColor: t.surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: AkSpace.s2),
+      contentPadding: EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: touch ? AkSpace.s3 : AkSpace.s2),
       border: inputBorder(t.borderControl),
       enabledBorder: inputBorder(t.borderControl),
       focusedBorder: inputBorder(t.focus, 2),

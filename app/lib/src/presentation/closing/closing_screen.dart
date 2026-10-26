@@ -14,6 +14,7 @@ import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import '../../domain/models.dart';
 import '../inventory/inventory_screen.dart';
+import '../widgets/ak_widgets.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 
@@ -49,25 +50,25 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
         _fy ??= list.where((f) => f.status != 'closed').firstOrNull ?? list.lastOrNull;
         final fy = _fy;
         if (fy == null) return const Center(child: Text('Aucun exercice.'));
+        final pad = akPagePadding(context);
         return Column(children: [
-          Material(
-            color: Colors.white,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Text('Clôture de l\'exercice', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(width: 12),
+          Padding(
+            padding: EdgeInsets.fromLTRB(pad.left, pad.top, pad.right, 0),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              AkPageHead(
+                title: 'Clôture de l\'exercice',
+                subtitle: widget.entity.name,
+                actions: [
                   DropdownButton<String>(
                     value: fy.id,
                     items: [for (final f in list) DropdownMenuItem(value: f.id, child: Text('${f.label} · ${f.statusLabel}'))],
                     onChanged: (v) => setState(() => _fy = list.where((f) => f.id == v).firstOrNull),
                   ),
-                ]),
-                const SizedBox(height: 8),
-                Wrap(spacing: 6, children: [for (var i = 0; i < steps.length; i++) ChoiceChip(label: Text('${i + 1}. ${steps[i]}'), selected: _step == i, onSelected: (_) => setState(() => _step = i))]),
-              ]),
-            ),
+                ],
+              ),
+              const SizedBox(height: AkSpace.s4),
+              _Stepper(steps: steps, current: _step, onTap: (i) => setState(() => _step = i)),
+            ]),
           ),
           Expanded(child: _stepBody(fy, list)),
         ]);
@@ -80,7 +81,17 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
       case 0:
         return ChecksStep(entity: widget.entity, fy: fy);
       case 1:
-        return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Text('Les travaux d\'inventaire (amortissements, stocks, provisions, régularisations, écarts de conversion) se préparent dans le module dédié ; leurs brouillards se valident dans Saisie.'), const SizedBox(height: 12), FilledButton(onPressed: () => context.go('/inventaire'), child: const Text('Ouvrir les travaux d\'inventaire'))]));
+        return ListView(padding: _bodyPad(context), children: [
+          AkCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Travaux d\'inventaire', style: AkText.heading.copyWith(color: context.ak.text)),
+              const SizedBox(height: AkSpace.s2),
+              Text('Les travaux d\'inventaire (amortissements, stocks, provisions, régularisations, écarts de conversion) se préparent dans le module dédié ; leurs brouillards se valident dans Saisie.', style: AkText.body.copyWith(color: context.ak.textMuted)),
+              const SizedBox(height: AkSpace.s3),
+              FilledButton.icon(onPressed: () => context.go('/inventaire'), icon: const Icon(Icons.inventory_2_outlined, size: 18), label: const Text('Ouvrir les travaux d\'inventaire')),
+            ]),
+          ),
+        ]);
       case 2:
         return TaxStep(entity: widget.entity, fy: fy);
       case 3:
@@ -92,6 +103,71 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
       default:
         return NextYearStep(entity: widget.entity, fy: fy, next: all.where((f) => f.startDate == fy.endDate.add(const Duration(days: 1))).firstOrNull);
     }
+  }
+}
+
+/// Marge des corps d'étape : latérale selon la taille d'écran, 16 px en haut et en bas.
+EdgeInsets _bodyPad(BuildContext context) => EdgeInsets.symmetric(horizontal: akPagePadding(context).left, vertical: AkSpace.s4);
+
+/// Indicateur d'étapes : cercles numérotés (coche pour les étapes passées), reliés par un filet.
+class _Stepper extends StatelessWidget {
+  const _Stepper({required this.steps, required this.current, required this.onTap});
+
+  final List<String> steps;
+  final int current;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    Widget item(int i) {
+      final done = i < current;
+      final active = i == current;
+      final circle = Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: active ? t.brand : (done ? t.successTint : t.surfaceSunken)),
+        child: done
+            ? Icon(Icons.check, size: 16, color: t.success)
+            : Text('${i + 1}', style: AkText.label.copyWith(color: active ? t.onBrand : t.textMuted, fontWeight: FontWeight.w600, letterSpacing: 0)),
+      );
+      return Semantics(
+        button: true,
+        selected: active,
+        child: InkWell(
+          borderRadius: AkRadius.mdAll,
+          onTap: () => onTap(i),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              circle,
+              const SizedBox(width: AkSpace.s2),
+              Text('${i + 1}. ${steps[i]}', style: AkText.table.copyWith(color: active ? t.brandText : (done ? t.text : t.textMuted), fontWeight: active ? FontWeight.w600 : FontWeight.w400)),
+            ]),
+          ),
+        ),
+      );
+    }
+
+    Widget line(int i, {required bool flex}) {
+      final bar = Container(height: 2, width: flex ? null : 20, color: i < current ? t.success : t.border);
+      return flex ? Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2), child: bar)) : Padding(padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2), child: bar);
+    }
+
+    return AkCard(
+      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s2),
+      child: LayoutBuilder(builder: (context, c) {
+        final wide = c.maxWidth >= 1080;
+        final row = Row(mainAxisSize: wide ? MainAxisSize.max : MainAxisSize.min, children: [
+          for (var i = 0; i < steps.length; i++) ...[
+            item(i),
+            if (i < steps.length - 1) line(i, flex: wide),
+          ],
+        ]);
+        return wide ? row : SingleChildScrollView(scrollDirection: Axis.horizontal, child: row);
+      }),
+    );
   }
 }
 
@@ -118,47 +194,75 @@ class _ChecksStepState extends ConsumerState<ChecksStep> {
         if (snap.hasError) return Center(child: Text(frenchRpcError(snap.error!)));
         if (!snap.hasData) return const Center(child: CircularProgressIndicator());
         final checks = snap.data!;
+        final t = context.ak;
+        final blocking = checks.where((c) => c.status == 'failed' && c.severity == 'blocking').length;
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: _bodyPad(context),
           children: [
             Row(children: [
-              Text('Contrôles de clôture', style: Theme.of(context).textTheme.titleMedium),
+              Text('Contrôles de clôture', style: AkText.heading.copyWith(color: t.text)),
               const Spacer(),
-              OutlinedButton.icon(onPressed: () => setState(() => _future = ref.read(closingRepositoryProvider).runChecks(widget.entity.id, widget.fy.id)), icon: const Icon(Icons.refresh), label: const Text('Relancer')),
+              OutlinedButton.icon(onPressed: () => setState(() => _future = ref.read(closingRepositoryProvider).runChecks(widget.entity.id, widget.fy.id)), icon: const Icon(Icons.refresh, size: 18), label: const Text('Relancer')),
             ]),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(children: [
-                for (final c in checks)
-                  ListTile(
-                    leading: Icon(
-                      c.status == 'passed' ? Icons.check_circle : (c.status == 'waived' ? Icons.remove_circle_outline : (c.severity == 'blocking' ? Icons.error : Icons.warning_amber)),
-                      color: c.status == 'passed' ? AkColors.validated : (c.status == 'waived' ? AkColors.reviewed : (c.severity == 'blocking' ? AkColors.toCorrect : AkColors.draft)),
-                    ),
-                    title: Text(c.label),
-                    subtitle: Text('${c.severity == 'blocking' ? 'Bloquant' : 'Alerte'} · ${c.status == 'passed' ? 'conforme' : c.status == 'waived' ? 'levée' : 'en échec'}${c.details.isEmpty ? '' : ' · ${c.details}'}'),
-                    trailing: c.status == 'failed' && c.severity == 'warning' && canWaive
-                        ? TextButton(
-                            onPressed: () async {
-                              final ctrl = TextEditingController();
-                              final comment = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(title: Text('Lever : ${c.label}'), content: TextField(controller: ctrl, autofocus: true, decoration: const InputDecoration(labelText: 'Commentaire (obligatoire)')), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')), FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('Lever l\'alerte'))]));
-                              if (comment == null || comment.trim().isEmpty) return;
-                              try {
-                                await ref.read(closingRepositoryProvider).waive(widget.fy.id, c.code, comment.trim());
-                              } catch (e) {
-                                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
-                              }
-                              setState(() => _future = ref.read(closingRepositoryProvider).runChecks(widget.entity.id, widget.fy.id));
-                            },
-                            child: const Text('Lever'),
-                          )
-                        : null,
-                  ),
-              ]),
-            ),
+            const SizedBox(height: AkSpace.s3),
+            if (blocking > 0) ...[
+              AkBanner(
+                kind: AkBannerKind.danger,
+                icon: Icons.block,
+                child: Text.rich(TextSpan(children: [
+                  TextSpan(text: '$blocking contrôle${blocking > 1 ? 's bloquants empêchent' : ' bloquant empêche'}', style: AkText.bodyStrong),
+                  const TextSpan(text: ' de prononcer la clôture. Les alertes peuvent être levées avec un commentaire.'),
+                ])),
+              ),
+              const SizedBox(height: AkSpace.s3),
+            ],
+            akRowsCard(context, [
+              for (final c in checks)
+                _checkRow(context, c, canWaive),
+            ]),
           ],
         );
       },
+    );
+  }
+
+  Widget _checkRow(BuildContext context, ClosingCheck c, bool canWaive) {
+    final t = context.ak;
+    final passed = c.status == 'passed';
+    final waived = c.status == 'waived';
+    final blocking = c.severity == 'blocking';
+    final (icon, color) = passed ? (Icons.check_circle, t.success) : (waived ? (Icons.remove_circle_outline, t.info) : (blocking ? (Icons.cancel, t.danger) : (Icons.warning_amber, t.warning)));
+    final badge = passed
+        ? AkBadge(label: 'Conforme', color: t.success, tint: t.successTint, icon: Icons.check_circle_outline)
+        : waived
+            ? AkBadge(label: 'Levée', color: t.info, tint: t.infoTint, icon: Icons.remove_circle_outline)
+            : blocking
+                ? AkBadge(label: 'Bloquant', color: t.danger, tint: t.dangerTint, icon: Icons.block)
+                : AkBadge(label: 'Alerte', color: t.warning, tint: t.warningTint, icon: Icons.warning_amber);
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(c.label, style: AkText.bodyStrong.copyWith(color: t.text)),
+      subtitle: Text('${blocking ? 'Bloquant' : 'Alerte'} · ${passed ? 'conforme' : waived ? 'levée' : 'en échec'}${c.details.isEmpty ? '' : ' · ${c.details}'}', style: AkText.caption.copyWith(color: t.textMuted)),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        badge,
+        if (c.status == 'failed' && c.severity == 'warning' && canWaive) ...[
+          const SizedBox(width: AkSpace.s2),
+          TextButton(
+            onPressed: () async {
+              final ctrl = TextEditingController();
+              final comment = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(title: Text('Lever : ${c.label}'), content: TextField(controller: ctrl, autofocus: true, decoration: const InputDecoration(labelText: 'Commentaire (obligatoire)')), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')), FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('Lever l\'alerte'))]));
+              if (comment == null || comment.trim().isEmpty) return;
+              try {
+                await ref.read(closingRepositoryProvider).waive(widget.fy.id, c.code, comment.trim());
+              } catch (e) {
+                if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+              }
+              setState(() => _future = ref.read(closingRepositoryProvider).runChecks(widget.entity.id, widget.fy.id));
+            },
+            child: const Text('Lever'),
+          ),
+        ],
+      ]),
     );
   }
 }
@@ -200,72 +304,80 @@ class _TaxStepState extends ConsumerState<TaxStep> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     final adj = _adjustments;
     if (adj == null) return const Center(child: CircularProgressIndicator());
     final addBacks = adj.where((a) => a.kind == 'add_back').fold<int>(0, (s, a) => s + a.amount);
     final deductions = adj.where((a) => a.kind == 'deduction').fold<int>(0, (s, a) => s + a.amount);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: _bodyPad(context),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Tableau de passage du résultat comptable au résultat fiscal', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text('Résultat comptable avant impôt : ${Fmt.fcfa(_accounting, showZero: true)} FCFA', style: const TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              for (final a in adj)
-                Row(children: [
-                  SizedBox(width: 120, child: Text(a.kind == 'add_back' ? 'Réintégration' : 'Déduction', style: TextStyle(color: a.kind == 'add_back' ? AkColors.toCorrect : AkColors.validated, fontSize: 12))),
-                  Expanded(child: Text(a.label)),
+        AkCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Tableau de passage du résultat comptable au résultat fiscal', style: AkText.heading.copyWith(color: t.text)),
+            const SizedBox(height: AkSpace.s2),
+            Text('Résultat comptable avant impôt : ${Fmt.fcfa(_accounting, showZero: true)} FCFA', style: AkText.amount.copyWith(fontWeight: FontWeight.w600, color: t.text)),
+            const SizedBox(height: AkSpace.s2),
+            for (final a in adj)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(children: [
+                  SizedBox(
+                    width: 130,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: a.kind == 'add_back'
+                          ? AkBadge(label: 'Réintégration', color: t.warning, tint: t.warningTint, icon: Icons.add)
+                          : AkBadge(label: 'Déduction', color: t.success, tint: t.successTint, icon: Icons.remove),
+                    ),
+                  ),
+                  Expanded(child: Text(a.label, style: AkText.body.copyWith(color: t.text))),
                   SizedBox(
                     width: 160,
                     child: TextFormField(
                       initialValue: a.amount == 0 ? '' : '${a.amount}',
                       textAlign: TextAlign.right,
+                      style: AkText.amount,
                       decoration: const InputDecoration(isDense: true),
                       onChanged: (v) => setState(() => a.amount = Fmt.parseAmount(v) ?? 0),
                     ),
                   ),
                 ]),
-              const Divider(),
-              Text('Résultat fiscal : ${Fmt.fcfa((_accounting ?? 0) + addBacks - deductions, showZero: true)} FCFA', style: const TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: _busy
-                    ? null
-                    : () async {
-                        setState(() => _busy = true);
-                        try {
-                          final r = await ref.read(closingRepositoryProvider).computeTax(widget.entity.id, widget.fy.id, adj);
-                          setState(() => _result = r);
-                          ref.invalidate(entityDashboardProvider);
-                        } catch (e) {
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
-                        } finally {
-                          if (mounted) setState(() => _busy = false);
-                        }
-                      },
-                icon: const Icon(Icons.calculate_outlined),
-                label: const Text('Calculer l\'IS et générer l\'écriture (brouillard)'),
               ),
-            ]),
-          ),
+            Divider(height: AkSpace.s6, color: t.border),
+            Text('Résultat fiscal : ${Fmt.fcfa((_accounting ?? 0) + addBacks - deductions, showZero: true)} FCFA', style: AkText.amount.copyWith(fontWeight: FontWeight.w600, color: t.text)),
+            const SizedBox(height: AkSpace.s3),
+            FilledButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () async {
+                      setState(() => _busy = true);
+                      try {
+                        final r = await ref.read(closingRepositoryProvider).computeTax(widget.entity.id, widget.fy.id, adj);
+                        setState(() => _result = r);
+                        ref.invalidate(entityDashboardProvider);
+                      } catch (e) {
+                        if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                      } finally {
+                        if (mounted) setState(() => _busy = false);
+                      }
+                    },
+              icon: const Icon(Icons.calculate_outlined, size: 18),
+              label: const Text('Calculer l\'IS et générer l\'écriture (brouillard)'),
+            ),
+          ]),
         ),
         if (_result != null) ...[
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Impôt sur les sociétés', style: Theme.of(context).textTheme.titleMedium),
-                Text('IS au taux de ${(_result!.isRate * 100).toStringAsFixed(0)} % : ${Fmt.fcfa(_result!.computedTax, showZero: true)}'),
-                Text('Minimum d\'impôt (sur CA ${Fmt.fcfa(_result!.revenue, showZero: true)}, plancher 250 000) : ${Fmt.fcfa(_result!.minimumTax, showZero: true)}'),
-                Text('IS dû : ${Fmt.fcfa(_result!.taxDue, showZero: true)} · acomptes 4492 : ${Fmt.fcfa(_result!.prepayments, showZero: true)} · solde à payer : ${Fmt.fcfa(_result!.balanceDue, showZero: true)}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                if (_result!.entryId != null) TextButton(onPressed: () => context.go('/saisie/${_result!.entryId}'), child: const Text('Ouvrir l\'écriture d\'IS')),
-              ]),
-            ),
+          const SizedBox(height: AkSpace.s3),
+          AkCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Impôt sur les sociétés', style: AkText.heading.copyWith(color: t.text)),
+              const SizedBox(height: AkSpace.s2),
+              Text('IS au taux de ${(_result!.isRate * 100).toStringAsFixed(0)} % : ${Fmt.fcfa(_result!.computedTax, showZero: true)}', style: AkText.body.copyWith(color: t.text)),
+              Text('Minimum d\'impôt (sur CA ${Fmt.fcfa(_result!.revenue, showZero: true)}, plancher 250 000) : ${Fmt.fcfa(_result!.minimumTax, showZero: true)}', style: AkText.body.copyWith(color: t.text)),
+              Text('IS dû : ${Fmt.fcfa(_result!.taxDue, showZero: true)} · acomptes 4492 : ${Fmt.fcfa(_result!.prepayments, showZero: true)} · solde à payer : ${Fmt.fcfa(_result!.balanceDue, showZero: true)}', style: AkText.bodyStrong.copyWith(color: t.text)),
+              if (_result!.entryId != null) TextButton(onPressed: () => context.go('/saisie/${_result!.entryId}'), child: const Text('Ouvrir l\'écriture d\'IS')),
+            ]),
           ),
         ],
       ],
@@ -306,7 +418,7 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
         if (!await f.exists() || await f.length() == 0) await f.writeAsBytes(bytes);
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
+      if (context.mounted) showErrorSnack(context, frenchRpcError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -314,13 +426,13 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     final fs = _fs;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: _bodyPad(context),
       children: [
-        Row(children: [
-          Text('États financiers SYSCOHADA (système normal)', style: Theme.of(context).textTheme.titleMedium),
-          const Spacer(),
+        Wrap(spacing: AkSpace.s3, runSpacing: AkSpace.s2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          Text('États financiers SYSCOHADA (système normal)', style: AkText.heading.copyWith(color: t.text)),
           FilledButton.icon(
             onPressed: _busy
                 ? null
@@ -330,44 +442,45 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
                       final v = await ref.read(closingRepositoryProvider).generateStatements(widget.entity.id, widget.fy.id);
                       setState(() => _fs = v);
                     } catch (e) {
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
+                      if (context.mounted) showErrorSnack(context, frenchRpcError(e));
                     } finally {
                       if (mounted) setState(() => _busy = false);
                     }
                   },
-            icon: const Icon(Icons.auto_awesome),
+            icon: const Icon(Icons.auto_awesome, size: 18),
             label: const Text('Générer les états'),
           ),
         ]),
-        if (fs == null) const Padding(padding: EdgeInsets.all(16), child: Text('Aucun état généré pour cet exercice.')),
+        const SizedBox(height: AkSpace.s3),
+        if (fs == null) AkBanner(kind: AkBannerKind.info, child: const Text('Aucun état généré pour cet exercice.')),
         if (fs != null) ...[
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Généré le ${Fmt.date(fs.generatedAt)}${fs.isFinal ? ' · arrêté' : ''}'),
-                for (final c in fs.checks)
-                  Row(children: [
-                    Icon((c['passed'] as bool?) == true ? Icons.check_circle : Icons.error, size: 16, color: (c['passed'] as bool?) == true ? AkColors.validated : AkColors.toCorrect),
+          AkCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Généré le ${Fmt.date(fs.generatedAt)}${fs.isFinal ? ' · arrêté' : ''}', style: AkText.bodyStrong.copyWith(color: t.text)),
+              const SizedBox(height: AkSpace.s2),
+              for (final c in fs.checks)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(children: [
+                    Icon((c['passed'] as bool?) == true ? Icons.check_circle : Icons.cancel, size: 16, color: (c['passed'] as bool?) == true ? t.success : t.danger),
                     const SizedBox(width: 6),
-                    Expanded(child: Text('${c['label']}')),
+                    Expanded(child: Text('${c['label']}', style: AkText.table.copyWith(color: t.text))),
                   ]),
-                const SizedBox(height: 8),
-                Wrap(spacing: 8, children: [
-                  OutlinedButton.icon(onPressed: () => _export(context, 'financial_statements', 'pdf'), icon: const Icon(Icons.picture_as_pdf_outlined), label: const Text('États financiers PDF')),
-                  OutlinedButton.icon(onPressed: () => _export(context, 'dgi', 'xlsm'), icon: const Icon(Icons.table_view_outlined), label: const Text('Liasse DGI (Excel, macros conservées)')),
-                ]),
-                const SizedBox(height: 4),
-                const Text('La liasse DGI reprend fiche R1/R2, bilan et compte de résultat (N et N-1) ; TFT et notes se complètent dans le classeur.', style: TextStyle(fontSize: 12)),
+                ),
+              const SizedBox(height: AkSpace.s3),
+              Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, children: [
+                OutlinedButton.icon(onPressed: () => _export(context, 'financial_statements', 'pdf'), icon: const Icon(Icons.picture_as_pdf_outlined, size: 18), label: const Text('États financiers PDF')),
+                OutlinedButton.icon(onPressed: () => _export(context, 'dgi', 'xlsm'), icon: const Icon(Icons.table_view_outlined, size: 18), label: const Text('Liasse DGI (Excel, macros conservées)')),
               ]),
-            ),
+              const SizedBox(height: AkSpace.s1),
+              Text('La liasse DGI reprend fiche R1/R2, bilan et compte de résultat (N et N-1) ; TFT et notes se complètent dans le classeur.', style: AkText.caption.copyWith(color: t.textMuted)),
+            ]),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AkSpace.s3),
           _PostsTable(title: 'Bilan — Actif', posts: fs.assets, previous: fs.previous?['assets']),
-          const SizedBox(height: 12),
+          const SizedBox(height: AkSpace.s3),
           _PostsTable(title: 'Bilan — Passif', posts: fs.liabilities, previous: fs.previous?['liabilities']),
-          const SizedBox(height: 12),
+          const SizedBox(height: AkSpace.s3),
           _PostsTable(title: 'Compte de résultat', posts: fs.income, previous: fs.previous?['income']),
         ],
       ],
@@ -397,39 +510,35 @@ class _PostsTable extends StatelessWidget {
       }
     }
     final hasGross = posts.any((p) => p.columnRole == 'gross');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          for (final e in byCode.entries)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(children: [
-                SizedBox(width: 40, child: Text(e.key, style: const TextStyle(fontFamily: 'monospace'))),
-                Expanded(child: Text(e.value['label'] as String, overflow: TextOverflow.ellipsis)),
-                if (hasGross) ...[
-                  SizedBox(width: 130, child: Text(Fmt.fcfa(e.value['gross'] as int), textAlign: TextAlign.right)),
-                  SizedBox(width: 130, child: Text(Fmt.fcfa(e.value['dep'] as int), textAlign: TextAlign.right)),
-                  SizedBox(width: 130, child: Text(Fmt.fcfa((e.value['gross'] as int) - (e.value['dep'] as int), showZero: true), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w600))),
-                ] else
-                  SizedBox(width: 130, child: Text(Fmt.fcfa(e.value['amount'] as int, showZero: true), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w600))),
-                if (previous != null) SizedBox(width: 130, child: Text(Fmt.fcfa(prev['${e.key}/${hasGross ? 'gross' : 'amount'}'] ?? 0), textAlign: TextAlign.right, style: const TextStyle(color: Colors.grey))),
-              ]),
-            ),
+    final t = context.ak;
+    return AkCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: AkText.heading.copyWith(color: t.text)),
+        const SizedBox(height: AkSpace.s2),
+        for (final e in byCode.entries)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.symmetric(vertical: 3),
             child: Row(children: [
-              const Expanded(child: Text('Total', style: TextStyle(fontWeight: FontWeight.w600))),
-              SizedBox(
-                width: 130,
-                child: Text(Fmt.fcfa(hasGross ? byCode.values.fold<int>(0, (s, e) => s + (e['gross'] as int) - (e['dep'] as int)) : byCode.values.fold<int>(0, (s, e) => s + (e['amount'] as int)), showZero: true), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
+              SizedBox(width: 44, child: Text(e.key, style: AkText.code.copyWith(color: t.text))),
+              Expanded(child: Text(e.value['label'] as String, overflow: TextOverflow.ellipsis, style: AkText.table.copyWith(color: t.text))),
+              if (hasGross) ...[
+                SizedBox(width: 130, child: AkAmountText(Fmt.fcfa(e.value['gross'] as int))),
+                SizedBox(width: 130, child: AkAmountText(Fmt.fcfa(e.value['dep'] as int))),
+                SizedBox(width: 130, child: AkAmountText(Fmt.fcfa((e.value['gross'] as int) - (e.value['dep'] as int), showZero: true), bold: true)),
+              ] else
+                SizedBox(width: 130, child: AkAmountText(Fmt.fcfa(e.value['amount'] as int, showZero: true), bold: true)),
+              if (previous != null) SizedBox(width: 130, child: AkAmountText(Fmt.fcfa(prev['${e.key}/${hasGross ? 'gross' : 'amount'}'] ?? 0), color: t.textMuted)),
             ]),
           ),
+        Divider(height: AkSpace.s4, color: t.border),
+        Row(children: [
+          Expanded(child: Text('Total', style: AkText.bodyStrong.copyWith(color: t.text))),
+          SizedBox(
+            width: 130,
+            child: AkAmountText(Fmt.fcfa(hasGross ? byCode.values.fold<int>(0, (s, e) => s + (e['gross'] as int) - (e['dep'] as int)) : byCode.values.fold<int>(0, (s, e) => s + (e['amount'] as int)), showZero: true), bold: true),
+          ),
         ]),
-      ),
+      ]),
     );
   }
 }
@@ -444,54 +553,52 @@ class ProvisionalStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repo = ref.read(closingRepositoryProvider);
+    final t = context.ak;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: _bodyPad(context),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Exercice ${fy.label} · ${fy.statusLabel}', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              const Text('1. Générer et valider l\'écriture de détermination du résultat (soldes des classes 6, 7, 8 vers 131 / 139).\n2. Clôture provisoire : tous les contrôles bloquants conformes, alertes levées avec commentaire ; les périodes sont verrouillées.\n3. Réouverture possible avec motif tant que l\'arrêté définitif n\'est pas prononcé.'),
-              const SizedBox(height: 12),
-              Wrap(spacing: 12, runSpacing: 8, children: [
-                OutlinedButton.icon(onPressed: () => runGeneration(context, ref, () => repo.generateResultEntry(entity.id, fy.id), 'Détermination du résultat'), icon: const Icon(Icons.functions), label: const Text('Écriture de résultat')),
-                FilledButton.icon(
-                  onPressed: fy.status != 'open'
-                      ? null
-                      : () async {
-                          try {
-                            await repo.closeProvisional(entity.id, fy.id);
-                            onChanged();
-                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clôture provisoire prononcée.')));
-                          } catch (e) {
-                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
-                          }
-                        },
-                  icon: const Icon(Icons.lock_outline),
-                  label: const Text('Clôture provisoire'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: fy.status != 'closing'
-                      ? null
-                      : () async {
-                          final ctrl = TextEditingController();
-                          final reason = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(title: const Text('Réouvrir l\'exercice'), content: TextField(controller: ctrl, autofocus: true, decoration: const InputDecoration(labelText: 'Motif (obligatoire)')), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')), FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('Réouvrir'))]));
-                          if (reason == null || reason.trim().isEmpty) return;
-                          try {
-                            await repo.reopen(entity.id, fy.id, reason.trim());
-                            onChanged();
-                          } catch (e) {
-                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
-                          }
-                        },
-                  icon: const Icon(Icons.lock_open),
-                  label: const Text('Réouvrir (motif)'),
-                ),
-              ]),
+        AkCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Exercice ${fy.label} · ${fy.statusLabel}', style: AkText.heading.copyWith(color: t.text)),
+            const SizedBox(height: AkSpace.s2),
+            Text('1. Générer et valider l\'écriture de détermination du résultat (soldes des classes 6, 7, 8 vers 131 / 139).\n2. Clôture provisoire : tous les contrôles bloquants conformes, alertes levées avec commentaire ; les périodes sont verrouillées.\n3. Réouverture possible avec motif tant que l\'arrêté définitif n\'est pas prononcé.', style: AkText.body.copyWith(color: t.textMuted)),
+            const SizedBox(height: AkSpace.s3),
+            Wrap(spacing: AkSpace.s3, runSpacing: AkSpace.s2, children: [
+              OutlinedButton.icon(onPressed: () => runGeneration(context, ref, () => repo.generateResultEntry(entity.id, fy.id), 'Détermination du résultat'), icon: const Icon(Icons.functions, size: 18), label: const Text('Écriture de résultat')),
+              FilledButton.icon(
+                onPressed: fy.status != 'open'
+                    ? null
+                    : () async {
+                        try {
+                          await repo.closeProvisional(entity.id, fy.id);
+                          onChanged();
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clôture provisoire prononcée.')));
+                        } catch (e) {
+                          if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                        }
+                      },
+                icon: const Icon(Icons.lock_outline, size: 18),
+                label: const Text('Clôture provisoire'),
+              ),
+              OutlinedButton.icon(
+                onPressed: fy.status != 'closing'
+                    ? null
+                    : () async {
+                        final ctrl = TextEditingController();
+                        final reason = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(title: const Text('Réouvrir l\'exercice'), content: TextField(controller: ctrl, autofocus: true, decoration: const InputDecoration(labelText: 'Motif (obligatoire)')), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')), FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('Réouvrir'))]));
+                        if (reason == null || reason.trim().isEmpty) return;
+                        try {
+                          await repo.reopen(entity.id, fy.id, reason.trim());
+                          onChanged();
+                        } catch (e) {
+                          if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                        }
+                      },
+                icon: const Icon(Icons.lock_open, size: 18),
+                label: const Text('Réouvrir (motif)'),
+              ),
             ]),
-          ),
+          ]),
         ),
       ],
     );
@@ -515,58 +622,80 @@ class _FinalStepState extends ConsumerState<FinalStep> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final can = perms.has('closing.final');
     final expected = 'ARRETER ${widget.fy.label}';
     if (widget.fy.status == 'closed') {
       final when = widget.fy.finalClosedAt;
-      return ListView(padding: const EdgeInsets.all(16), children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Exercice ${widget.fy.label} arrêté définitivement', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text('${when == null ? '' : 'Le ${Fmt.date(when)}. '}Aucune réouverture possible ; états financiers, grand livre et balance sont archivés avec leurs empreintes SHA-256.'),
-            ]),
-          ),
+      return ListView(padding: _bodyPad(context), children: [
+        AkBanner(
+          kind: AkBannerKind.success,
+          icon: Icons.lock,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Exercice ${widget.fy.label} arrêté définitivement', style: AkText.bodyStrong.copyWith(color: t.text)),
+            Text('${when == null ? '' : 'Le ${Fmt.date(when)}. '}Aucune réouverture possible ; états financiers, grand livre et balance sont archivés avec leurs empreintes SHA-256.'),
+          ]),
         ),
       ]);
     }
+    final blocked = !can || !_acknowledged || _confirm.text.trim() != expected || widget.fy.status != 'closing';
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: _bodyPad(context),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Arrêté définitif de l\'exercice ${widget.fy.label}', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              const Text('Réservé à l\'associé (TOTP vérifié). L\'exercice devient intangible : aucune réouverture. Les états financiers, le grand livre et la balance sont archivés avec leurs empreintes SHA-256.'),
-              const SizedBox(height: 12),
-              CheckboxListTile(value: _acknowledged, onChanged: can ? (v) => setState(() => _acknowledged = v ?? false) : null, title: const Text('J\'ai vérifié les états financiers et je comprends que cette action est irréversible.'), contentPadding: EdgeInsets.zero),
-              TextField(controller: _confirm, enabled: can && _acknowledged, decoration: InputDecoration(labelText: 'Tapez « $expected » pour confirmer'), onChanged: (_) => setState(() {})),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: AkColors.toCorrect),
-                onPressed: !can || !_acknowledged || _confirm.text.trim() != expected || widget.fy.status != 'closing'
-                    ? null
-                    : () async {
-                        try {
-                          final archive = await ref.read(closingRepositoryProvider).closeFinal(widget.entity.id, widget.fy.id, _confirm.text.trim());
-                          widget.onChanged();
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exercice arrêté. Archive $archive.')));
-                        } catch (e) {
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
-                        }
-                      },
-                icon: const Icon(Icons.gavel),
-                label: const Text('Arrêter définitivement'),
+        AkBanner(
+          kind: AkBannerKind.danger,
+          icon: Icons.warning_amber_outlined,
+          child: Text.rich(TextSpan(children: [
+            TextSpan(text: 'Action irréversible. ', style: AkText.bodyStrong),
+            const TextSpan(text: 'Après l\'arrêté, l\'exercice devient intangible : aucune réouverture, aucune écriture ajoutée ni modifiée.'),
+          ])),
+        ),
+        const SizedBox(height: AkSpace.s3),
+        AkCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Arrêté définitif de l\'exercice ${widget.fy.label}', style: AkText.heading.copyWith(color: t.text)),
+            const SizedBox(height: AkSpace.s2),
+            Text('Réservé à l\'associé (TOTP vérifié). L\'exercice devient intangible : aucune réouverture. Les états financiers, le grand livre et la balance sont archivés avec leurs empreintes SHA-256.', style: AkText.body.copyWith(color: t.textMuted)),
+            const SizedBox(height: AkSpace.s3),
+            CheckboxListTile(value: _acknowledged, onChanged: can ? (v) => setState(() => _acknowledged = v ?? false) : null, controlAffinity: ListTileControlAffinity.leading, title: Text('J\'ai vérifié les états financiers et je comprends que cette action est irréversible.', style: AkText.table.copyWith(color: t.text)), contentPadding: EdgeInsets.zero),
+            const SizedBox(height: AkSpace.s2),
+            TextField(controller: _confirm, enabled: can && _acknowledged, style: AkText.code, decoration: InputDecoration(labelText: 'Tapez « $expected » pour confirmer'), onChanged: (_) => setState(() {})),
+            const SizedBox(height: AkSpace.s3),
+            FilledButton.icon(
+              style: akDangerFilledStyle(context),
+              onPressed: blocked
+                  ? null
+                  : () async {
+                      try {
+                        final archive = await ref.read(closingRepositoryProvider).closeFinal(widget.entity.id, widget.fy.id, _confirm.text.trim());
+                        widget.onChanged();
+                        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exercice arrêté. Archive $archive.')));
+                      } catch (e) {
+                        if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                      }
+                    },
+              icon: const Icon(Icons.lock, size: 18),
+              label: const Text('Arrêter définitivement'),
+            ),
+            if (widget.fy.status != 'closing') Padding(padding: const EdgeInsets.only(top: AkSpace.s2), child: Text('L\'exercice doit être en clôture provisoire.', style: AkText.caption.copyWith(color: t.textMuted))),
+            if (!can) Padding(padding: const EdgeInsets.only(top: AkSpace.s2), child: Text('Votre rôle ne permet pas l\'arrêté définitif.', style: AkText.caption.copyWith(color: t.textMuted))),
+          ]),
+        ),
+        const SizedBox(height: AkSpace.s3),
+        AkCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Ce que fait l\'arrêté définitif', style: AkText.heading.copyWith(color: t.text)),
+            const SizedBox(height: AkSpace.s2),
+            for (final (icon, text) in const [
+              (Icons.lock_outline, 'L\'exercice passe en lecture seule, définitivement.'),
+              (Icons.fingerprint, 'États financiers, grand livre et balance sont archivés avec leurs empreintes SHA-256.'),
+            ])
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, size: 18, color: t.textMuted), const SizedBox(width: AkSpace.s2), Expanded(child: Text(text, style: AkText.table.copyWith(color: t.text)))]),
               ),
-              if (widget.fy.status != 'closing') const Padding(padding: EdgeInsets.only(top: 8), child: Text('L\'exercice doit être en clôture provisoire.', style: TextStyle(fontSize: 12))),
-              if (!can) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Votre rôle ne permet pas l\'arrêté définitif.', style: TextStyle(fontSize: 12))),
-            ]),
-          ),
+          ]),
         ),
       ],
     );
@@ -595,43 +724,46 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
   Widget build(BuildContext context) {
     final repo = ref.read(closingRepositoryProvider);
     final next = widget.next;
+    final t = context.ak;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: _bodyPad(context),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Exercice suivant', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              if (next == null) Row(children: [const Expanded(child: Text('Créez l\'exercice suivant dans Dossiers → Exercices avant de générer les à-nouveaux.')), TextButton(onPressed: () => context.go('/dossiers/${widget.entity.id}'), child: const Text('Ouvrir le dossier'))]),
-              if (next != null) ...[
-                Text('À-nouveaux de ${next.label} : soldes de bilan à la clôture de ${widget.fy.label}, détaillés par tiers ; résultat repris en 1300. Recalculables tant que ${widget.fy.label} n\'est pas arrêté (brouillard remplacé).'),
-                const SizedBox(height: 8),
-                FilledButton.icon(onPressed: () => runGeneration(context, ref, () => repo.generateOpeningBalances(widget.entity.id, widget.fy.id), 'À-nouveaux ${next.label}'), icon: const Icon(Icons.auto_awesome), label: Text('Générer les à-nouveaux ${next.label}')),
-                const Divider(height: 24),
-                Text('Affectation du résultat de ${widget.fy.label} (en ${next.label})', style: const TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  SizedBox(width: 160, child: TextField(controller: _legal, decoration: const InputDecoration(labelText: 'Réserve légale (111)'))),
-                  SizedBox(width: 160, child: TextField(controller: _free, decoration: const InputDecoration(labelText: 'Réserves libres (118)'))),
-                  SizedBox(width: 160, child: TextField(controller: _div, decoration: const InputDecoration(labelText: 'Dividendes (465)'))),
-                  SizedBox(width: 160, child: TextField(controller: _carry, decoration: const InputDecoration(labelText: 'Report à nouveau (121)'))),
-                  SizedBox(width: 130, child: TextField(controller: _date, decoration: const InputDecoration(labelText: 'Date'))),
-                ]),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    final d = Fmt.parseDate(_date.text);
-                    if (d == null) return;
-                    runGeneration(context, ref, () => repo.allocateResult(widget.entity.id, next.id, d, legalReserve: Fmt.parseAmount(_legal.text) ?? 0, freeReserve: Fmt.parseAmount(_free.text) ?? 0, dividends: Fmt.parseAmount(_div.text) ?? 0, carryForward: Fmt.parseAmount(_carry.text) ?? 0), 'Affectation du résultat');
-                  },
-                  icon: const Icon(Icons.call_split),
-                  label: const Text('Générer l\'écriture d\'affectation'),
-                ),
-              ],
-            ]),
-          ),
+        AkCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Exercice suivant', style: AkText.heading.copyWith(color: t.text)),
+            const SizedBox(height: AkSpace.s2),
+            if (next == null)
+              AkBanner(
+                kind: AkBannerKind.warning,
+                action: TextButton(onPressed: () => context.go('/dossiers/${widget.entity.id}'), child: const Text('Ouvrir le dossier')),
+                child: const Text('Créez l\'exercice suivant dans Dossiers → Exercices avant de générer les à-nouveaux.'),
+              ),
+            if (next != null) ...[
+              Text('À-nouveaux de ${next.label} : soldes de bilan à la clôture de ${widget.fy.label}, détaillés par tiers ; résultat repris en 1300. Recalculables tant que ${widget.fy.label} n\'est pas arrêté (brouillard remplacé).', style: AkText.body.copyWith(color: t.textMuted)),
+              const SizedBox(height: AkSpace.s2),
+              FilledButton.icon(onPressed: () => runGeneration(context, ref, () => repo.generateOpeningBalances(widget.entity.id, widget.fy.id), 'À-nouveaux ${next.label}'), icon: const Icon(Icons.auto_awesome, size: 18), label: Text('Générer les à-nouveaux ${next.label}')),
+              Divider(height: AkSpace.s6, color: t.border),
+              Text('Affectation du résultat de ${widget.fy.label} (en ${next.label})', style: AkText.bodyStrong.copyWith(color: t.text)),
+              const SizedBox(height: AkSpace.s2),
+              Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, children: [
+                SizedBox(width: 160, child: TextField(controller: _legal, style: AkText.amount, textAlign: TextAlign.right, decoration: const InputDecoration(labelText: 'Réserve légale (111)'))),
+                SizedBox(width: 160, child: TextField(controller: _free, style: AkText.amount, textAlign: TextAlign.right, decoration: const InputDecoration(labelText: 'Réserves libres (118)'))),
+                SizedBox(width: 160, child: TextField(controller: _div, style: AkText.amount, textAlign: TextAlign.right, decoration: const InputDecoration(labelText: 'Dividendes (465)'))),
+                SizedBox(width: 160, child: TextField(controller: _carry, style: AkText.amount, textAlign: TextAlign.right, decoration: const InputDecoration(labelText: 'Report à nouveau (121)'))),
+                SizedBox(width: 130, child: TextField(controller: _date, decoration: const InputDecoration(labelText: 'Date'))),
+              ]),
+              const SizedBox(height: AkSpace.s2),
+              OutlinedButton.icon(
+                onPressed: () {
+                  final d = Fmt.parseDate(_date.text);
+                  if (d == null) return;
+                  runGeneration(context, ref, () => repo.allocateResult(widget.entity.id, next.id, d, legalReserve: Fmt.parseAmount(_legal.text) ?? 0, freeReserve: Fmt.parseAmount(_free.text) ?? 0, dividends: Fmt.parseAmount(_div.text) ?? 0, carryForward: Fmt.parseAmount(_carry.text) ?? 0), 'Affectation du résultat');
+                },
+                icon: const Icon(Icons.call_split, size: 18),
+                label: const Text('Générer l\'écriture d\'affectation'),
+              ),
+            ],
+          ]),
         ),
       ],
     );

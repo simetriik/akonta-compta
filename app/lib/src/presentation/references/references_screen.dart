@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +9,7 @@ import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
+import '../widgets/ak_widgets.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 
@@ -17,16 +20,153 @@ class ReferencesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RequireEntity(
-      builder: (entity) => DefaultTabController(
-        length: 5,
-        child: Column(children: [
-          const Material(color: Colors.white, child: TabBar(isScrollable: true, tabs: [Tab(text: 'Plan de comptes'), Tab(text: 'Tiers'), Tab(text: 'Journaux'), Tab(text: 'Modèles d\'écritures'), Tab(text: 'Taux')])),
-          Expanded(child: TabBarView(children: [AccountsTab(entity: entity), ThirdPartiesTab(entity: entity), JournalsTab(entity: entity), TemplatesTab(entity: entity), const TaxRatesTab()])),
-        ]),
+      builder: (entity) {
+        final margin = akPageMargin(context);
+        return DefaultTabController(
+          length: 5,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(margin, AkSpace.s4, margin, AkSpace.s4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              AkPageHead(title: 'Référentiels', subtitle: entity.dossierLabel),
+              const SizedBox(height: AkSpace.s3),
+              Expanded(
+                child: AkCard(
+                  padding: EdgeInsets.zero,
+                  clip: true,
+                  child: Column(children: [
+                    const TabBar(
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      padding: EdgeInsets.symmetric(horizontal: AkSpace.s2),
+                      tabs: [Tab(text: 'Plan de comptes'), Tab(text: 'Tiers'), Tab(text: 'Journaux'), Tab(text: 'Modèles d\'écritures'), Tab(text: 'Taux')],
+                    ),
+                    Expanded(child: TabBarView(children: [AccountsTab(entity: entity), ThirdPartiesTab(entity: entity), JournalsTab(entity: entity), TemplatesTab(entity: entity), const TaxRatesTab()])),
+                  ]),
+                ),
+              ),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Largeur d'une boîte de dialogue, réduite sur les écrans étroits.
+double _dialogWidth(BuildContext context, double wanted) => math.min(wanted, MediaQuery.sizeOf(context).width - 80);
+
+/// Barre d'outils d'un onglet : filtres à gauche, action principale à droite (sous les filtres sur mobile).
+class _Toolbar extends StatelessWidget {
+  const _Toolbar({this.filters = const [], this.action});
+
+  final List<Widget> filters;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    final compact = akIsCompact(context);
+    final filterWrap = Wrap(spacing: AkSpace.s3, runSpacing: AkSpace.s2, crossAxisAlignment: WrapCrossAlignment.center, children: filters);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
+      decoration: BoxDecoration(color: t.surfaceSunken, border: Border(bottom: BorderSide(color: t.border))),
+      child: compact
+          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [if (filters.isNotEmpty) filterWrap, if (filters.isNotEmpty && action != null) const SizedBox(height: AkSpace.s2), ?action])
+          : Row(children: [Expanded(child: filterWrap), if (action != null) ...[const SizedBox(width: AkSpace.s3), action!]]),
+    );
+  }
+}
+
+/// Champ de recherche compact (32 px, 44 px sur mobile).
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.hint, required this.onChanged});
+
+  final String hint;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    final h = akControlHeight(context);
+    return SizedBox(
+      width: akIsCompact(context) ? double.infinity : 280,
+      height: h,
+      child: Semantics(
+        label: hint,
+        child: TextField(
+          style: AkText.table.copyWith(color: t.text),
+          decoration: InputDecoration(hintText: hint, prefixIcon: Icon(Icons.search, size: 18, color: t.textMuted), prefixIconConstraints: const BoxConstraints(minWidth: 36), contentPadding: EdgeInsets.symmetric(horizontal: AkSpace.s2, vertical: (h - 18) / 2)),
+          onChanged: onChanged,
+        ),
       ),
     );
   }
 }
+
+/// Liste déroulante à contour de champ (remplace le DropdownButton nu).
+class _AkDropdown<T> extends StatelessWidget {
+  const _AkDropdown({required this.value, required this.items, required this.onChanged, this.hint});
+
+  final T? value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?>? onChanged;
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return Container(
+      height: akControlHeight(context),
+      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
+      decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.borderControl), borderRadius: AkRadius.mdAll),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isDense: true,
+          hint: hint == null ? null : Text(hint!, style: AkText.table.copyWith(color: t.text)),
+          style: AkText.table.copyWith(color: t.text),
+          icon: Icon(Icons.expand_more, size: 18, color: t.textMuted),
+          items: items,
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+/// Ligne de liste : filet bas, hauteur tactile sur mobile.
+class _ListRow extends StatelessWidget {
+  const _ListRow({required this.child, this.onTap, this.indent = 0});
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final double indent;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = Container(
+      constraints: BoxConstraints(minHeight: akIsCompact(context) ? AkSpace.rowTouch : AkSpace.rowCompact + 8),
+      padding: EdgeInsets.fromLTRB(AkSpace.s4 + indent, 4, AkSpace.s2, 4),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: context.ak.border))),
+      child: child,
+    );
+    return onTap == null ? row : InkWell(onTap: onTap, child: row);
+  }
+}
+
+/// Mention « Désactivé » (icône + mot) pour un élément retiré de l'usage.
+class _InactiveBadge extends StatelessWidget {
+  const _InactiveBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return AkBadge(label: 'Désactivé', color: t.textMuted, tint: t.surfaceSunken, icon: Icons.block);
+  }
+}
+
+Widget _formError(String error, {Key? key}) => Padding(padding: const EdgeInsets.only(top: AkSpace.s2), child: AkBanner(kind: AkBannerKind.danger, child: Text(error, key: key)));
 
 // ---------------------------------------------------------------------------
 // Plan de comptes
@@ -46,48 +186,53 @@ class _AccountsTabState extends ConsumerState<AccountsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     final accounts = ref.watch(accountsProvider(widget.entity.id));
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('new-account'),
-        onPressed: () => showDialog(context: context, builder: (_) => AccountDialog(entity: widget.entity)),
-        icon: const Icon(Icons.add),
-        label: const Text('Subdiviser un compte'),
-      ),
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Row(children: [
-            Expanded(child: TextField(decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'Numéro ou intitulé'), onChanged: (v) => setState(() => _search = v.trim().toLowerCase()))),
-            const SizedBox(width: 12),
-            DropdownButton<int?>(
-              value: _classFilter,
-              hint: const Text('Classe'),
-              items: [const DropdownMenuItem(value: null, child: Text('Toutes')), for (var c = 1; c <= 8; c++) DropdownMenuItem(value: c, child: Text('Classe $c'))],
-              onChanged: (v) => setState(() => _classFilter = v),
-            ),
-          ]),
+    final compact = akIsCompact(context);
+    return Column(children: [
+      _Toolbar(
+        filters: [
+          _SearchField(hint: 'Numéro ou intitulé', onChanged: (v) => setState(() => _search = v.trim().toLowerCase())),
+          _AkDropdown<int?>(
+            value: _classFilter,
+            hint: 'Classe',
+            items: [const DropdownMenuItem(value: null, child: Text('Toutes')), for (var c = 1; c <= 8; c++) DropdownMenuItem(value: c, child: Text('Classe $c'))],
+            onChanged: (v) => setState(() => _classFilter = v),
+          ),
+        ],
+        action: FilledButton.icon(
+          key: const Key('new-account'),
+          style: FilledButton.styleFrom(minimumSize: Size(0, akControlHeight(context))),
+          onPressed: () => showDialog(context: context, builder: (_) => AccountDialog(entity: widget.entity)),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Subdiviser un compte'),
         ),
-        Expanded(
-          child: AsyncView(
-            value: accounts,
-            onRetry: () => ref.invalidate(accountsProvider(widget.entity.id)),
-            builder: (list) {
-              final filtered = list.where((a) => (_classFilter == null || a.classNo == _classFilter) && (_search.isEmpty || a.code.startsWith(_search) || a.label.toLowerCase().contains(_search))).toList();
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: filtered.length,
-                itemBuilder: (_, i) {
-                  final a = filtered[i];
-                  final depth = a.significant.length.clamp(1, 7) - 1;
-                  return ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.only(left: 8.0 + depth * 14, right: 8),
-                    leading: SizedBox(width: 80, child: Text(a.code, style: TextStyle(fontFamily: 'monospace', fontWeight: a.allowPosting ? FontWeight.normal : FontWeight.bold))),
-                    title: Text(a.label, style: TextStyle(decoration: a.isActive ? null : TextDecoration.lineThrough, fontWeight: a.allowPosting ? FontWeight.normal : FontWeight.w600)),
-                    subtitle: Text([if (a.isCollective) 'collectif', if (a.isLetterable) 'lettrable', a.normalSide == 'debit' ? 'débiteur' : 'créditeur'].join(' · '), style: const TextStyle(fontSize: 11)),
-                    trailing: PopupMenuButton<String>(
+      ),
+      Expanded(
+        child: AsyncView(
+          value: accounts,
+          onRetry: () => ref.invalidate(accountsProvider(widget.entity.id)),
+          builder: (list) {
+            final filtered = list.where((a) => (_classFilter == null || a.classNo == _classFilter) && (_search.isEmpty || a.code.startsWith(_search) || a.label.toLowerCase().contains(_search))).toList();
+            if (filtered.isEmpty) return const AkEmptyState('Aucun compte.');
+            return ListView.builder(
+              itemCount: filtered.length,
+              itemBuilder: (_, i) {
+                final a = filtered[i];
+                final depth = a.significant.length.clamp(1, 7) - 1;
+                final meta = [if (a.isCollective) 'collectif', if (a.isLetterable) 'lettrable', a.normalSide == 'debit' ? 'débiteur' : 'créditeur'].join(' · ');
+                final label = Text(a.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: (a.allowPosting ? AkText.table : AkText.table.copyWith(fontWeight: FontWeight.w600)).copyWith(color: a.isActive ? t.text : t.textMuted, decoration: a.isActive ? null : TextDecoration.lineThrough));
+                return _ListRow(
+                  indent: depth * 14.0,
+                  child: Row(children: [
+                    SizedBox(width: 96, child: Text(a.code, style: AkText.code.copyWith(color: t.text, fontWeight: a.allowPosting ? FontWeight.w400 : FontWeight.w600))),
+                    Expanded(
+                      child: compact
+                          ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [label, Text(meta, style: AkText.caption.copyWith(color: t.textMuted))])
+                          : Row(children: [Expanded(child: label), Text(meta, style: AkText.caption.copyWith(color: t.textMuted))]),
+                    ),
+                    if (!a.isActive) const Padding(padding: EdgeInsets.only(left: AkSpace.s2), child: _InactiveBadge()),
+                    PopupMenuButton<String>(
                       onSelected: (v) => _action(v, a),
                       itemBuilder: (_) => [
                         const PopupMenuItem(value: 'rename', child: Text('Renommer')),
@@ -95,14 +240,14 @@ class _AccountsTabState extends ConsumerState<AccountsTab> {
                         const PopupMenuItem(value: 'delete', child: Text('Supprimer (sans mouvement)')),
                       ],
                     ),
-                  );
-                },
-              );
-            },
-          ),
+                  ]),
+                );
+              },
+            );
+          },
         ),
-      ]),
-    );
+      ),
+    ]);
   }
 
   Future<void> _action(String action, Account a) async {
@@ -176,13 +321,13 @@ class _AccountDialogState extends ConsumerState<AccountDialog> {
     return AlertDialog(
       title: const Text('Nouveau compte (subdivision)'),
       content: SizedBox(
-        width: 380,
+        width: _dialogWidth(context, 380),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           TextField(controller: _code, key: const Key('account-code'), autofocus: true, decoration: InputDecoration(labelText: 'Numéro', helperText: padded == null ? 'Chiffres uniquement, $_length au plus' : 'Sera enregistré : $padded'), onChanged: (_) => setState(() {})),
           const SizedBox(height: 8),
           TextField(controller: _label, key: const Key('account-label'), decoration: const InputDecoration(labelText: 'Intitulé')),
           CheckboxListTile(value: _collective, onChanged: (v) => setState(() => _collective = v ?? false), title: const Text('Compte collectif (tiers rattachés)'), contentPadding: EdgeInsets.zero),
-          if (_error != null) Text(_error!, key: const Key('account-error'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          if (_error != null) _formError(_error!, key: const Key('account-error')),
         ]),
       ),
       actions: [
@@ -227,44 +372,52 @@ class _ThirdPartiesTabState extends ConsumerState<ThirdPartiesTab> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     final tps = ref.watch(thirdPartiesProvider(widget.entity.id));
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showDialog(context: context, builder: (_) => ThirdPartyDialog(entity: widget.entity)),
-        icon: const Icon(Icons.add),
-        label: const Text('Nouveau tiers'),
-      ),
-      body: Column(children: [
-        Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: TextField(decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'Code ou nom'), onChanged: (v) => setState(() => _search = v.trim().toLowerCase()))),
-        Expanded(
-          child: AsyncView(
-            value: tps,
-            builder: (list) {
-              final filtered = list.where((t) => _search.isEmpty || t.code.toLowerCase().contains(_search) || t.name.toLowerCase().contains(_search)).toList();
-              return ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  for (final t in filtered)
-                    ListTile(
-                      dense: true,
-                      leading: SizedBox(width: 90, child: Text(t.code, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600))),
-                      title: Text(t.name, style: TextStyle(decoration: t.isActive ? null : TextDecoration.lineThrough)),
-                      subtitle: Text([ThirdParty.typeLabels[t.type] ?? t.type, if (t.collectiveCodes.isNotEmpty) 'collectifs ${t.collectiveCodes.join(', ')}', if (t.taxId != null) 'IFU ${t.taxId}'].join(' · ')),
-                      onTap: () => showDialog(context: context, builder: (_) => ThirdPartyDialog(entity: widget.entity, initial: t)),
-                      trailing: Switch(value: t.isActive, onChanged: (v) async {
-                        await ref.read(referencesRepositoryProvider).setThirdPartyActive(t.id, v);
-                        ref.invalidate(thirdPartiesProvider(widget.entity.id));
-                      }),
-                    ),
-                  if (filtered.isEmpty) const Text('Aucun tiers.'),
-                ],
-              );
-            },
-          ),
+    return Column(children: [
+      _Toolbar(
+        filters: [_SearchField(hint: 'Code ou nom', onChanged: (v) => setState(() => _search = v.trim().toLowerCase()))],
+        action: FilledButton.icon(
+          style: FilledButton.styleFrom(minimumSize: Size(0, akControlHeight(context))),
+          onPressed: () => showDialog(context: context, builder: (_) => ThirdPartyDialog(entity: widget.entity)),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Nouveau tiers'),
         ),
-      ]),
-    );
+      ),
+      Expanded(
+        child: AsyncView(
+          value: tps,
+          onRetry: () => ref.invalidate(thirdPartiesProvider(widget.entity.id)),
+          builder: (list) {
+            final filtered = list.where((p) => _search.isEmpty || p.code.toLowerCase().contains(_search) || p.name.toLowerCase().contains(_search)).toList();
+            if (filtered.isEmpty) return const AkEmptyState('Aucun tiers.');
+            return ListView.builder(
+              itemCount: filtered.length,
+              itemBuilder: (_, i) {
+                final p = filtered[i];
+                return _ListRow(
+                  onTap: () => showDialog(context: context, builder: (_) => ThirdPartyDialog(entity: widget.entity, initial: p)),
+                  child: Row(children: [
+                    SizedBox(width: 96, child: Text(p.code, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.code.copyWith(color: t.text, fontWeight: FontWeight.w600))),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.table.copyWith(color: p.isActive ? t.text : t.textMuted, decoration: p.isActive ? null : TextDecoration.lineThrough)),
+                        Text([ThirdParty.typeLabels[p.type] ?? p.type, if (p.collectiveCodes.isNotEmpty) 'collectifs ${p.collectiveCodes.join(', ')}', if (p.taxId != null) 'IFU ${p.taxId}'].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.caption.copyWith(color: t.textMuted)),
+                      ]),
+                    ),
+                    if (!p.isActive) const Padding(padding: EdgeInsets.only(left: AkSpace.s2), child: _InactiveBadge()),
+                    Switch(value: p.isActive, onChanged: (v) async {
+                      await ref.read(referencesRepositoryProvider).setThirdPartyActive(p.id, v);
+                      ref.invalidate(thirdPartiesProvider(widget.entity.id));
+                    }),
+                  ]),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    ]);
   }
 }
 
@@ -304,7 +457,7 @@ class _ThirdPartyDialogState extends ConsumerState<ThirdPartyDialog> {
       content: Form(
         key: _form,
         child: SizedBox(
-          width: 460,
+          width: _dialogWidth(context, 460),
           child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Row(children: [
@@ -330,15 +483,15 @@ class _ThirdPartyDialogState extends ConsumerState<ThirdPartyDialog> {
                 Expanded(child: TextFormField(controller: _email, decoration: const InputDecoration(labelText: 'E-mail'))),
               ]),
               const SizedBox(height: 12),
-              const Align(alignment: Alignment.centerLeft, child: Text('Comptes collectifs de rattachement', style: TextStyle(fontWeight: FontWeight.w600))),
+              Align(alignment: Alignment.centerLeft, child: Text('Comptes collectifs de rattachement', style: AkText.bodyStrong.copyWith(color: context.ak.text))),
               Wrap(
                 spacing: 6,
                 children: [
                   for (final a in collectives)
-                    FilterChip(label: Text('${a.code} ${a.label}', style: const TextStyle(fontSize: 12)), selected: _collectives.contains(a.id), onSelected: (v) => setState(() => v ? _collectives.add(a.id) : _collectives.remove(a.id))),
+                    FilterChip(label: Text('${a.code} ${a.label}'), selected: _collectives.contains(a.id), onSelected: (v) => setState(() => v ? _collectives.add(a.id) : _collectives.remove(a.id))),
                 ],
               ),
-              if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+              if (_error != null) _formError(_error!),
             ]),
           ),
         ),
@@ -376,40 +529,52 @@ class JournalsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.ak;
     final journals = ref.watch(journalsProvider(entity.id));
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showDialog(context: context, builder: (_) => JournalDialog(entity: entity)),
-        icon: const Icon(Icons.add),
-        label: const Text('Nouveau journal'),
+    return Column(children: [
+      _Toolbar(
+        action: FilledButton.icon(
+          style: FilledButton.styleFrom(minimumSize: Size(0, akControlHeight(context))),
+          onPressed: () => showDialog(context: context, builder: (_) => JournalDialog(entity: entity)),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Nouveau journal'),
+        ),
       ),
-      body: AsyncView(
-        value: journals,
-        builder: (list) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Card(
-              child: Column(children: [
-                for (final j in list)
-                  ListTile(
-                    leading: SizedBox(width: 60, child: Text(j.code, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600))),
-                    title: Text(j.label, style: TextStyle(decoration: j.isActive ? null : TextDecoration.lineThrough)),
-                    subtitle: Text([Journal.typeLabels[j.type] ?? j.type, if (j.treasuryAccountCode != null) 'compte ${j.treasuryAccountCode}'].join(' · ')),
-                    onTap: () => showDialog(context: context, builder: (_) => JournalDialog(entity: entity, initial: j)),
-                    trailing: j.type == 'opening'
-                        ? const Tooltip(message: 'Journal imposé', child: Icon(Icons.lock_outline))
-                        : Switch(value: j.isActive, onChanged: (v) async {
+      Expanded(
+        child: AsyncView(
+          value: journals,
+          onRetry: () => ref.invalidate(journalsProvider(entity.id)),
+          builder: (list) => list.isEmpty
+              ? const AkEmptyState('Aucun journal.')
+              : ListView.builder(
+                  itemCount: list.length,
+                  itemBuilder: (_, i) {
+                    final j = list[i];
+                    return _ListRow(
+                      onTap: () => showDialog(context: context, builder: (_) => JournalDialog(entity: entity, initial: j)),
+                      child: Row(children: [
+                        SizedBox(width: 64, child: Text(j.code, style: AkText.code.copyWith(color: t.text, fontWeight: FontWeight.w600))),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(j.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.table.copyWith(color: j.isActive ? t.text : t.textMuted, decoration: j.isActive ? null : TextDecoration.lineThrough)),
+                            Text([Journal.typeLabels[j.type] ?? j.type, if (j.treasuryAccountCode != null) 'compte ${j.treasuryAccountCode}'].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.caption.copyWith(color: t.textMuted)),
+                          ]),
+                        ),
+                        if (!j.isActive) const Padding(padding: EdgeInsets.only(left: AkSpace.s2), child: _InactiveBadge()),
+                        if (j.type == 'opening')
+                          const Padding(padding: EdgeInsets.symmetric(horizontal: AkSpace.s2), child: Tooltip(message: 'Journal imposé', child: Icon(Icons.lock_outline, size: 20)))
+                        else
+                          Switch(value: j.isActive, onChanged: (v) async {
                             await ref.read(referencesRepositoryProvider).setJournalActive(j.id, v);
                             ref.invalidate(journalsProvider(entity.id));
                           }),
-                  ),
-              ]),
-            ),
-          ],
+                      ]),
+                    );
+                  },
+                ),
         ),
       ),
-    );
+    ]);
   }
 }
 
@@ -440,7 +605,7 @@ class _JournalDialogState extends ConsumerState<JournalDialog> {
       content: Form(
         key: _form,
         child: SizedBox(
-          width: 420,
+          width: _dialogWidth(context, 420),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Row(children: [
               SizedBox(width: 110, child: TextFormField(controller: _code, enabled: widget.initial == null, decoration: const InputDecoration(labelText: 'Code'), validator: validateJournalCode, textCapitalization: TextCapitalization.characters)),
@@ -465,7 +630,7 @@ class _JournalDialogState extends ConsumerState<JournalDialog> {
                 validator: (v) => v == null ? 'Compte requis pour un journal de trésorerie' : null,
               ),
             ],
-            if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+            if (_error != null) _formError(_error!),
           ]),
         ),
       ),
@@ -500,51 +665,80 @@ class TemplatesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.ak;
     final templates = ref.watch(templatesProvider(entity.id));
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showDialog(context: context, builder: (_) => TemplateDialog(entity: entity)),
-        icon: const Icon(Icons.add),
-        label: const Text('Nouveau modèle'),
-      ),
-      body: AsyncView(
-        value: templates,
-        builder: (list) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            for (final t in list)
-              Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ExpansionTile(
-                  title: Text('${t.code} — ${t.label}'),
-                  subtitle: Text([t.isCabinetLevel ? 'modèle du cabinet' : 'modèle du dossier', if (t.journalType != null) Journal.typeLabels[t.journalType] ?? t.journalType!, if (t.description != null) t.description!].join(' · ')),
-                  children: [
-                    for (final l in t.lines)
-                      ListTile(
-                        dense: true,
-                        leading: Text('${l.lineNo}'),
-                        title: Text('${l.accountCode}${l.usesThirdParty ? ' + tiers' : ''} · ${l.side == 'debit' ? 'Débit' : 'Crédit'}'),
-                        subtitle: Text('${l.label ?? ''} · ${l.formulaLabel}'),
-                      ),
-                    if (!t.isCabinetLevel)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () async {
-                            await ref.read(referencesRepositoryProvider).deactivateTemplate(t.id);
-                            ref.invalidate(templatesProvider(entity.id));
-                          },
-                          child: const Text('Retirer ce modèle'),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-          ],
+    return Column(children: [
+      _Toolbar(
+        action: FilledButton.icon(
+          style: FilledButton.styleFrom(minimumSize: Size(0, akControlHeight(context))),
+          onPressed: () => showDialog(context: context, builder: (_) => TemplateDialog(entity: entity)),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Nouveau modèle'),
         ),
       ),
-    );
+      Expanded(
+        child: AsyncView(
+          value: templates,
+          onRetry: () => ref.invalidate(templatesProvider(entity.id)),
+          builder: (list) => list.isEmpty
+              ? const AkEmptyState('Aucun modèle d\'écriture.')
+              : ListView.builder(
+                  itemCount: list.length,
+                  itemBuilder: (_, i) {
+                    final m = list[i];
+                    return Container(
+                      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.border))),
+                      child: ExpansionTile(
+                        shape: const Border(),
+                        collapsedShape: const Border(),
+                        tilePadding: const EdgeInsets.symmetric(horizontal: AkSpace.s4),
+                        title: Row(children: [
+                          Text(m.code, style: AkText.code.copyWith(color: t.text, fontWeight: FontWeight.w600)),
+                          const SizedBox(width: AkSpace.s2),
+                          Expanded(child: Text('— ${m.label}', maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.table.copyWith(color: t.text))),
+                        ]),
+                        subtitle: Text([m.isCabinetLevel ? 'modèle du cabinet' : 'modèle du dossier', if (m.journalType != null) Journal.typeLabels[m.journalType] ?? m.journalType!, if (m.description != null) m.description!].join(' · '), style: AkText.caption.copyWith(color: t.textMuted)),
+                        children: [
+                          for (final l in m.lines)
+                            Container(
+                              color: t.surfaceSunken,
+                              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: 6),
+                              child: Row(children: [
+                                SizedBox(width: 28, child: Text('${l.lineNo}', style: AkText.code.copyWith(color: t.textMuted))),
+                                Expanded(
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text.rich(TextSpan(children: [
+                                      TextSpan(text: l.accountCode, style: AkText.code.copyWith(color: t.text)),
+                                      TextSpan(text: '${l.usesThirdParty ? ' + tiers' : ''} · ${l.side == 'debit' ? 'Débit' : 'Crédit'}', style: AkText.table.copyWith(color: t.text)),
+                                    ])),
+                                    Text('${l.label ?? ''} · ${l.formulaLabel}', style: AkText.caption.copyWith(color: t.textMuted)),
+                                  ]),
+                                ),
+                              ]),
+                            ),
+                          if (!m.isCabinetLevel)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Padding(
+                                padding: const EdgeInsets.all(AkSpace.s2),
+                                child: TextButton(
+                                  style: TextButton.styleFrom(foregroundColor: t.danger, minimumSize: Size(0, akControlHeight(context))),
+                                  onPressed: () async {
+                                    await ref.read(referencesRepositoryProvider).deactivateTemplate(m.id);
+                                    ref.invalidate(templatesProvider(entity.id));
+                                  },
+                                  child: const Text('Retirer ce modèle'),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ),
+    ]);
   }
 }
 
@@ -572,14 +766,12 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
     return AlertDialog(
       title: const Text('Nouveau modèle d\'écriture'),
       content: SizedBox(
-        width: 720,
+        width: _dialogWidth(context, 720),
         child: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Row(children: [
-              SizedBox(width: 160, child: TextField(controller: _code, decoration: const InputDecoration(labelText: 'Code'), textCapitalization: TextCapitalization.characters)),
-              const SizedBox(width: 8),
-              Expanded(child: TextField(controller: _label, decoration: const InputDecoration(labelText: 'Libellé'))),
-              const SizedBox(width: 8),
+            Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, children: [
+              SizedBox(width: 140, child: TextField(controller: _code, decoration: const InputDecoration(labelText: 'Code'), textCapitalization: TextCapitalization.characters)),
+              SizedBox(width: 240, child: TextField(controller: _label, decoration: const InputDecoration(labelText: 'Libellé'))),
               SizedBox(
                 width: 170,
                 child: DropdownButtonFormField<String?>(
@@ -593,7 +785,7 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
             const SizedBox(height: 12),
             for (var i = 0; i < _lines.length; i++) _lineRow(i, rateCodes),
             Align(alignment: Alignment.centerLeft, child: TextButton.icon(onPressed: () => setState(() => _lines.add(_LineDraft())), icon: const Icon(Icons.add), label: const Text('Ajouter une ligne'))),
-            if (_error != null) Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            if (_error != null) _formError(_error!),
           ]),
         ),
       ),
@@ -605,29 +797,26 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
   }
 
   Widget _lineRow(int i, List<String> rateCodes) {
+    final t = context.ak;
     final l = _lines[i];
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(children: [
-        SizedBox(width: 24, child: Text('${i + 1}')),
-        SizedBox(width: 90, child: TextField(controller: l.account, decoration: const InputDecoration(labelText: 'Compte'))),
-        const SizedBox(width: 6),
-        Checkbox(value: l.thirdParty, onChanged: (v) => setState(() => l.thirdParty = v ?? false)),
-        const Text('tiers', style: TextStyle(fontSize: 12)),
-        const SizedBox(width: 6),
-        DropdownButton<String>(value: l.side, items: const [DropdownMenuItem(value: 'debit', child: Text('Débit')), DropdownMenuItem(value: 'credit', child: Text('Crédit'))], onChanged: (v) => setState(() => l.side = v ?? 'debit')),
-        const SizedBox(width: 6),
-        DropdownButton<String>(value: l.formula, items: const [DropdownMenuItem(value: 'input', child: Text('Saisie')), DropdownMenuItem(value: 'percent_of', child: Text('% d\'une ligne')), DropdownMenuItem(value: 'balance', child: Text('Solde'))], onChanged: (v) => setState(() => l.formula = v ?? 'input')),
+      padding: const EdgeInsets.only(bottom: AkSpace.s2),
+      child: Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        SizedBox(width: 20, child: Text('${i + 1}', style: AkText.code.copyWith(color: t.textMuted))),
+        SizedBox(width: 96, child: TextField(controller: l.account, style: AkText.code.copyWith(color: t.text), decoration: const InputDecoration(labelText: 'Compte'))),
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          Checkbox(value: l.thirdParty, onChanged: (v) => setState(() => l.thirdParty = v ?? false)),
+          Text('tiers', style: AkText.caption.copyWith(color: t.text)),
+        ]),
+        _AkDropdown<String>(value: l.side, items: const [DropdownMenuItem(value: 'debit', child: Text('Débit')), DropdownMenuItem(value: 'credit', child: Text('Crédit'))], onChanged: (v) => setState(() => l.side = v ?? 'debit')),
+        _AkDropdown<String>(value: l.formula, items: const [DropdownMenuItem(value: 'input', child: Text('Saisie')), DropdownMenuItem(value: 'percent_of', child: Text('% d\'une ligne')), DropdownMenuItem(value: 'balance', child: Text('Solde'))], onChanged: (v) => setState(() => l.formula = v ?? 'input')),
         if (l.formula == 'percent_of') ...[
-          const SizedBox(width: 6),
-          SizedBox(width: 60, child: TextField(controller: l.refLine, decoration: const InputDecoration(labelText: 'Ligne'))),
-          const SizedBox(width: 6),
-          DropdownButton<String?>(value: l.rateCode, hint: const Text('Taux'), items: [const DropdownMenuItem(value: null, child: Text('% fixe')), for (final c in rateCodes) DropdownMenuItem(value: c, child: Text(c))], onChanged: (v) => setState(() => l.rateCode = v)),
-          if (l.rateCode == null) ...[const SizedBox(width: 6), SizedBox(width: 70, child: TextField(controller: l.percent, decoration: const InputDecoration(labelText: '%')))],
+          SizedBox(width: 64, child: TextField(controller: l.refLine, decoration: const InputDecoration(labelText: 'Ligne'))),
+          _AkDropdown<String?>(value: l.rateCode, hint: 'Taux', items: [const DropdownMenuItem(value: null, child: Text('% fixe')), for (final c in rateCodes) DropdownMenuItem(value: c, child: Text(c))], onChanged: (v) => setState(() => l.rateCode = v)),
+          if (l.rateCode == null) SizedBox(width: 72, child: TextField(controller: l.percent, decoration: const InputDecoration(labelText: '%'))),
         ],
-        const SizedBox(width: 6),
-        Expanded(child: TextField(controller: l.label, decoration: const InputDecoration(labelText: 'Libellé'))),
-        IconButton(icon: const Icon(Icons.close), onPressed: _lines.length <= 2 ? null : () => setState(() => _lines.removeAt(i))),
+        SizedBox(width: 200, child: TextField(controller: l.label, decoration: const InputDecoration(labelText: 'Libellé'))),
+        IconButton(tooltip: 'Retirer la ligne', icon: const Icon(Icons.close), onPressed: _lines.length <= 2 ? null : () => setState(() => _lines.removeAt(i))),
       ]),
     );
   }
@@ -689,28 +878,49 @@ class TaxRatesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.ak;
     final rates = ref.watch(taxRatesProvider);
     final canEdit = ref.watch(permissionsProvider).value?.has('cabinet.settings') ?? false;
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: canEdit
-          ? FloatingActionButton.extended(onPressed: () => showDialog(context: context, builder: (_) => const TaxRateDialog()), icon: const Icon(Icons.add), label: const Text('Nouveau taux'))
-          : null,
-      body: AsyncView(
-        value: rates,
-        builder: (list) => SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: DataTable(
-            headingRowColor: WidgetStateProperty.all(AkColors.sand),
-            columns: const [DataColumn(label: Text('Code')), DataColumn(label: Text('Libellé')), DataColumn(label: Text('Taux')), DataColumn(label: Text('Valide du')), DataColumn(label: Text('au'))],
-            rows: [
-              for (final r in list)
-                DataRow(cells: [DataCell(Text(r.code)), DataCell(Text(r.label)), DataCell(Text(r.percentLabel)), DataCell(Text(Fmt.date(r.validFrom))), DataCell(Text(r.validTo == null ? '—' : Fmt.date(r.validTo)))]),
-            ],
+    return Column(children: [
+      if (canEdit)
+        _Toolbar(
+          action: FilledButton.icon(
+            style: FilledButton.styleFrom(minimumSize: Size(0, akControlHeight(context))),
+            onPressed: () => showDialog(context: context, builder: (_) => const TaxRateDialog()),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Nouveau taux'),
+          ),
+        ),
+      Expanded(
+        child: AsyncView(
+          value: rates,
+          onRetry: () => ref.invalidate(taxRatesProvider),
+          builder: (list) => SingleChildScrollView(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: MediaQuery.sizeOf(context).width - 2 * akPageMargin(context) - 2),
+                child: DataTable(
+                  columnSpacing: AkSpace.s6,
+                  horizontalMargin: AkSpace.s4,
+                  columns: const [DataColumn(label: Text('Code')), DataColumn(label: Text('Libellé')), DataColumn(label: Text('Taux'), numeric: true), DataColumn(label: Text('Valide du')), DataColumn(label: Text('au'))],
+                  rows: [
+                    for (final r in list)
+                      DataRow(cells: [
+                        DataCell(Text(r.code, style: AkText.code.copyWith(color: t.text))),
+                        DataCell(Text(r.label)),
+                        DataCell(AkAmountText(r.percentLabel)),
+                        DataCell(Text(Fmt.date(r.validFrom))),
+                        DataCell(Text(r.validTo == null ? '—' : Fmt.date(r.validTo))),
+                      ]),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
-    );
+    ]);
   }
 }
 
@@ -733,7 +943,7 @@ class _TaxRateDialogState extends ConsumerState<TaxRateDialog> {
     return AlertDialog(
       title: const Text('Nouveau taux (ou nouvelle valeur d\'un taux existant)'),
       content: SizedBox(
-        width: 380,
+        width: _dialogWidth(context, 380),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: _code, decoration: const InputDecoration(labelText: 'Code (ex. TVA, AIB1)'), textCapitalization: TextCapitalization.characters),
           const SizedBox(height: 8),
@@ -744,7 +954,7 @@ class _TaxRateDialogState extends ConsumerState<TaxRateDialog> {
             const SizedBox(width: 8),
             Expanded(child: TextField(controller: _from, decoration: const InputDecoration(labelText: 'Valide à partir du'))),
           ]),
-          if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+          if (_error != null) _formError(_error!),
         ]),
       ),
       actions: [

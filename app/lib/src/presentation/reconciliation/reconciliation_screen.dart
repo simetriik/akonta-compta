@@ -14,6 +14,8 @@ import '../../data/supabase_providers.dart';
 import '../../domain/bank_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
+import '../inventory/inventory_screen.dart' show akPagePadding, showErrorSnack;
+import '../widgets/ak_widgets.dart';
 import '../widgets/require_entity.dart';
 
 /// Rapprochement bancaire (§10.7) : import du relevé selon un gabarit mémorisé, deux volets relevé / comptabilité,
@@ -67,7 +69,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
         _selBook.clear();
       });
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_french(e)), backgroundColor: AkColors.toCorrect));
+      if (mounted) showErrorSnack(context, _french(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -82,105 +84,142 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final can = perms.has('reconciliation.manage', entityId: widget.entity.id);
     final st = _state;
-    return Column(children: [
-      Material(
-        color: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            SizedBox(
-              width: 260,
-              child: DropdownButtonFormField<String>(
-                key: const Key('recon-journal'),
-                isExpanded: true,
-                initialValue: _journal?.id,
-                decoration: const InputDecoration(labelText: 'Journal de trésorerie'),
-                items: [for (final j in journals) DropdownMenuItem(value: j.id, child: Text('${j.code} · ${j.label} (${j.treasuryAccountCode})', overflow: TextOverflow.ellipsis))],
-                onChanged: (v) {
-                  setState(() => _journal = journals.where((j) => j.id == v).firstOrNull);
-                  _load();
-                },
-              ),
-            ),
-            SizedBox(width: 130, child: TextField(controller: _asOf, decoration: const InputDecoration(labelText: 'État au'), onSubmitted: (_) => _load())),
-            if (can && _journal != null) OutlinedButton.icon(key: const Key('import-statement'), onPressed: _busy ? null : _importStatement, icon: const Icon(Icons.upload_file_outlined), label: const Text('Importer un relevé')),
+    final t = context.ak;
+    final selectedLabel = _selBank.isEmpty && _selBook.isEmpty ? 'Pointer' : 'Pointer (${Fmt.fcfa(_selBankNet, showZero: true)} ↔ ${Fmt.fcfa(_selBookNet, showZero: true)})';
+    final subtitle = _journal == null ? null : '${_journal!.treasuryAccountCode} ${_journal!.label} · ${Fmt.month(_until)}';
+    return ListView(
+      padding: akPagePadding(context),
+      children: [
+        AkPageHead(
+          title: 'Rapprochement bancaire',
+          subtitle: subtitle,
+          actions: [
+            if (can && _journal != null) OutlinedButton.icon(key: const Key('import-statement'), onPressed: _busy ? null : _importStatement, icon: const Icon(Icons.upload_file_outlined, size: 18), label: const Text('Importer un relevé')),
+            if (_journal != null) OutlinedButton.icon(onPressed: _busy ? null : _exportPdf, icon: const Icon(Icons.picture_as_pdf_outlined, size: 18), label: const Text('État PDF')),
             if (can && _journal != null)
-              FilledButton.icon(
-                key: const Key('match-selected'),
-                onPressed: _busy || _selBank.isEmpty || _selBook.isEmpty || _selBankNet != _selBookNet ? null : _matchSelected,
-                icon: const Icon(Icons.link),
-                label: Text(_selBank.isEmpty && _selBook.isEmpty ? 'Pointer' : 'Pointer (${Fmt.fcfa(_selBankNet, showZero: true)} ↔ ${Fmt.fcfa(_selBookNet, showZero: true)})'),
-              ),
-            if (_journal != null) OutlinedButton.icon(onPressed: _busy ? null : _exportPdf, icon: const Icon(Icons.picture_as_pdf_outlined), label: const Text('État PDF')),
-            if (can && _journal != null)
-              FilledButton.tonal(
+              FilledButton(
                 key: const Key('finalize-recon'),
                 onPressed: _busy || st == null || st.difference != 0 ? null : _finalize,
                 child: const Text('Figer l\'état du mois'),
               ),
-            if (_busy) const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-          ]),
+          ],
         ),
-      ),
-      if (st != null) _StateBar(state: st),
-      Expanded(
-        child: _journal == null
-            ? const Center(child: Text('Choisissez un journal de banque ou de caisse.'))
-            : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(child: _pane('Relevé bancaire non pointé (${_bank.length})', [
-                  for (final l in _bank)
-                    CheckboxListTile(
-                      dense: true,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: _selBank.contains(l.id),
-                      onChanged: !can ? null : (v) => setState(() => v == true ? _selBank.add(l.id) : _selBank.remove(l.id)),
-                      title: Row(children: [
-                        SizedBox(width: 85, child: Text(Fmt.date(l.date))),
-                        Expanded(child: Text(l.label, overflow: TextOverflow.ellipsis)),
-                        SizedBox(width: 110, child: Text(l.debit > 0 ? '-${Fmt.fcfa(l.debit)}' : '+${Fmt.fcfa(l.credit)}', textAlign: TextAlign.right, style: TextStyle(color: l.debit > 0 ? AkColors.toCorrect : AkColors.validated))),
-                      ]),
-                      subtitle: _proposals.any((p) => p.statementLineId == l.id) ? const Text('proposition disponible', style: TextStyle(color: AkColors.terracotta, fontSize: 11)) : null,
-                      secondary: can ? IconButton(tooltip: 'Créer l\'écriture', icon: const Icon(Icons.add_circle_outline), onPressed: () => _createEntry(l)) : null,
-                    ),
-                ])),
-                const VerticalDivider(width: 1),
-                Expanded(child: _pane('Comptabilité non pointée (${_book.length})', [
-                  for (final l in _book)
-                    CheckboxListTile(
-                      dense: true,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: _selBook.contains(l.id),
-                      onChanged: !can ? null : (v) => setState(() => v == true ? _selBook.add(l.id) : _selBook.remove(l.id)),
-                      title: Row(children: [
-                        SizedBox(width: 85, child: Text(Fmt.date(l.date))),
-                        SizedBox(width: 50, child: Text('${l.number}', style: const TextStyle(fontFamily: 'monospace'))),
-                        Expanded(child: Text(l.label, overflow: TextOverflow.ellipsis)),
-                        SizedBox(width: 110, child: Text(l.debit > 0 ? '+${Fmt.fcfa(l.debit)}' : '-${Fmt.fcfa(l.credit)}', textAlign: TextAlign.right, style: TextStyle(color: l.debit > 0 ? AkColors.validated : AkColors.toCorrect))),
-                      ]),
-                    ),
-                ])),
-              ]),
-      ),
-      if (_proposals.isNotEmpty && can)
-        Material(
-          color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Row(children: [
-              Text('${_proposals.length} proposition(s) de pointage (montant identique, ± 5 jours)'),
-              const Spacer(),
-              TextButton(onPressed: _selectProposals, child: const Text('Sélectionner la première')),
-              FilledButton.tonal(onPressed: _busy ? null : _acceptAllProposals, child: const Text('Tout accepter')),
-            ]),
+        const SizedBox(height: AkSpace.s4),
+        Wrap(spacing: AkSpace.s3, runSpacing: AkSpace.s2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          SizedBox(
+            width: 260,
+            child: DropdownButtonFormField<String>(
+              key: const Key('recon-journal'),
+              isExpanded: true,
+              initialValue: _journal?.id,
+              decoration: const InputDecoration(labelText: 'Journal de trésorerie'),
+              items: [for (final j in journals) DropdownMenuItem(value: j.id, child: Text('${j.code} · ${j.label} (${j.treasuryAccountCode})', overflow: TextOverflow.ellipsis))],
+              onChanged: (v) {
+                setState(() => _journal = journals.where((j) => j.id == v).firstOrNull);
+                _load();
+              },
+            ),
           ),
-        ),
-    ]);
+          SizedBox(width: 130, child: TextField(controller: _asOf, decoration: const InputDecoration(labelText: 'État au'), onSubmitted: (_) => _load())),
+          if (can && _journal != null)
+            FilledButton.icon(
+              key: const Key('match-selected'),
+              onPressed: _busy || _selBank.isEmpty || _selBook.isEmpty || _selBankNet != _selBookNet ? null : _matchSelected,
+              icon: const Icon(Icons.link, size: 18),
+              label: Text(selectedLabel),
+            ),
+          if (_busy) const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+        ]),
+        if (st != null) ...[
+          const SizedBox(height: AkSpace.s4),
+          _StateBar(state: st),
+        ],
+        if (_proposals.isNotEmpty && can) ...[
+          const SizedBox(height: AkSpace.s4),
+          AkBanner(
+            kind: AkBannerKind.info,
+            icon: Icons.auto_awesome,
+            action: Wrap(spacing: AkSpace.s2, children: [
+              TextButton(onPressed: _selectProposals, child: const Text('Sélectionner la première')),
+              OutlinedButton.icon(onPressed: _busy ? null : _acceptAllProposals, icon: const Icon(Icons.done_all, size: 18), label: const Text('Tout accepter')),
+            ]),
+            child: Text.rich(TextSpan(children: [TextSpan(text: '${_proposals.length} proposition(s) de pointage', style: AkText.bodyStrong), const TextSpan(text: ' (montant identique, ± 5 jours)')])),
+          ),
+        ],
+        const SizedBox(height: AkSpace.s4),
+        if (_journal == null)
+          AkBanner(kind: AkBannerKind.info, child: const Text('Choisissez un journal de banque ou de caisse.'))
+        else
+          LayoutBuilder(builder: (context, c) {
+            final bankPane = _pane('Relevé bancaire non pointé (${_bank.length})', [
+              for (final l in _bank)
+                _row(
+                  selected: _selBank.contains(l.id),
+                  onChanged: !can ? null : (v) => setState(() => v == true ? _selBank.add(l.id) : _selBank.remove(l.id)),
+                  cells: [
+                    SizedBox(width: 84, child: Text(Fmt.date(l.date), style: AkText.table.copyWith(color: t.text))),
+                    Expanded(child: Text(l.label, overflow: TextOverflow.ellipsis, style: AkText.table.copyWith(color: t.text))),
+                    if (_proposals.any((p) => p.statementLineId == l.id)) ...[
+                      AkBadge(label: 'Proposée', color: t.info, tint: t.infoTint, icon: Icons.auto_awesome),
+                      const SizedBox(width: AkSpace.s2),
+                    ],
+                    SizedBox(width: 110, child: AkAmountText(l.debit > 0 ? '-${Fmt.fcfa(l.debit)}' : '+${Fmt.fcfa(l.credit)}', color: l.debit > 0 ? t.danger : t.success)),
+                    if (can) IconButton(tooltip: 'Créer l\'écriture', visualDensity: VisualDensity.compact, icon: const Icon(Icons.add_circle_outline, size: 20), onPressed: () => _createEntry(l)),
+                  ],
+                ),
+            ]);
+            final bookPane = _pane('Comptabilité non pointée (${_book.length})', [
+              for (final l in _book)
+                _row(
+                  selected: _selBook.contains(l.id),
+                  onChanged: !can ? null : (v) => setState(() => v == true ? _selBook.add(l.id) : _selBook.remove(l.id)),
+                  cells: [
+                    SizedBox(width: 84, child: Text(Fmt.date(l.date), style: AkText.table.copyWith(color: t.text))),
+                    SizedBox(width: 60, child: Text('${l.number}', style: AkText.code.copyWith(color: t.text))),
+                    Expanded(child: Text(l.label, overflow: TextOverflow.ellipsis, style: AkText.table.copyWith(color: t.text))),
+                    SizedBox(width: 110, child: AkAmountText(l.debit > 0 ? '+${Fmt.fcfa(l.debit)}' : '-${Fmt.fcfa(l.credit)}', color: l.debit > 0 ? t.success : t.danger)),
+                  ],
+                ),
+            ]);
+            if (c.maxWidth >= 900) {
+              return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: bankPane), const SizedBox(width: AkSpace.s4), Expanded(child: bookPane)]);
+            }
+            return Column(children: [bankPane, const SizedBox(height: AkSpace.s3), bookPane]);
+          }),
+        if (_journal != null) ...[
+          const SizedBox(height: AkSpace.s3),
+          Text('Pointage 1-1 ou plusieurs-à-plusieurs : sélectionnez des lignes des deux côtés puis « Pointer ». Les montants sont vus côté banque à gauche, côté entreprise à droite.', style: AkText.caption.copyWith(color: t.textMuted)),
+        ],
+      ],
+    );
   }
 
-  Widget _pane(String title, List<Widget> children) => Column(children: [
-        Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 4), child: Align(alignment: Alignment.centerLeft, child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)))),
-        Expanded(child: ListView(children: children.isEmpty ? const [Padding(padding: EdgeInsets.all(16), child: Text('Rien à pointer.'))] : children)),
-      ]);
+  /// Ligne pointable : case à cocher puis cellules ; fond teinté quand sélectionnée.
+  Widget _row({required bool selected, required ValueChanged<bool?>? onChanged, required List<Widget> cells}) {
+    final t = context.ak;
+    return InkWell(
+      onTap: onChanged == null ? null : () => onChanged(!selected),
+      child: Container(
+        color: selected ? t.brandTint : null,
+        constraints: const BoxConstraints(minHeight: AkSpace.rowCompact),
+        padding: const EdgeInsets.fromLTRB(AkSpace.s2, 2, AkSpace.s3, 2),
+        child: Row(children: [SizedBox(width: 36, child: Checkbox(value: selected, onChanged: onChanged)), ...cells]),
+      ),
+    );
+  }
+
+  Widget _pane(String title, List<Widget> rows) {
+    final t = context.ak;
+    return AkCard(
+      padding: EdgeInsets.zero,
+      clip: true,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3), child: Text(title, style: AkText.heading.copyWith(color: t.text))),
+        for (final r in rows) ...[Divider(height: 1, color: t.border), r],
+        if (rows.isEmpty) ...[Divider(height: 1, color: t.border), Padding(padding: const EdgeInsets.all(AkSpace.s4), child: Text('Rien à pointer.', style: AkText.body.copyWith(color: t.textMuted)))],
+      ]),
+    );
+  }
 
   void _selectProposals() {
     final p = _proposals.first;
@@ -211,7 +250,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
     try {
       await ref.read(reconciliationRepositoryProvider).match(_journal!.id, _selBank.toList(), _selBook.toList());
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_french(e)), backgroundColor: AkColors.toCorrect));
+      if (mounted) showErrorSnack(context, _french(e));
     }
     await _load();
   }
@@ -227,7 +266,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
       await ref.read(reconciliationRepositoryProvider).entryFromLine(l.id, accountId: result.$1.id, thirdPartyId: result.$2?.id, label: result.$3, entryDate: result.$4, validate: true);
       ref.invalidate(entityDashboardProvider);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_french(e)), backgroundColor: AkColors.toCorrect));
+      if (mounted) showErrorSnack(context, _french(e));
     }
     await _load();
   }
@@ -244,7 +283,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
     final parsed = parseStatementCsv(text, template);
     if (!mounted) return;
     if (parsed.lines.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Aucune ligne lue. ${parsed.errors.take(3).join(' · ')}'), backgroundColor: AkColors.toCorrect));
+      showErrorSnack(context, 'Aucune ligne lue. ${parsed.errors.take(3).join(' · ')}');
       return;
     }
     final dates = parsed.lines.map((l) => l.date).toList()..sort();
@@ -260,7 +299,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
       await ref.read(reconciliationRepositoryProvider).importStatement(journalId: _journal!.id, from: params.$1, to: params.$2, lines: parsed.lines, opening: params.$3, closing: params.$4, templateId: templateId, fileName: file.name);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${parsed.lines.length} lignes de relevé importées.')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_french(e)), backgroundColor: AkColors.toCorrect));
+      if (mounted) showErrorSnack(context, _french(e));
     }
     await _load();
   }
@@ -270,7 +309,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
       await ref.read(reconciliationRepositoryProvider).finalize(_journal!.id, _until);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('État de rapprochement figé. Exportez le PDF pour l\'archiver.')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_french(e)), backgroundColor: AkColors.toCorrect));
+      if (mounted) showErrorSnack(context, _french(e));
     }
     await _load();
   }
@@ -286,7 +325,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
         if (!await f.exists() || await f.length() == 0) await f.writeAsBytes(bytes);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_french(e)), backgroundColor: AkColors.toCorrect));
+      if (mounted) showErrorSnack(context, _french(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -302,26 +341,40 @@ class _StateBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     final ok = state.difference == 0;
-    Widget cell(String label, int v) => Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Column(mainAxisSize: MainAxisSize.min, children: [Text(label, style: const TextStyle(fontSize: 11)), Text(Fmt.fcfa(v, showZero: true), style: const TextStyle(fontWeight: FontWeight.w600))]));
-    return Material(
-      color: (ok ? AkColors.validated : AkColors.draft).withValues(alpha: 0.08),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-          cell('Solde comptable', state.bookBalance),
-          cell('Solde banque', state.bankBalance),
-          cell('+ Encaissements non crédités', state.depositsInTransit),
-          cell('- Décaissements non débités', state.outstandingPayments),
-          cell('+ Débits banque non comptabilisés', state.unmatchedBankDebits),
-          cell('- Crédits banque non comptabilisés', state.unmatchedBankCredits),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Chip(key: const Key('recon-diff'), label: Text(ok ? 'Écart 0 : rapproché' : 'Écart ${Fmt.fcfa(state.difference, showZero: true)}'), backgroundColor: (ok ? AkColors.validated : AkColors.toCorrect).withValues(alpha: 0.15)),
+    Widget cell(String label, int v) => ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 170, maxWidth: 260),
+          child: AkCard(
+            padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(label, style: AkText.caption.copyWith(color: t.textMuted)),
+              Text(Fmt.fcfa(v, showZero: true), style: AkText.amount.copyWith(fontSize: 18, height: 24 / 18, fontWeight: FontWeight.w600, color: t.text)),
+            ]),
+          ),
+        );
+    return Wrap(spacing: AkSpace.s3, runSpacing: AkSpace.s3, children: [
+      cell('Solde comptable', state.bookBalance),
+      cell('Solde banque', state.bankBalance),
+      cell('+ Encaissements non crédités', state.depositsInTransit),
+      cell('- Décaissements non débités', state.outstandingPayments),
+      cell('+ Débits banque non comptabilisés', state.unmatchedBankDebits),
+      cell('- Crédits banque non comptabilisés', state.unmatchedBankCredits),
+      AkCard(
+        padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text('Écart après rapprochement', style: AkText.caption.copyWith(color: t.textMuted)),
+          const SizedBox(height: 2),
+          AkBadge(
+            key: const Key('recon-diff'),
+            label: ok ? 'Écart 0 : rapproché' : 'Écart ${Fmt.fcfa(state.difference, showZero: true)}',
+            color: ok ? t.success : t.danger,
+            tint: ok ? t.successTint : t.dangerTint,
+            icon: ok ? Icons.check_circle_outline : Icons.error_outline,
           ),
         ]),
       ),
-    );
+    ]);
   }
 }
 
@@ -390,7 +443,7 @@ class _EntryFromLineDialogState extends State<_EntryFromLineDialog> {
           const SizedBox(height: 8),
           TextField(controller: _label, decoration: const InputDecoration(labelText: 'Libellé')),
           const SizedBox(height: 8),
-          const Text('L\'écriture est validée dans le journal de banque et pointée avec la ligne du relevé.', style: TextStyle(fontSize: 12)),
+          Text('L\'écriture est validée dans le journal de banque et pointée avec la ligne du relevé.', style: AkText.caption.copyWith(color: context.ak.textMuted)),
         ]),
       ),
       actions: [
@@ -462,7 +515,7 @@ class _TemplateDialogState extends State<_TemplateDialog> {
                 const SizedBox(width: 8),
                 Expanded(child: CheckboxListTile(value: _header, onChanged: (v) => setState(() => _header = v ?? true), title: const Text('Ligne d\'en-tête'), contentPadding: EdgeInsets.zero)),
               ]),
-              const Text('Numéros de colonnes (1 = première)', style: TextStyle(fontSize: 12)),
+              Text('Numéros de colonnes (1 = première)', style: AkText.caption.copyWith(color: context.ak.textMuted)),
               Row(children: [
                 Expanded(child: TextField(controller: _date, decoration: const InputDecoration(labelText: 'Date'))),
                 const SizedBox(width: 6),
@@ -544,7 +597,7 @@ class _StatementParamsDialogState extends State<_StatementParamsDialog> {
             const SizedBox(width: 8),
             Expanded(child: TextField(controller: _closing, decoration: const InputDecoration(labelText: 'Solde fin (facultatif)'))),
           ]),
-          if (widget.errors.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text('${widget.errors.length} ligne(s) ignorée(s) : ${widget.errors.take(3).join(' · ')}', style: const TextStyle(fontSize: 12, color: AkColors.toCorrect))),
+          if (widget.errors.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text('${widget.errors.length} ligne(s) ignorée(s) : ${widget.errors.take(3).join(' · ')}', style: AkText.caption.copyWith(color: context.ak.danger))),
         ]),
       ),
       actions: [

@@ -11,10 +11,38 @@ import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
+import '../widgets/ak_widgets.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 
 String frenchRpcError(Object e) => RegExp(r'message: ([^,}]+)').firstMatch(e.toString())?.group(1) ?? e.toString();
+
+/// Marge latérale de page : 24 px sur desktop, 16 px sur mobile (< 600 px).
+EdgeInsets akPagePadding(BuildContext context) => EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? AkSpace.s4 : AkSpace.s6);
+
+/// Message d'erreur : le SnackBar du thème est sombre, on force un fond « danger » avec texte lisible.
+void showErrorSnack(BuildContext context, String message) {
+  final t = context.ak;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message, style: AkText.body.copyWith(color: t.surface)), backgroundColor: t.danger));
+}
+
+/// Liste de lignes séparées par des filets, dans une carte sans marge interne.
+Widget akRowsCard(BuildContext context, List<Widget> rows) {
+  final t = context.ak;
+  return AkCard(
+    padding: EdgeInsets.zero,
+    clip: true,
+    child: Column(children: [
+      for (var i = 0; i < rows.length; i++) ...[
+        if (i > 0) Divider(height: 1, color: t.border),
+        rows[i],
+      ],
+    ]),
+  );
+}
+
+/// Message de liste vide, dans une carte.
+Widget akEmptyRow(BuildContext context, String text) => Padding(padding: const EdgeInsets.all(AkSpace.s4), child: Text(text, style: AkText.body.copyWith(color: context.ak.textMuted)));
 
 /// Travaux d'inventaire (§10.8) : immobilisations, stocks, provisions, régularisations, écarts de conversion.
 /// Toutes les générations produisent des brouillards « générée » à valider dans Saisie.
@@ -38,16 +66,24 @@ class _InventoryBody extends ConsumerWidget {
       builder: (list) {
         final fy = list.where((f) => f.status != 'closed').lastOrNull ?? list.lastOrNull;
         if (fy == null) return const Center(child: Text('Aucun exercice.'));
+        final t = context.ak;
         return DefaultTabController(
           length: 5,
           child: Column(children: [
-            Material(
-              color: Colors.white,
-              child: Column(children: [
-                Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 0), child: Row(children: [Text('Travaux d\'inventaire — exercice ${fy.label}', style: Theme.of(context).textTheme.titleMedium), const Spacer(), const Text('Les écritures générées arrivent en brouillard, marquées « générée ».', style: TextStyle(fontSize: 12))])),
-                const TabBar(isScrollable: true, tabs: [Tab(text: 'Immobilisations'), Tab(text: 'Stocks'), Tab(text: 'Provisions'), Tab(text: 'Régularisations'), Tab(text: 'Écarts de conversion')]),
-              ]),
+            Padding(
+              padding: EdgeInsets.fromLTRB(akPagePadding(context).left, AkSpace.s6, akPagePadding(context).right, AkSpace.s2),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: AkPageHead(title: 'Travaux d\'inventaire — exercice ${fy.label}', subtitle: entity.name),
+              ),
             ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: akPagePadding(context).left),
+              child: Align(alignment: Alignment.centerLeft, child: Text('Les écritures générées arrivent en brouillard, marquées « générée ».', style: AkText.caption.copyWith(color: t.textMuted))),
+            ),
+            const SizedBox(height: AkSpace.s2),
+            const TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [Tab(text: 'Immobilisations'), Tab(text: 'Stocks'), Tab(text: 'Provisions'), Tab(text: 'Régularisations'), Tab(text: 'Écarts de conversion')]),
+            Divider(height: 1, color: t.border),
             Expanded(child: TabBarView(children: [AssetsTab(entity: entity, fy: fy), StocksTab(entity: entity, fy: fy), ProvisionsTab(entity: entity, fy: fy), AccrualsTab(entity: entity, fy: fy), FxTab(entity: entity, fy: fy)])),
           ]),
         );
@@ -66,7 +102,7 @@ Future<void> runGeneration(BuildContext context, WidgetRef ref, Future<String?> 
       action: id == null ? null : SnackBarAction(label: 'Ouvrir', onPressed: () => context.go('/saisie/$id')),
     ));
   } catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
+    if (context.mounted) showErrorSnack(context, frenchRpcError(e));
   }
 }
 
@@ -79,49 +115,45 @@ class AssetsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.ak;
     final assets = ref.watch(fixedAssetsProvider(entity.id));
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: Row(mainAxisSize: MainAxisSize.min, children: [
-        FloatingActionButton.extended(heroTag: 'gen-dep', onPressed: () => runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateDepreciation(entity.id, fy.id), 'Dotations ${fy.label}'), icon: const Icon(Icons.auto_awesome), label: const Text('Générer les dotations')),
-        const SizedBox(width: 12),
-        FloatingActionButton.extended(heroTag: 'new-asset', onPressed: () => showDialog(context: context, builder: (_) => AssetDialog(entity: entity)), icon: const Icon(Icons.add), label: const Text('Immobilisation')),
-      ]),
-      body: AsyncView(
-        value: assets,
-        builder: (list) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Card(
-              child: Column(children: [
-                for (final a in list)
-                  ListTile(
-                    leading: SizedBox(width: 80, child: Text(a.code, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600))),
-                    title: Text(a.designation, style: TextStyle(decoration: a.status == 'in_service' ? null : TextDecoration.lineThrough)),
-                    subtitle: Text('${a.assetAccountCode} · mise en service ${Fmt.date(a.serviceDate)} · ${Fmt.fcfa(a.grossValue, showZero: true)} FCFA · ${a.durationMonths ~/ 12} ans ${a.method == 'declining' ? 'dégressif' : 'linéaire'}${a.priorDepreciation > 0 ? ' · amortissements antérieurs ${Fmt.fcfa(a.priorDepreciation)}' : ''} · ${a.statusLabel}'),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (v) async {
-                        if (v == 'plan') {
-                          showDialog(context: context, builder: (_) => PlanDialog(asset: a));
-                        } else if (v == 'edit') {
-                          showDialog(context: context, builder: (_) => AssetDialog(entity: entity, initial: a));
-                        } else {
-                          showDialog(context: context, builder: (_) => DisposalDialog(entity: entity, asset: a, scrap: v == 'scrap'));
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        const PopupMenuItem(value: 'plan', child: Text('Tableau d\'amortissement')),
-                        if (a.status == 'in_service') const PopupMenuItem(value: 'edit', child: Text('Modifier')),
-                        if (a.status == 'in_service') const PopupMenuItem(value: 'dispose', child: Text('Cession…')),
-                        if (a.status == 'in_service') const PopupMenuItem(value: 'scrap', child: Text('Mise au rebut…')),
-                      ],
-                    ),
-                  ),
-                if (list.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Aucune immobilisation. Reprenez l\'existant (valeur brute + amortissements cumulés) ou enregistrez les acquisitions.')),
-              ]),
-            ),
-          ],
-        ),
+    return AsyncView(
+      value: assets,
+      builder: (list) => ListView(
+        padding: akPagePadding(context),
+        children: [
+          Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, children: [
+            FilledButton.icon(onPressed: () => runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateDepreciation(entity.id, fy.id), 'Dotations ${fy.label}'), icon: const Icon(Icons.auto_awesome, size: 18), label: const Text('Générer les dotations')),
+            OutlinedButton.icon(onPressed: () => showDialog(context: context, builder: (_) => AssetDialog(entity: entity)), icon: const Icon(Icons.add, size: 18), label: const Text('Immobilisation')),
+          ]),
+          const SizedBox(height: AkSpace.s4),
+          akRowsCard(context, [
+            for (final a in list)
+              ListTile(
+                leading: SizedBox(width: 80, child: Text(a.code, style: AkText.code.copyWith(fontWeight: FontWeight.w600, color: t.text))),
+                title: Text(a.designation, style: AkText.body.copyWith(color: a.status == 'in_service' ? t.text : t.textMuted, decoration: a.status == 'in_service' ? null : TextDecoration.lineThrough)),
+                subtitle: Text('${a.assetAccountCode} · mise en service ${Fmt.date(a.serviceDate)} · ${Fmt.fcfa(a.grossValue, showZero: true)} FCFA · ${a.durationMonths ~/ 12} ans ${a.method == 'declining' ? 'dégressif' : 'linéaire'}${a.priorDepreciation > 0 ? ' · amortissements antérieurs ${Fmt.fcfa(a.priorDepreciation)}' : ''} · ${a.statusLabel}', style: AkText.caption.copyWith(color: t.textMuted)),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (v) async {
+                    if (v == 'plan') {
+                      showDialog(context: context, builder: (_) => PlanDialog(asset: a));
+                    } else if (v == 'edit') {
+                      showDialog(context: context, builder: (_) => AssetDialog(entity: entity, initial: a));
+                    } else {
+                      showDialog(context: context, builder: (_) => DisposalDialog(entity: entity, asset: a, scrap: v == 'scrap'));
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'plan', child: Text('Tableau d\'amortissement')),
+                    if (a.status == 'in_service') const PopupMenuItem(value: 'edit', child: Text('Modifier')),
+                    if (a.status == 'in_service') const PopupMenuItem(value: 'dispose', child: Text('Cession…')),
+                    if (a.status == 'in_service') const PopupMenuItem(value: 'scrap', child: Text('Mise au rebut…')),
+                  ],
+                ),
+              ),
+            if (list.isEmpty) akEmptyRow(context, 'Aucune immobilisation. Reprenez l\'existant (valeur brute + amortissements cumulés) ou enregistrez les acquisitions.'),
+          ]),
+        ],
       ),
     );
   }
@@ -195,7 +227,7 @@ class _AssetDialogState extends ConsumerState<AssetDialog> {
               const SizedBox(width: 8),
               Expanded(child: TextField(controller: _prior, decoration: const InputDecoration(labelText: 'Amortissements antérieurs (reprise)'))),
             ]),
-            if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+            if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: AkText.caption.copyWith(color: context.ak.danger))),
           ]),
         ),
       ),
@@ -254,11 +286,10 @@ class PlanDialog extends ConsumerWidget {
             if (!snap.hasData) return const Center(child: CircularProgressIndicator());
             return SingleChildScrollView(
               child: DataTable(
-                headingRowColor: WidgetStateProperty.all(AkColors.sand),
                 columns: const [DataColumn(label: Text('Exercice')), DataColumn(label: Text('Période')), DataColumn(label: Text('Taux'), numeric: true), DataColumn(label: Text('Dotation'), numeric: true), DataColumn(label: Text('Cumul'), numeric: true), DataColumn(label: Text('VNC'), numeric: true)],
                 rows: [
                   for (final r in snap.data!)
-                    DataRow(cells: [DataCell(Text('${r.periodStart.year}')), DataCell(Text('${Fmt.date(r.periodStart)} → ${Fmt.date(r.periodEnd)}')), DataCell(Text('${(r.rate * 100).toStringAsFixed(2)} %')), DataCell(Text(Fmt.fcfa(r.charge, showZero: true))), DataCell(Text(Fmt.fcfa(r.cumulated, showZero: true))), DataCell(Text(Fmt.fcfa(r.netBookValue, showZero: true)))]),
+                    DataRow(cells: [DataCell(Text('${r.periodStart.year}')), DataCell(Text('${Fmt.date(r.periodStart)} → ${Fmt.date(r.periodEnd)}')), DataCell(Text('${(r.rate * 100).toStringAsFixed(2)} %', style: AkText.amount)), DataCell(Text(Fmt.fcfa(r.charge, showZero: true), style: AkText.amount)), DataCell(Text(Fmt.fcfa(r.cumulated, showZero: true), style: AkText.amount)), DataCell(Text(Fmt.fcfa(r.netBookValue, showZero: true), style: AkText.amount))]),
                 ],
               ),
             );
@@ -308,8 +339,8 @@ class _DisposalDialogState extends ConsumerState<DisposalDialog> {
             ),
           ],
           const SizedBox(height: 8),
-          const Text('Génère la dotation complémentaire, la sortie de l\'actif (81 / 28 / 2x) et le produit de cession (82), en brouillard.', style: TextStyle(fontSize: 12)),
-          if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+          Text('Génère la dotation complémentaire, la sortie de l\'actif (81 / 28 / 2x) et le produit de cession (82), en brouillard.', style: AkText.caption.copyWith(color: context.ak.textMuted)),
+          if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: AkText.caption.copyWith(color: context.ak.danger))),
         ]),
       ),
       actions: [
@@ -342,24 +373,25 @@ class StocksTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.ak;
     final stocks = ref.watch(stocksProvider(fy.id));
     final accounts = ref.watch(accountsProvider(entity.id)).value ?? const <Account>[];
     final stockAccounts = accounts.where((a) => a.classNo == 3 && a.allowPosting && a.isActive && !a.code.startsWith('39')).toList();
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(onPressed: () => runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateStockVariations(entity.id, fy.id), 'Variations de stocks'), icon: const Icon(Icons.auto_awesome), label: const Text('Générer les variations')),
-      body: AsyncView(
-        value: stocks,
-        builder: (list) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            const Text('Inventaire intermittent : saisissez le stock final par compte de stock ; le stock initial est repris des à-nouveaux.'),
-            const SizedBox(height: 8),
-            for (final a in stockAccounts)
-              _StockRow(entity: entity, fy: fy, account: a, existing: list.where((s) => s.stockAccountCode == a.code).firstOrNull, variationAccounts: accounts.where((x) => x.allowPosting && x.isActive && (x.code.startsWith('603') || x.code.startsWith('73'))).toList()),
-            if (stockAccounts.isEmpty) const Text('Aucun compte de stock imputable dans le plan.'),
-          ],
-        ),
+    return AsyncView(
+      value: stocks,
+      builder: (list) => ListView(
+        padding: akPagePadding(context),
+        children: [
+          Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, children: [
+            FilledButton.icon(onPressed: () => runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateStockVariations(entity.id, fy.id), 'Variations de stocks'), icon: const Icon(Icons.auto_awesome, size: 18), label: const Text('Générer les variations')),
+          ]),
+          const SizedBox(height: AkSpace.s3),
+          AkBanner(kind: AkBannerKind.info, child: const Text('Inventaire intermittent : saisissez le stock final par compte de stock ; le stock initial est repris des à-nouveaux.')),
+          const SizedBox(height: AkSpace.s3),
+          for (final a in stockAccounts)
+            _StockRow(entity: entity, fy: fy, account: a, existing: list.where((s) => s.stockAccountCode == a.code).firstOrNull, variationAccounts: accounts.where((x) => x.allowPosting && x.isActive && (x.code.startsWith('603') || x.code.startsWith('73'))).toList()),
+          if (stockAccounts.isEmpty) Text('Aucun compte de stock imputable dans le plan.', style: AkText.body.copyWith(color: t.textMuted)),
+        ],
       ),
     );
   }
@@ -386,14 +418,15 @@ class _StockRowState extends ConsumerState<_StockRow> {
   Widget build(BuildContext context) {
     final def = widget.variationAccounts.where((v) => widget.existing != null ? v.code == widget.existing!.variationAccountCode : v.code.startsWith(widget.account.code.startsWith('31') || widget.account.code.startsWith('32') || widget.account.code.startsWith('33') ? '603' : '73')).firstOrNull;
     _variation ??= def?.id;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+    final t = context.ak;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AkSpace.s2),
+      child: AkCard(
+        padding: const EdgeInsets.all(AkSpace.s3),
         child: Row(children: [
-          SizedBox(width: 260, child: Text('${widget.account.code} ${widget.account.label}', overflow: TextOverflow.ellipsis)),
-          SizedBox(width: 160, child: Text('Initial ${Fmt.fcfa(widget.existing?.openingValue ?? 0, showZero: true)}')),
-          SizedBox(width: 160, child: TextField(controller: _closing, decoration: const InputDecoration(labelText: 'Stock final'), keyboardType: TextInputType.number)),
+          SizedBox(width: 260, child: Text.rich(TextSpan(children: [TextSpan(text: widget.account.code, style: AkText.code), TextSpan(text: ' ${widget.account.label}')]), style: AkText.body.copyWith(color: t.text), overflow: TextOverflow.ellipsis)),
+          SizedBox(width: 160, child: Text('Initial ${Fmt.fcfa(widget.existing?.openingValue ?? 0, showZero: true)}', style: AkText.amount.copyWith(color: t.textMuted))),
+          SizedBox(width: 160, child: TextField(controller: _closing, style: AkText.amount, textAlign: TextAlign.right, decoration: const InputDecoration(labelText: 'Stock final'), keyboardType: TextInputType.number)),
           const SizedBox(width: 8),
           Expanded(
             child: DropdownButtonFormField<String>(
@@ -405,7 +438,7 @@ class _StockRowState extends ConsumerState<_StockRow> {
             ),
           ),
           const SizedBox(width: 8),
-          FilledButton.tonal(
+          OutlinedButton(
             onPressed: () async {
               final closing = Fmt.parseAmount(_closing.text);
               if (closing == null || _variation == null) return;
@@ -439,49 +472,44 @@ class _ProvisionsTabState extends ConsumerState<ProvisionsTab> {
   @override
   Widget build(BuildContext context) {
     final provisions = ref.watch(provisionsProvider(widget.fy.id));
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(onPressed: () => runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateProvisionEntries(widget.entity.id, widget.fy.id), 'Provisions'), icon: const Icon(Icons.auto_awesome), label: const Text('Générer dotations / reprises')),
-      body: AsyncView(
+    final t = context.ak;
+    return AsyncView(
         value: provisions,
         builder: (list) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: akPagePadding(context),
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(children: [
-                  const Text('Créances douteuses depuis la balance âgée :'),
-                  const SizedBox(width: 12),
+            Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, children: [
+              FilledButton.icon(onPressed: () => runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateProvisionEntries(widget.entity.id, widget.fy.id), 'Provisions'), icon: const Icon(Icons.auto_awesome, size: 18), label: const Text('Générer dotations / reprises')),
+            ]),
+            const SizedBox(height: AkSpace.s4),
+            AkCard(
+                child: Wrap(spacing: AkSpace.s3, runSpacing: AkSpace.s2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  Text('Créances douteuses depuis la balance âgée :', style: AkText.body.copyWith(color: t.text)),
                   SizedBox(width: 120, child: TextField(controller: _r91, decoration: const InputDecoration(labelText: '91-180 j (%)'))),
-                  const SizedBox(width: 8),
                   SizedBox(width: 120, child: TextField(controller: _r180, decoration: const InputDecoration(labelText: '> 180 j (%)'))),
-                  const SizedBox(width: 12),
-                  FilledButton.tonal(
+                  OutlinedButton(
                     onPressed: () async {
                       try {
                         final n = await ref.read(inventoryRepositoryProvider).proposeReceivableProvisions(widget.entity.id, widget.fy.id, rate91to180: (double.tryParse(_r91.text) ?? 0) / 100, rateOver180: (double.tryParse(_r180.text) ?? 0) / 100);
                         ref.invalidate(provisionsProvider(widget.fy.id));
                         if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$n provision(s) proposée(s).')));
                       } catch (e) {
-                        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
+                        if (context.mounted) showErrorSnack(context, frenchRpcError(e));
                       }
                     },
                     child: const Text('Proposer'),
                   ),
                 ]),
-              ),
             ),
-            const SizedBox(height: 12),
-            Card(
-              child: Column(children: [
+            const SizedBox(height: AkSpace.s3),
+            akRowsCard(context, [
                 for (final p in list)
                   ListTile(
                     dense: true,
                     title: Text('${p.kind == 'receivable' ? 'Créance' : 'Risque'} · ${p.thirdPartyCode ?? ''} · base ${Fmt.fcfa(p.baseAmount, showZero: true)}${p.rate != null ? ' × ${(p.rate! * 100).toStringAsFixed(0)} %' : ''}'),
                     subtitle: Text('Provision N-1 ${Fmt.fcfa(p.previousAmount, showZero: true)} → N ${Fmt.fcfa(p.amount, showZero: true)} · ${p.amount - p.previousAmount >= 0 ? 'dotation' : 'reprise'} ${Fmt.fcfa((p.amount - p.previousAmount).abs(), showZero: true)}${p.note != null ? ' · ${p.note}' : ''}'),
                     trailing: p.entryId != null
-                        ? const Icon(Icons.check, color: AkColors.validated)
+                        ? Icon(Icons.check_circle_outline, color: t.success)
                         : IconButton(
                             icon: const Icon(Icons.edit_outlined),
                             onPressed: () async {
@@ -494,12 +522,10 @@ class _ProvisionsTabState extends ConsumerState<ProvisionsTab> {
                             },
                           ),
                   ),
-                if (list.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Aucune provision pour cet exercice.')),
-              ]),
-            ),
+                if (list.isEmpty) akEmptyRow(context, 'Aucune provision pour cet exercice.'),
+            ]),
           ],
         ),
-      ),
     );
   }
 }
@@ -513,50 +539,44 @@ class AccrualsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.ak;
     final accruals = ref.watch(accrualsProvider(fy.id));
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: Row(mainAxisSize: MainAxisSize.min, children: [
-        FloatingActionButton.extended(heroTag: 'gen-acc', onPressed: () => runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateAccruals(entity.id, fy.id), 'Régularisations au 31/12'), icon: const Icon(Icons.auto_awesome), label: const Text('Générer au 31/12')),
-        const SizedBox(width: 12),
-        FloatingActionButton.extended(
-          heroTag: 'gen-rev',
-          onPressed: () async {
-            try {
-              final ids = await ref.read(inventoryRepositoryProvider).generateReversals(entity.id, fy.id);
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${ids.length} extourne(s) générée(s) au 1er janvier N+1.')));
-            } catch (e) {
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchRpcError(e)), backgroundColor: AkColors.toCorrect));
-            }
-          },
-          icon: const Icon(Icons.undo),
-          label: const Text('Extournes N+1'),
-        ),
-        const SizedBox(width: 12),
-        FloatingActionButton.extended(heroTag: 'new-acc', onPressed: () => showDialog(context: context, builder: (_) => AccrualDialog(entity: entity, fy: fy)), icon: const Icon(Icons.add), label: const Text('Régularisation')),
-      ]),
-      body: AsyncView(
-        value: accruals,
-        builder: (list) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Card(
-              child: Column(children: [
-                for (final a in list)
-                  ListTile(
-                    dense: true,
-                    title: Text('${AccrualRow.kindLabels[a.kind]} · ${a.description}'),
-                    subtitle: Text('${a.accountCode} / ${a.counterpartCode} · ${Fmt.fcfa(a.totalAmount, showZero: true)} du ${Fmt.date(a.periodFrom)} au ${Fmt.date(a.periodTo)} · part régularisée ${Fmt.fcfa(a.amount, showZero: true)}${a.entryId != null ? ' · écriture générée' : ''}${a.reversalEntryId != null ? ' · extournée' : ''}'),
-                    trailing: a.entryId == null ? IconButton(icon: const Icon(Icons.delete_outline), onPressed: () async {
-                      await ref.read(inventoryRepositoryProvider).deleteAccrual(a.id);
-                      ref.invalidate(accrualsProvider(fy.id));
-                    }) : null,
-                  ),
-                if (list.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Aucune régularisation saisie.')),
-              ]),
+    return AsyncView(
+      value: accruals,
+      builder: (list) => ListView(
+        padding: akPagePadding(context),
+        children: [
+          Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, children: [
+            FilledButton.icon(onPressed: () => runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateAccruals(entity.id, fy.id), 'Régularisations au 31/12'), icon: const Icon(Icons.auto_awesome, size: 18), label: const Text('Générer au 31/12')),
+            OutlinedButton.icon(
+              onPressed: () async {
+                try {
+                  final ids = await ref.read(inventoryRepositoryProvider).generateReversals(entity.id, fy.id);
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${ids.length} extourne(s) générée(s) au 1er janvier N+1.')));
+                } catch (e) {
+                  if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                }
+              },
+              icon: const Icon(Icons.undo, size: 18),
+              label: const Text('Extournes N+1'),
             ),
-          ],
-        ),
+            OutlinedButton.icon(onPressed: () => showDialog(context: context, builder: (_) => AccrualDialog(entity: entity, fy: fy)), icon: const Icon(Icons.add, size: 18), label: const Text('Régularisation')),
+          ]),
+          const SizedBox(height: AkSpace.s4),
+          akRowsCard(context, [
+            for (final a in list)
+              ListTile(
+                dense: true,
+                title: Text('${AccrualRow.kindLabels[a.kind]} · ${a.description}', style: AkText.body.copyWith(color: t.text)),
+                subtitle: Text('${a.accountCode} / ${a.counterpartCode} · ${Fmt.fcfa(a.totalAmount, showZero: true)} du ${Fmt.date(a.periodFrom)} au ${Fmt.date(a.periodTo)} · part régularisée ${Fmt.fcfa(a.amount, showZero: true)}${a.entryId != null ? ' · écriture générée' : ''}${a.reversalEntryId != null ? ' · extournée' : ''}', style: AkText.caption.copyWith(color: t.textMuted)),
+                trailing: a.entryId == null ? IconButton(tooltip: 'Supprimer', icon: const Icon(Icons.delete_outline), onPressed: () async {
+                  await ref.read(inventoryRepositoryProvider).deleteAccrual(a.id);
+                  ref.invalidate(accrualsProvider(fy.id));
+                }) : null,
+              ),
+            if (list.isEmpty) akEmptyRow(context, 'Aucune régularisation saisie.'),
+          ]),
+        ],
       ),
     );
   }
@@ -618,8 +638,8 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
             Expanded(child: TextField(controller: _to, decoration: const InputDecoration(labelText: 'au'))),
           ]),
           const SizedBox(height: 6),
-          const Text('Prorata au jour (base 360) calculé à la génération ; extourne automatique au 1er janvier N+1.', style: TextStyle(fontSize: 12)),
-          if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+          Text('Prorata au jour (base 360) calculé à la génération ; extourne automatique au 1er janvier N+1.', style: AkText.caption.copyWith(color: context.ak.textMuted)),
+          if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: AkText.caption.copyWith(color: context.ak.danger))),
         ]),
       ),
       actions: [
@@ -665,35 +685,32 @@ class _FxTabState extends ConsumerState<FxTab> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: akPagePadding(context),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Cours de clôture (l\'euro est à parité fixe 655,957). Les créances et dettes en devises non lettrées sont réévaluées au cours de clôture : écarts 478 / 479 et provision pour pertes de change, extournés au 1er janvier.'),
-              const SizedBox(height: 8),
-              Row(children: [
-                SizedBox(width: 100, child: TextField(controller: _currency, decoration: const InputDecoration(labelText: 'Devise'), textCapitalization: TextCapitalization.characters)),
-                const SizedBox(width: 8),
-                SizedBox(width: 160, child: TextField(controller: _rate, decoration: const InputDecoration(labelText: 'Cours de clôture (FCFA)'))),
-                const SizedBox(width: 8),
-                FilledButton.tonal(
-                  onPressed: () async {
-                    final r = double.tryParse(_rate.text.replaceAll(',', '.'));
-                    if (r == null || _currency.text.trim().length != 3) return;
-                    final cabinet = await ref.read(currentCabinetProvider.future);
-                    await ref.read(inventoryRepositoryProvider).setClosingRate(cabinet!.id, _currency.text.trim().toUpperCase(), widget.fy.endDate, r);
-                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cours enregistré.')));
-                  },
-                  child: const Text('Enregistrer le cours'),
-                ),
-                const Spacer(),
-                FilledButton.icon(onPressed: () => runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateFxRevaluation(widget.entity.id, widget.fy.id), 'Écarts de conversion'), icon: const Icon(Icons.auto_awesome), label: const Text('Générer les écarts')),
-              ]),
+        AkCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Cours de clôture', style: AkText.heading.copyWith(color: t.text)),
+            const SizedBox(height: AkSpace.s2),
+            Text('Cours de clôture (l\'euro est à parité fixe 655,957). Les créances et dettes en devises non lettrées sont réévaluées au cours de clôture : écarts 478 / 479 et provision pour pertes de change, extournés au 1er janvier.', style: AkText.body.copyWith(color: t.textMuted)),
+            const SizedBox(height: AkSpace.s3),
+            Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              SizedBox(width: 100, child: TextField(controller: _currency, decoration: const InputDecoration(labelText: 'Devise'), textCapitalization: TextCapitalization.characters)),
+              SizedBox(width: 160, child: TextField(controller: _rate, style: AkText.amount, textAlign: TextAlign.right, decoration: const InputDecoration(labelText: 'Cours de clôture (FCFA)'))),
+              OutlinedButton(
+                onPressed: () async {
+                  final r = double.tryParse(_rate.text.replaceAll(',', '.'));
+                  if (r == null || _currency.text.trim().length != 3) return;
+                  final cabinet = await ref.read(currentCabinetProvider.future);
+                  await ref.read(inventoryRepositoryProvider).setClosingRate(cabinet!.id, _currency.text.trim().toUpperCase(), widget.fy.endDate, r);
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cours enregistré.')));
+                },
+                child: const Text('Enregistrer le cours'),
+              ),
+              FilledButton.icon(onPressed: () => runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateFxRevaluation(widget.entity.id, widget.fy.id), 'Écarts de conversion'), icon: const Icon(Icons.auto_awesome, size: 18), label: const Text('Générer les écarts')),
             ]),
-          ),
+          ]),
         ),
       ],
     );

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/formatting.dart';
+import '../../core/theme.dart';
 import '../../domain/entity_models.dart';
+import '../widgets/ak_widgets.dart';
 
 /// Fiche entité en 4 blocs (R1 identification, R2 activité, R3 dirigeants [écran dédié], paramètres comptables).
 class EntityForm extends StatefulWidget {
@@ -86,14 +88,14 @@ class _EntityFormState extends State<EntityForm> {
 
   @override
   Widget build(BuildContext context) {
-    final titleStyle = Theme.of(context).textTheme.titleMedium;
+    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
+    final t = context.ak;
     return Form(
       key: _form,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(pad),
         children: [
-          Text('Identification (R1)', style: titleStyle),
-          const SizedBox(height: 8),
+          _Section(title: 'Identification (R1)', children: [
           TextFormField(controller: _name, key: const Key('entity-name'), decoration: const InputDecoration(labelText: 'Dénomination *'), validator: EntityInput.validateName),
           const SizedBox(height: 8),
           Row(children: [
@@ -156,9 +158,9 @@ class _EntityFormState extends State<EntityForm> {
               ),
             ),
           ]),
-          const SizedBox(height: 20),
-          Text('Activité (R2)', style: titleStyle),
-          const SizedBox(height: 8),
+          ]),
+          const SizedBox(height: AkSpace.s4),
+          _Section(title: 'Activité (R2)', children: [
           TextFormField(controller: _mainActivity, decoration: const InputDecoration(labelText: 'Activité principale')),
           const SizedBox(height: 8),
           Row(children: [
@@ -166,9 +168,9 @@ class _EntityFormState extends State<EntityForm> {
             const SizedBox(width: 8),
             Expanded(child: TextFormField(controller: _activityCode, decoration: const InputDecoration(labelText: 'Code de nomenclature'))),
           ]),
-          const SizedBox(height: 20),
-          Text('Paramètres comptables', style: titleStyle),
-          const SizedBox(height: 8),
+          ]),
+          const SizedBox(height: AkSpace.s4),
+          _Section(title: 'Paramètres comptables', children: [
           Row(children: [
             SizedBox(
               width: 220,
@@ -186,19 +188,42 @@ class _EntityFormState extends State<EntityForm> {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: SwitchListTile(
+              child: Material(
+                type: MaterialType.transparency,
+                child: SwitchListTile(
                 value: _monthlyLock,
                 onChanged: widget.canEditAccountingParams ? (v) => setState(() => _monthlyLock = v) : null,
                 title: const Text('Verrouillage mensuel par le chef de mission'),
                 subtitle: const Text('Système normal SYSCOHADA · FCFA'),
+                ),
               ),
             ),
           ]),
-          if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, key: const Key('entity-error'), style: TextStyle(color: Theme.of(context).colorScheme.error))),
-          const SizedBox(height: 16),
+          ]),
+          if (_error != null) Padding(padding: const EdgeInsets.only(top: AkSpace.s3), child: Text(_error!, key: const Key('entity-error'), style: AkText.body.copyWith(color: t.danger))),
+          const SizedBox(height: AkSpace.s4),
           Align(alignment: Alignment.centerRight, child: FilledButton(key: const Key('entity-submit'), onPressed: _busy ? null : _submit, child: Text(widget.submitLabel))),
         ],
       ),
+    );
+  }
+}
+
+/// Bloc de formulaire : carte à filet avec titre de section.
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return AkCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: AkText.heading.copyWith(color: context.ak.text)),
+        const SizedBox(height: AkSpace.s3),
+        ...children,
+      ]),
     );
   }
 }
