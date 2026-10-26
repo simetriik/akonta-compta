@@ -421,6 +421,15 @@ ThemeData _buildTheme(AkTokens t, Brightness brightness, bool touch) {
       fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? t.brand : Colors.transparent),
       checkColor: WidgetStatePropertyAll(t.onBrand),
     ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        shape: const WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: AkRadius.mdAll)),
+        side: WidgetStatePropertyAll(BorderSide(color: t.borderControl)),
+        textStyle: const WidgetStatePropertyAll(AkText.table),
+        backgroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? t.brandTint : t.surface),
+        foregroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? t.brandText : t.text),
+      ),
+    ),
     progressIndicatorTheme: ProgressIndicatorThemeData(color: t.brand, linearTrackColor: t.border),
     tooltipTheme: TooltipThemeData(
       decoration: BoxDecoration(color: t.text, borderRadius: AkRadius.mdAll),

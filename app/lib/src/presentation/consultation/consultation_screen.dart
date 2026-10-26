@@ -94,7 +94,7 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
-                decoration: BoxDecoration(color: t.surfaceSunken, border: Border(bottom: BorderSide(color: t.border))),
+                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.border))),
                 child: _filters(context),
               ),
               Expanded(
@@ -486,7 +486,7 @@ class _LedgerGrid extends StatelessWidget {
     ];
     return _DataGrid(
       columns: const [
-        _Col('Date', 100),
+        _Col('Date', 116),
         _Col('Pièce', 96),
         _Col('Référence', 110),
         _Col('Libellé', 240, grow: true),

@@ -70,7 +70,7 @@ class _Toolbar extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
-      decoration: BoxDecoration(color: t.surfaceSunken, border: Border(bottom: BorderSide(color: t.border))),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.border))),
       child: compact
           ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [if (filters.isNotEmpty) filterWrap, if (filters.isNotEmpty && action != null) const SizedBox(height: AkSpace.s2), ?action])
           : Row(children: [Expanded(child: filterWrap), if (action != null) ...[const SizedBox(width: AkSpace.s3), action!]]),
