@@ -4,31 +4,35 @@ import '../../core/theme.dart';
 
 /// Symbole Akonta (tête d'éléphant : oreille, tête, trompe) dessiné en vectoriel, d'après le kit logo.
 class AkontaLogo extends StatelessWidget {
-  const AkontaLogo({super.key, this.height = 40, this.color = AkColors.ink, this.withWordmark = true});
+  const AkontaLogo({super.key, this.height = 40, this.color, this.withWordmark = true});
 
   final double height;
-  final Color color;
+
+  /// Par défaut : encre du thème courant (claire en mode sombre).
+  final Color? color;
   final bool withWordmark;
 
   @override
   Widget build(BuildContext context) {
-    final symbol = SizedBox(height: height, width: height, child: CustomPaint(painter: _ElephantPainter(color)));
+    final c = color ?? context.ak.text;
+    final symbol = SizedBox(height: height, width: height, child: CustomPaint(painter: _ElephantPainter(c, context.ak.surface)));
     if (!withWordmark) return symbol;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         symbol,
         SizedBox(width: height * 0.25),
-        Text('akonta', style: TextStyle(fontSize: height * 0.55, fontWeight: FontWeight.w600, color: color, letterSpacing: 0.5)),
+        Text('akonta', style: TextStyle(fontFamily: AkFonts.display, fontSize: height * 0.55, fontWeight: FontWeight.w600, color: c, letterSpacing: 0.01 * height * 0.55)),
       ],
     );
   }
 }
 
 class _ElephantPainter extends CustomPainter {
-  _ElephantPainter(this.color);
+  _ElephantPainter(this.color, this.eye);
 
   final Color color;
+  final Color eye;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -53,10 +57,10 @@ class _ElephantPainter extends CustomPainter {
     // Tête
     canvas.drawOval(Rect.fromCenter(center: Offset(160 * s, 101 * s), width: 108 * s, height: 116 * s), paint);
     if (size.width >= 48) {
-      canvas.drawCircle(Offset(148 * s, 88 * s), 5 * s, Paint()..color = Colors.white);
+      canvas.drawCircle(Offset(148 * s, 88 * s), 5 * s, Paint()..color = eye);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _ElephantPainter old) => old.color != color;
+  bool shouldRepaint(covariant _ElephantPainter old) => old.color != color || old.eye != eye;
 }

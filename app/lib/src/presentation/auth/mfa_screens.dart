@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme.dart';
 import '../../data/auth_repository.dart';
+import '../widgets/ak_widgets.dart';
 import '../widgets/akonta_logo.dart';
 
 /// Saisie du code TOTP à la connexion (facteur déjà enrôlé).
@@ -49,7 +50,7 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
         const Text('Saisissez le code à 6 chiffres de votre application d\'authentification.'),
         const SizedBox(height: 16),
         CodeField(controller: _code, onSubmitted: _verify),
-        if (_error != null) ...[const SizedBox(height: 8), Text(_error!, style: const TextStyle(color: AkColors.toCorrect))],
+        if (_error != null) ...[const SizedBox(height: 8), AkBanner(kind: AkBannerKind.danger, child: Text(_error!))],
         const SizedBox(height: 16),
         FilledButton(onPressed: _busy ? null : _verify, child: const Text('Vérifier')),
         TextButton(onPressed: () => ref.read(authRepositoryProvider).signOut(), child: const Text('Se déconnecter')),
@@ -123,11 +124,11 @@ class _MfaEnrollScreenState extends ConsumerState<MfaEnrollScreen> {
         if (e != null && totp != null) ...[
           Center(child: QrImageView(data: totp.uri, size: 180, backgroundColor: Colors.white)),
           const SizedBox(height: 8),
-          SelectableText('Clé manuelle : ${totp.secret}', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+          SelectableText('Clé manuelle : ${totp.secret}', style: AkText.code.copyWith(fontSize: 12)),
           const SizedBox(height: 16),
           CodeField(controller: _code, onSubmitted: _confirm),
         ],
-        if (_error != null) ...[const SizedBox(height: 8), Text(_error!, style: const TextStyle(color: AkColors.toCorrect))],
+        if (_error != null) ...[const SizedBox(height: 8), AkBanner(kind: AkBannerKind.danger, child: Text(_error!))],
         const SizedBox(height: 16),
         FilledButton(onPressed: _busy || e == null ? null : _confirm, child: const Text('Confirmer')),
         if (!widget.mandatory) TextButton(onPressed: widget.onDone, child: const Text('Plus tard')),
@@ -152,7 +153,7 @@ class CodeField extends StatelessWidget {
       keyboardType: TextInputType.number,
       maxLength: 6,
       textAlign: TextAlign.center,
-      style: const TextStyle(fontSize: 22, letterSpacing: 8),
+      style: AkText.code.copyWith(fontSize: 22, letterSpacing: 8),
       decoration: const InputDecoration(labelText: 'Code à 6 chiffres', counterText: ''),
       onSubmitted: (_) => onSubmitted(),
     );
@@ -167,27 +168,32 @@ class MfaScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AkSpace.s6),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Center(child: AkontaLogo(height: 48)),
-                    const SizedBox(height: 8),
-                    Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    ...children,
-                  ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Center(child: AkontaLogo(height: 56)),
+                const SizedBox(height: AkSpace.s6),
+                AkCard(
+                  padding: const EdgeInsets.all(AkSpace.s8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(title, style: AkText.titleLg.copyWith(color: t.text)),
+                      const SizedBox(height: AkSpace.s4),
+                      ...children,
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),

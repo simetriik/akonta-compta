@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
+import 'ak_widgets.dart';
 
 /// Statut coloré d'une écriture : brouillard, validée, revue, à corriger (conception §12.3).
 enum EntryStatusKind { draft, validated, reviewed, toCorrect }
@@ -21,16 +22,13 @@ class StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = switch (kind) {
-      EntryStatusKind.draft => ('Brouillard', AkColors.draft),
-      EntryStatusKind.validated => ('Validée', AkColors.validated),
-      EntryStatusKind.reviewed => ('Revue', AkColors.reviewed),
-      EntryStatusKind.toCorrect => ('À corriger', AkColors.toCorrect),
+    final t = context.ak;
+    final (label, color, tint, icon) = switch (kind) {
+      EntryStatusKind.draft => ('Brouillard', t.statusDraft, t.statusDraftTint, Icons.edit_outlined),
+      EntryStatusKind.validated => ('Validée', t.statusValid, t.statusValidTint, Icons.check_circle_outline),
+      EntryStatusKind.reviewed => ('Revue', t.statusReview, t.statusReviewTint, Icons.fact_check_outlined),
+      EntryStatusKind.toCorrect => ('À corriger', t.statusFix, t.statusFixTint, Icons.error_outline),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: color)),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
-    );
+    return AkBadge(label: label, color: color, tint: tint, icon: icon);
   }
 }
