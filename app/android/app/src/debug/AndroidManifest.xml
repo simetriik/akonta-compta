@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Recette interne : l'instance de test est jointe en HTTP sur le réseau local (jamais en production : manifeste de débogage seulement). -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

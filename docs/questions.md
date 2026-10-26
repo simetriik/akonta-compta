@@ -23,3 +23,39 @@
 ## Q-006 — Refonte UI : composants à compléter ?
 - **Question** : faut-il ajouter à la bibliothèque un `AkTabs`, un `AkRadio` et une grille paresseuse (grand livre) pour supprimer les derniers widgets Material thémés ?
 - **Hypothèse appliquée** : non en V1 ; ils sont thémés aux jetons et listés dans `docs/design/systeme-de-design.md` (écarts connus).
+
+## Q-007 — Import Perfecto : deux « Date illisible » sur l'en-tête et le total
+- **Constat** : `import_parse_perfecto_journal` signale « Date illisible » pour la ligne d'en-tête faite de seules tabulations (le `trim` ne retire pas les tabulations) et pour la ligne `Total<TAB>Journal` (le motif attend « Total Journal »). Vérifié sur le vrai `JOURNAL BANQUE.TXT` : mêmes deux alertes, aucune ligne de données rejetée.
+- **Hypothèse appliquée** : bénin, laissé en l'état pendant la préparation de la recette (pas de changement de logique) ; le test `150_recette_import` fige ce comportement. À corriger après la recette (ignorer les lignes vides de tabulations et accepter `Total<TAB>Journal`).
+
+## Q-008 — Invitation : création du mot de passe
+- **Constat** : l'Edge Function `invite-user` envoie un lien Supabase, mais l'application n'a aucun écran pour définir le mot de passe depuis ce lien (`updatePassword` n'est jamais appelé) ni pour réinitialiser un mot de passe oublié.
+- **Hypothèse appliquée** : recette avec `recette/definir-mot-de-passe.sh`. À traiter avant toute mise en service.
+
+## Q-009 — Saisie en devise absente de la grille
+- **Constat** : la base accepte les écritures en devise (euro à parité fixe, autre devise avec cours) mais la grille de saisie n'expose ni devise, ni montant en devise, ni cours.
+- **Hypothèse appliquée** : `recette/injecter-ecritures-devise.sh` crée les deux brouillards du jeu de données.
+
+## Q-010 — Verrouillage du compte après 5 échecs de connexion
+- **Constat** : prévu par la fiche de recette, absent du code et de la base ; la configuration locale ne fait que limiter le débit des connexions.
+- **Hypothèse appliquée** : écart consigné dans `recette/LISEZMOI.md`, non corrigé. À trancher avec ABC (paramètre du cabinet ou comportement Supabase).
+
+## Q-011 — « Reclassement » d'une écriture validée
+- **Constat** : la permission est libellée « contre-passer / reclasser », mais seule la contre-passation (avec motif) existe dans l'interface.
+- **Hypothèse appliquée** : la correction se fait par contre-passation puis nouvelle saisie.
+
+## Q-012 — Associés de l'exercice
+- **Constat** : la table `fiscal_year_partners` et le dépôt de données existent, aucun écran ne permet de saisir les associés et leurs parts.
+- **Hypothèse appliquée** : non bloquant pour la recette ; la fiche R3 ne couvre que les dirigeants.
+
+## Q-013 — Modèles d'écritures : comptes absents du plan
+- **Constat** : le modèle SALAIRES vise 4221 (inexistant : le collectif est 422) ; les modèles de règlement et de frais bancaires visent 5211 « Banque X ».
+- **Hypothèse appliquée** : l'utilisateur choisit le compte à la main ; correction des modèles par défaut (`seed_default_referentials`) après la recette.
+
+## Q-014 — Manifestes mobiles
+- **Constat** : le manifeste Android principal ne déclare pas INTERNET (seuls les manifestes debug et profile l'ont) ; `Info.plist` iOS n'a ni `NSCameraUsageDescription` ni description d'accès aux photos ; aucun dossier `windows/` ni `macos/` dans `app/`.
+- **Hypothèse appliquée** : recette mobile sur build de débogage Android, avec HTTP en clair autorisé dans le seul manifeste de débogage ; le reste à régler avant un build de production.
+
+## Q-015 — Cabinet-coquille de l'instance de recette
+- **Constat** : aucun écran ne crée un cabinet et `profiles.cabinet_id` est obligatoire ; « aucun cabinet » est donc impossible pour l'administrateur technique.
+- **Hypothèse appliquée** : `recette/bootstrap-admin.sql` crée un cabinet minimal « Cabinet de recette Simetriik » (nom seul) et l'administrateur. Pour ABC, le cabinet sera créé par une procédure d'amorçage à définir.

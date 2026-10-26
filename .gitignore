@@ -5,3 +5,4 @@ inputs/
 .env
 .env.*
 !.env.example
+recette/.stack/

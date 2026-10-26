@@ -76,3 +76,9 @@ Parcours dans le navigateur intégré (`flutter run -d web-server`, fenêtre 144
 - **Saisie** : parcours entièrement au clavier, contrepartie proposée sur la nouvelle ligne, barre d'équilibre fixe, aide F1 ; navigation mobile réduite centrée sur les pièces.
 - **Changements de comportement mineurs** (revue UI) : contrepartie de cession d'immobilisation et compte de trésorerie d'un journal en saisie avec autocomplétion ; compte de régularisation reconnu parmi les comptes filtrés ; total du tableau des postes de clôture sous la colonne Net ; case « tout sélectionner » à deux états.
 - Captures avant / après : `docs/design/avant/`, `docs/design/apres/`.
+
+## Préparation de la recette interne (27 oct. 2026, branche `recette-interne`)
+- **Instance de test dédiée** : projet Supabase local `akonta-recette` (ports 55xxx), distinct de la pile de développement ; `scripts/reset-recette.sh` la remet à zéro (migrations rejouées, aucune donnée, plan SYSCOHADA + administrateur technique + cabinet-coquille, Q-015). Les exports passent par `recette/lancer-service-documents.sh` (port 8101).
+- **Jeu de données** `recette/` (généré par `generer-jeu.py`) : PME fictive de Cotonou, 45 opérations (T1 2027, TVA, AIB et TVA retenue, paie, euro, dollar, acquisition et cession), export Perfecto simulé au format réel (cp1252), relevé Ecobank avec lignes non rapprochables, 12 pièces PDF/JPEG, données d'inventaire, balance attendue.
+- **Vérifié** : pgTAP `150` (import en mode essai sans erreur) et `151` (les 44 opérations hors cession et les à-nouveaux sont validés par la base, balance conforme), Flutter `recette_jeu_test`.
+- **Écarts relevés** (non corrigés, Q-007 à Q-015) : création du mot de passe depuis l'invitation, verrouillage après 5 échecs, devise dans la grille, reclassement, associés, modèles d'écritures, manifestes mobiles. Contournements dans `recette/LISEZMOI.md`.
