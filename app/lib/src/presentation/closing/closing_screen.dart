@@ -42,6 +42,16 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
   static const steps = ['Contrôles', 'Inventaire', 'Fiscalité', 'États financiers', 'Clôture provisoire', 'Arrêté définitif', 'Exercice N+1'];
 
   @override
+  void didUpdateWidget(covariant _ClosingBody old) {
+    super.didUpdateWidget(old);
+    // Changement de dossier : on repart de l'exercice ouvert et de la première étape.
+    if (old.entity.id != widget.entity.id) {
+      _fy = null;
+      _step = 0;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final fys = ref.watch(fiscalYearsProvider(widget.entity.id));
     return AsyncView(

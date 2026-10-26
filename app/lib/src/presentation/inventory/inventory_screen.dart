@@ -97,8 +97,12 @@ Future<void> runGeneration(BuildContext context, WidgetRef ref, Future<String?> 
     final id = await action();
     ref.invalidate(entityDashboardProvider);
     if (!context.mounted) return;
+    // Avec un bouton d'action, un message reste affiché tant que la navigation accessible est active :
+    // on le borne dans le temps et on permet de le fermer.
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(id == null ? 'Rien à générer.' : '$successLabel : brouillard créé.'),
+      duration: const Duration(seconds: 6),
+      showCloseIcon: true,
       action: id == null ? null : SnackBarAction(label: 'Ouvrir', onPressed: () => context.go('/saisie/$id')),
     ));
   } catch (e) {
@@ -377,6 +381,7 @@ class StocksTab extends ConsumerWidget {
     final stocks = ref.watch(stocksProvider(fy.id));
     final accounts = ref.watch(accountsProvider(entity.id)).value ?? const <Account>[];
     final stockAccounts = accounts.where((a) => a.classNo == 3 && a.allowPosting && a.isActive && !a.code.startsWith('39')).toList();
+    final opening = ref.watch(stockOpeningBalancesProvider((entityId: entity.id, startDate: fy.startDate))).value ?? const <String, int>{};
     return AsyncView(
       value: stocks,
       builder: (list) => ListView(
@@ -389,7 +394,7 @@ class StocksTab extends ConsumerWidget {
           AkBanner(kind: AkBannerKind.info, child: const Text('Inventaire intermittent : saisissez le stock final par compte de stock ; le stock initial est repris des à-nouveaux.')),
           const SizedBox(height: AkSpace.s3),
           for (final a in stockAccounts)
-            _StockRow(entity: entity, fy: fy, account: a, existing: list.where((s) => s.stockAccountCode == a.code).firstOrNull, variationAccounts: accounts.where((x) => x.allowPosting && x.isActive && (x.code.startsWith('603') || x.code.startsWith('73'))).toList()),
+            _StockRow(entity: entity, fy: fy, account: a, existing: list.where((s) => s.stockAccountCode == a.code).firstOrNull, openingValue: opening[a.code] ?? 0, variationAccounts: accounts.where((x) => x.allowPosting && x.isActive && (x.code.startsWith('603') || x.code.startsWith('73'))).toList()),
           if (stockAccounts.isEmpty) Text('Aucun compte de stock imputable dans le plan.', style: AkText.body.copyWith(color: t.textMuted)),
         ],
       ),
@@ -398,12 +403,14 @@ class StocksTab extends ConsumerWidget {
 }
 
 class _StockRow extends ConsumerStatefulWidget {
-  const _StockRow({required this.entity, required this.fy, required this.account, required this.existing, required this.variationAccounts});
+  const _StockRow({required this.entity, required this.fy, required this.account, required this.existing, required this.openingValue, required this.variationAccounts});
 
   final EntitySummary entity;
   final FiscalYear fy;
   final Account account;
   final StockRow? existing;
+  /// Stock initial lu dans les à-nouveaux (balance à l'ouverture).
+  final int openingValue;
   final List<Account> variationAccounts;
 
   @override
@@ -425,7 +432,7 @@ class _StockRowState extends ConsumerState<_StockRow> {
         padding: const EdgeInsets.all(AkSpace.s3),
         child: Row(children: [
           SizedBox(width: 260, child: Text.rich(TextSpan(children: [TextSpan(text: widget.account.code, style: AkText.code), TextSpan(text: ' ${widget.account.label}')]), style: AkText.body.copyWith(color: t.text), overflow: TextOverflow.ellipsis)),
-          SizedBox(width: 160, child: Text('Initial ${Fmt.fcfa(widget.existing?.openingValue ?? 0, showZero: true)}', style: AkText.amount.copyWith(color: t.textMuted))),
+          SizedBox(width: 160, child: Text('Initial ${Fmt.fcfa(widget.openingValue, showZero: true)}', style: AkText.amount.copyWith(color: t.textMuted))),
           SizedBox(width: 160, child: TextField(controller: _closing, style: AkText.amount, textAlign: TextAlign.right, decoration: const InputDecoration(labelText: 'Stock final'), keyboardType: TextInputType.number)),
           const SizedBox(width: 8),
           Expanded(
