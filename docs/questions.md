@@ -19,3 +19,7 @@
 ## Q-005 — Tableau des flux de trésorerie (TFT) et notes annexes dans la liasse DGI
 - **Question** : ABC souhaite-t-il que le TFT et les notes 1 à 35 soient calculés automatiquement dès la première clôture, ou complétés dans le modèle Excel ?
 - **Hypothèse appliquée** : la liasse DGI est remplie automatiquement pour la fiche R1/R2 (identification), le bilan (actif, passif, N et N-1) et le compte de résultat ; le TFT et les notes restent à compléter dans le classeur (macros conservées). Les cellules correspondantes sont cartographiées (version `SN-2025`) pour une automatisation ultérieure.
+
+## Q-006 — Refonte UI : composants à compléter ?
+- **Question** : faut-il ajouter à la bibliothèque un `AkTabs`, un `AkRadio` et une grille paresseuse (grand livre) pour supprimer les derniers widgets Material thémés ?
+- **Hypothèse appliquée** : non en V1 ; ils sont thémés aux jetons et listés dans `docs/design/systeme-de-design.md` (écarts connus).

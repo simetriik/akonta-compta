@@ -69,3 +69,10 @@ Parcours dans le navigateur intégré (`flutter run -d web-server`, fenêtre 144
 - **Corrigé en chemin** : poste CJ des états financiers (D-014, migration 0019) ; bouton « Enregistrer » de la revue inactif pendant la saisie du commentaire.
 - **Corrigé ensuite** (même jour) : la liste Saisie est limitée à l'exercice du dossier courant (`fiscal_year_id`) ; l'écran Clôture repart de l'exercice ouvert au changement de dossier ; le message de génération est borné à 6 s et fermable (avec la navigation accessible, un message à action restait affiché) ; l'onglet Stocks lit le stock initial dans la balance à la date d'ouverture (`trial_balance`, classe 3) sans attendre la génération.
 - **Observé, à traiter** : sur une fenêtre de moins de 1 280 px, les tableaux de consultation débordent à droite.
+
+## Refonte de l'interface (27 oct. 2026, branche `refonte-ui`)
+- **Système de design** `app/lib/design/` : jetons (palette terracotta, neutres chauds, états, espacements base 4, rayons, ombre, échelle typographique ≥ 14 px, Plex Sans / Plex Mono tabulaire / Poppins), thèmes clair et sombre, logo du kit, bibliothèque de composants unique et catalogue `/catalogue`. Documentation : `docs/design/systeme-de-design.md`.
+- **Migration** de tous les écrans vers les composants ; garde-fou `design_guard_test` (widgets bruts, tailles < 14 px, couleurs en dur). Contraste WCAG AA testé (`design_tokens_test`).
+- **Saisie** : parcours entièrement au clavier, contrepartie proposée sur la nouvelle ligne, barre d'équilibre fixe, aide F1 ; navigation mobile réduite centrée sur les pièces.
+- **Changements de comportement mineurs** (revue UI) : contrepartie de cession d'immobilisation et compte de trésorerie d'un journal en saisie avec autocomplétion ; compte de régularisation reconnu parmi les comptes filtrés ; total du tableau des postes de clôture sous la colonne Net ; case « tout sélectionner » à deux états.
+- Captures avant / après : `docs/design/avant/`, `docs/design/apres/`.
