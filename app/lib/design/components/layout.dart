@@ -77,7 +77,7 @@ class AkSectionTitle extends StatelessWidget {
         Expanded(
           child: Text(text, style: AkText.heading.copyWith(color: context.ak.text)),
         ),
-        if (trailing != null) trailing!,
+        ?trailing,
       ],
     );
   }

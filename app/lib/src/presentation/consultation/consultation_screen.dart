@@ -61,7 +61,15 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
 
   ConsultationParams? _previousYear(ConsultationParams p) {
     try {
-      return ConsultationParams(entityId: p.entityId, from: DateTime(p.from.year - 1, p.from.month, p.from.day), to: DateTime(p.to.year - 1, p.to.month, p.to.day), accountFrom: p.accountFrom, accountTo: p.accountTo, classNo: p.classNo, side: p.side);
+      return ConsultationParams(
+        entityId: p.entityId,
+        from: DateTime(p.from.year - 1, p.from.month, p.from.day),
+        to: DateTime(p.to.year - 1, p.to.month, p.to.day),
+        accountFrom: p.accountFrom,
+        accountTo: p.accountTo,
+        classNo: p.classNo,
+        side: p.side,
+      );
     } catch (_) {
       return null;
     }
@@ -75,110 +83,95 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
     final margin = akPageMargin(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(margin, AkSpace.s4, margin, AkSpace.s4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        AkPageHead(title: 'Consultation', subtitle: widget.entity.dossierLabel, actions: [_exportMenu(context)]),
-        const SizedBox(height: AkSpace.s3),
-        Expanded(
-          child: AkCard(
-            padding: EdgeInsets.zero,
-            clip: true,
-            child: Column(children: [
-              TabBar(
-                controller: _tabs,
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
-                tabs: const [Tab(text: 'Grand livre'), Tab(text: 'Balance générale'), Tab(text: 'Balance auxiliaire'), Tab(text: 'Balance âgée'), Tab(text: 'Centralisateur')],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AkPageHead(title: 'Consultation', subtitle: widget.entity.dossierLabel, actions: [_exportMenu(context)]),
+          const SizedBox(height: AkSpace.s3),
+          Expanded(
+            child: AkCard(
+              padding: EdgeInsets.zero,
+              clip: true,
+              child: Column(
+                children: [
+                  TabBar(
+                    controller: _tabs,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
+                    tabs: const [
+                      Tab(text: 'Grand livre'),
+                      Tab(text: 'Balance générale'),
+                      Tab(text: 'Balance auxiliaire'),
+                      Tab(text: 'Balance âgée'),
+                      Tab(text: 'Centralisateur'),
+                    ],
+                  ),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: t.border)),
+                    ),
+                    child: _filters(context),
+                  ),
+                  Expanded(
+                    child: p == null
+                        ? Padding(
+                            padding: const EdgeInsets.all(AkSpace.s4),
+                            child: Align(
+                              alignment: Alignment.topLeft,
+                              child: AkBanner(kind: AkBannerKind.warning, child: const Text('Dates invalides (jj/mm/aaaa).')),
+                            ),
+                          )
+                        : TabBarView(
+                            controller: _tabs,
+                            children: [
+                              _LedgerTab(params: p),
+                              _BalanceTab(params: p, previous: _compare ? _previousYear(p) : null),
+                              _AuxiliaryTab(params: p),
+                              _AgedTab(params: p, side: _side, onSide: (s) => setState(() => _side = s)),
+                              _CentralizationTab(params: p),
+                            ],
+                          ),
+                  ),
+                ],
               ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
-                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.border))),
-                child: _filters(context),
-              ),
-              Expanded(
-                child: p == null
-                    ? Padding(padding: const EdgeInsets.all(AkSpace.s4), child: Align(alignment: Alignment.topLeft, child: AkBanner(kind: AkBannerKind.warning, child: const Text('Dates invalides (jj/mm/aaaa).'))))
-                    : TabBarView(controller: _tabs, children: [
-                        _LedgerTab(params: p),
-                        _BalanceTab(params: p, previous: _compare ? _previousYear(p) : null),
-                        _AuxiliaryTab(params: p),
-                        _AgedTab(params: p, side: _side, onSide: (s) => setState(() => _side = s)),
-                        _CentralizationTab(params: p),
-                      ]),
-              ),
-            ]),
+            ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 
   /// Filtres de période, de comptes et de classe ; l'actualisation relit les champs.
   Widget _filters(BuildContext context) {
-    final t = context.ak;
-    final h = akControlHeight(context);
-    Widget labelled(String label, Widget field) => Row(mainAxisSize: MainAxisSize.min, children: [
-          Text(label, style: AkText.label.copyWith(color: t.textMuted)),
-          const SizedBox(width: 6),
-          field,
-        ]);
-    Widget input(TextEditingController c, String semantic, double width, {bool mono = false}) => SizedBox(
-          width: width,
-          height: h,
-          child: Semantics(
-            label: semantic,
-            child: TextField(
-              controller: c,
-              style: (mono ? AkText.code : AkText.table).copyWith(color: t.text),
-              decoration: InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: AkSpace.s2, vertical: (h - 18) / 2)),
-              onSubmitted: (_) => setState(() {}),
-            ),
-          ),
-        );
-    return Wrap(spacing: AkSpace.s3, runSpacing: AkSpace.s2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-      labelled('Du', input(_from, 'Date de début', 110)),
-      labelled('Au', input(_to, 'Date de fin', 110)),
-      labelled('Comptes', Row(mainAxisSize: MainAxisSize.min, children: [
-        input(_accountFrom, 'Compte de', 96, mono: true),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text('à', style: AkText.table.copyWith(color: t.textMuted))),
-        input(_accountTo, 'Compte à', 96, mono: true),
-      ])),
-      Container(
-        height: h,
-        padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
-        decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.borderControl), borderRadius: AkRadius.mdAll),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<int?>(
+    Widget sized(double width, Widget child) => SizedBox(width: width, child: child);
+    return Wrap(
+      spacing: AkSpace.s3,
+      runSpacing: AkSpace.s2,
+      crossAxisAlignment: WrapCrossAlignment.end,
+      children: [
+        sized(176, AkDateField(controller: _from, label: 'Du', onSubmitted: (_) => setState(() {}))),
+        sized(176, AkDateField(controller: _to, label: 'Au', onSubmitted: (_) => setState(() {}))),
+        sized(136, AkTextField(controller: _accountFrom, label: 'Compte de', mono: true, onSubmitted: (_) => setState(() {}))),
+        sized(136, AkTextField(controller: _accountTo, label: 'Compte à', mono: true, onSubmitted: (_) => setState(() {}))),
+        sized(
+          176,
+          AkDropdown<int?>(
+            label: 'Classe',
             value: _classNo,
-            isDense: true,
-            hint: Text('Toutes classes', style: AkText.table.copyWith(color: t.text)),
-            style: AkText.table.copyWith(color: t.text),
-            icon: Icon(Icons.expand_more, size: 18, color: t.textMuted),
-            items: [const DropdownMenuItem(value: null, child: Text('Toutes classes')), for (var c = 1; c <= 8; c++) DropdownMenuItem(value: c, child: Text('Classe $c'))],
+            items: [const AkOption<int?>(null, 'Toutes classes'), for (var c = 1; c <= 8; c++) AkOption<int?>(c, 'Classe $c')],
             onChanged: (v) => setState(() => _classNo = v),
           ),
         ),
-      ),
-      InkWell(
-        borderRadius: AkRadius.mdAll,
-        onTap: () => setState(() => _compare = !_compare),
-        child: SizedBox(
-          height: h,
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Checkbox(value: _compare, onChanged: (v) => setState(() => _compare = v ?? false)),
-            Text('Comparer N-1', style: AkText.table.copyWith(color: t.text)),
-            const SizedBox(width: AkSpace.s1),
-          ]),
+        SizedBox(
+          height: akControlHeight(context),
+          child: AkCheckbox(value: _compare, label: 'Comparer N-1', onChanged: (v) => setState(() => _compare = v)),
         ),
-      ),
-      OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(minimumSize: Size(0, h)),
-        onPressed: () => setState(() {}),
-        icon: const Icon(Icons.refresh, size: 18),
-        label: const Text('Actualiser'),
-      ),
-    ]);
+        AkButton.secondary('Actualiser', icon: Icons.refresh, onPressed: () => setState(() {})),
+      ],
+    );
   }
 
   /// Menu d'export (PDF ou Excel) placé dans l'en-tête de l'écran.
@@ -199,12 +192,22 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
       child: Container(
         height: h,
         padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3),
-        decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.borderStrong), borderRadius: AkRadius.mdAll),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (_exporting) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) else Icon(Icons.download_outlined, size: 18, color: t.text),
-          const SizedBox(width: 6),
-          Text('Exporter', style: AkText.bodyStrong.copyWith(color: t.text)),
-        ]),
+        decoration: BoxDecoration(
+          color: t.surface,
+          border: Border.all(color: t.borderStrong),
+          borderRadius: AkRadius.mdAll,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_exporting)
+              const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+            else
+              Icon(Icons.download_outlined, size: 18, color: t.text),
+            const SizedBox(width: 6),
+            Text('Exporter', style: AkText.bodyStrong.copyWith(color: t.text)),
+          ],
+        ),
       ),
     );
   }
@@ -221,7 +224,9 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
         final f = File(uri.toFilePath());
         if (!await f.exists() || await f.length() == 0) await f.writeAsBytes(bytes);
       }
-      if (mounted && uri != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export enregistré : ${uri.scheme == 'file' ? uri.toFilePath() : uri}')));
+      if (mounted && uri != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export enregistré : ${uri.scheme == 'file' ? uri.toFilePath() : uri}')));
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: context.ak.danger));
     } finally {
@@ -258,11 +263,19 @@ class _GRow {
   final Widget? sectionChild;
 }
 
-Widget _txt(BuildContext context, String s, {bool bold = false, bool muted = false}) =>
-    Text(s, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.table.copyWith(color: muted ? context.ak.textMuted : context.ak.text, fontWeight: bold ? FontWeight.w600 : null));
+Widget _txt(BuildContext context, String s, {bool bold = false, bool muted = false}) => Text(
+  s,
+  maxLines: 1,
+  overflow: TextOverflow.ellipsis,
+  style: AkText.table.copyWith(color: muted ? context.ak.textMuted : context.ak.text, fontWeight: bold ? FontWeight.w600 : null),
+);
 
-Widget _codeTxt(BuildContext context, String s, {bool bold = false}) =>
-    Text(s, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.code.copyWith(color: context.ak.text, fontWeight: bold ? FontWeight.w600 : null));
+Widget _codeTxt(BuildContext context, String s, {bool bold = false}) => Text(
+  s,
+  maxLines: 1,
+  overflow: TextOverflow.ellipsis,
+  style: AkText.code.copyWith(color: context.ak.text, fontWeight: bold ? FontWeight.w600 : null),
+);
 
 Widget _amt(String s, {bool bold = false}) => AkAmountText(s, bold: bold);
 
@@ -279,112 +292,154 @@ class _DataGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.ak;
     final rowH = akIsCompact(context) ? AkSpace.rowTouch : AkSpace.rowCompact;
-    return LayoutBuilder(builder: (context, c) {
-      final base = columns.fold<double>(0, (s, col) => s + col.width);
-      final extra = c.maxWidth.isFinite && c.maxWidth > base ? c.maxWidth - base : 0.0;
-      final widths = [for (final col in columns) col.width + (col.grow ? extra : 0)];
-      final total = base + extra;
-      // Colonnes qui ouvrent un groupe : filet vertical à gauche.
-      final starts = <int>{};
-      if (groups != null) {
-        var i = 0;
-        for (final g in groups!) {
-          if (g.$1.isNotEmpty) starts.add(i);
-          i += g.$2;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final base = columns.fold<double>(0, (s, col) => s + col.width);
+        final extra = c.maxWidth.isFinite && c.maxWidth > base ? c.maxWidth - base : 0.0;
+        final widths = [for (final col in columns) col.width + (col.grow ? extra : 0)];
+        final total = base + extra;
+        // Colonnes qui ouvrent un groupe : filet vertical à gauche.
+        final starts = <int>{};
+        if (groups != null) {
+          var i = 0;
+          for (final g in groups!) {
+            if (g.$1.isNotEmpty) starts.add(i);
+            i += g.$2;
+          }
         }
-      }
-      BoxDecoration? sep(int j) => starts.contains(j) ? BoxDecoration(border: Border(left: BorderSide(color: t.border))) : null;
+        BoxDecoration? sep(int j) => starts.contains(j)
+            ? BoxDecoration(
+                border: Border(left: BorderSide(color: t.border)),
+              )
+            : null;
 
-      Widget headerCell(int j) => Container(
-            width: widths[j],
-            padding: EdgeInsets.symmetric(horizontal: j == 0 ? AkSpace.s4 : AkSpace.s3),
-            alignment: columns[j].numeric ? Alignment.centerRight : Alignment.centerLeft,
-            decoration: sep(j),
-            child: Text(columns[j].label, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.label.copyWith(color: t.textMuted)),
-          );
-      final groupCells = <Widget>[];
-      if (groups != null) {
-        var i = 0;
-        for (final g in groups!) {
-          final start = i;
-          i += g.$2;
-          final w = widths.sublist(start, start + g.$2).fold<double>(0, (s, x) => s + x);
-          groupCells.add(Container(
-            width: w,
-            alignment: Alignment.center,
-            decoration: sep(start),
-            child: Text(g.$1, style: AkText.label.copyWith(color: t.textMuted)),
-          ));
-        }
-      }
-      final header = Column(mainAxisSize: MainAxisSize.min, children: [
-        if (groups != null)
-          Container(
-            height: rowH,
-            color: t.surfaceSunken,
-            child: Row(children: groupCells),
+        Widget headerCell(int j) => Container(
+          width: widths[j],
+          padding: EdgeInsets.symmetric(horizontal: j == 0 ? AkSpace.s4 : AkSpace.s3),
+          alignment: columns[j].numeric ? Alignment.centerRight : Alignment.centerLeft,
+          decoration: sep(j),
+          child: Text(
+            columns[j].label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AkText.label.copyWith(color: t.textMuted),
           ),
-        Container(
-          height: rowH,
-          decoration: BoxDecoration(color: t.surfaceSunken, border: Border(bottom: BorderSide(color: t.border))),
-          child: Row(children: [for (var j = 0; j < columns.length; j++) headerCell(j)]),
-        ),
-      ]);
-
-      Widget rowAt(int i) {
-        final r = rows[i];
-        if (r.kind == _RowKind.section) {
-          return Container(
-            width: total,
-            height: rowH,
-            padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4),
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(color: t.surfaceSunken, border: Border(bottom: BorderSide(color: t.border))),
-            child: r.sectionChild,
-          );
-        }
-        final isTotal = r.kind == _RowKind.total;
-        Widget row = Container(
-          height: rowH,
-          decoration: BoxDecoration(
-            color: isTotal ? t.surfaceSunken : null,
-            border: Border(top: isTotal ? BorderSide(color: t.borderStrong) : BorderSide.none, bottom: BorderSide(color: t.border)),
-          ),
-          child: Row(children: [
-            for (var j = 0; j < columns.length; j++)
-              Container(
-                width: widths[j],
-                padding: EdgeInsets.symmetric(horizontal: j == 0 ? AkSpace.s4 : AkSpace.s3),
-                alignment: columns[j].numeric ? Alignment.centerRight : Alignment.centerLeft,
-                decoration: sep(j),
-                child: j < r.cells.length ? r.cells[j] : null,
-              ),
-          ]),
         );
-        if (r.onTap != null) row = InkWell(onTap: r.onTap, child: row);
-        return row;
-      }
+        final groupCells = <Widget>[];
+        if (groups != null) {
+          var i = 0;
+          for (final g in groups!) {
+            final start = i;
+            i += g.$2;
+            final w = widths.sublist(start, start + g.$2).fold<double>(0, (s, x) => s + x);
+            groupCells.add(
+              Container(
+                width: w,
+                alignment: Alignment.center,
+                decoration: sep(start),
+                child: Text(g.$1, style: AkText.label.copyWith(color: t.textMuted)),
+              ),
+            );
+          }
+        }
+        final header = Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (groups != null)
+              Container(
+                height: rowH,
+                color: t.surfaceSunken,
+                child: Row(children: groupCells),
+              ),
+            Container(
+              height: rowH,
+              decoration: BoxDecoration(
+                color: t.surfaceSunken,
+                border: Border(bottom: BorderSide(color: t.border)),
+              ),
+              child: Row(children: [for (var j = 0; j < columns.length; j++) headerCell(j)]),
+            ),
+          ],
+        );
 
-      final content = Column(children: [header, Expanded(child: ListView.builder(itemCount: rows.length, itemBuilder: (_, i) => rowAt(i)))]);
-      return SingleChildScrollView(scrollDirection: Axis.horizontal, child: SizedBox(width: total, child: content));
-    });
+        Widget rowAt(int i) {
+          final r = rows[i];
+          if (r.kind == _RowKind.section) {
+            return Container(
+              width: total,
+              height: rowH,
+              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4),
+              alignment: Alignment.centerLeft,
+              decoration: BoxDecoration(
+                color: t.surfaceSunken,
+                border: Border(bottom: BorderSide(color: t.border)),
+              ),
+              child: r.sectionChild,
+            );
+          }
+          final isTotal = r.kind == _RowKind.total;
+          Widget row = Container(
+            height: rowH,
+            decoration: BoxDecoration(
+              color: isTotal ? t.surfaceSunken : null,
+              border: Border(
+                top: isTotal ? BorderSide(color: t.borderStrong) : BorderSide.none,
+                bottom: BorderSide(color: t.border),
+              ),
+            ),
+            child: Row(
+              children: [
+                for (var j = 0; j < columns.length; j++)
+                  Container(
+                    width: widths[j],
+                    padding: EdgeInsets.symmetric(horizontal: j == 0 ? AkSpace.s4 : AkSpace.s3),
+                    alignment: columns[j].numeric ? Alignment.centerRight : Alignment.centerLeft,
+                    decoration: sep(j),
+                    child: j < r.cells.length ? r.cells[j] : null,
+                  ),
+              ],
+            ),
+          );
+          if (r.onTap != null) row = InkWell(onTap: r.onTap, child: row);
+          return row;
+        }
+
+        final content = Column(
+          children: [
+            header,
+            Expanded(
+              child: ListView.builder(itemCount: rows.length, itemBuilder: (_, i) => rowAt(i)),
+            ),
+          ],
+        );
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(width: total, child: content),
+        );
+      },
+    );
   }
 }
 
 /// Libellé de classe SYSCOHADA pour les lignes de section de la balance.
 String _classLabel(int c) => switch (c) {
-      1 => 'Ressources durables',
-      2 => 'Actif immobilisé',
-      3 => 'Stocks',
-      4 => 'Tiers',
-      5 => 'Trésorerie',
-      6 => 'Charges des activités ordinaires',
-      7 => 'Produits des activités ordinaires',
-      8 => 'Autres charges et produits',
-      _ => '',
-    };
+  1 => 'Ressources durables',
+  2 => 'Actif immobilisé',
+  3 => 'Stocks',
+  4 => 'Tiers',
+  5 => 'Trésorerie',
+  6 => 'Charges des activités ordinaires',
+  7 => 'Produits des activités ordinaires',
+  8 => 'Autres charges et produits',
+  _ => '',
+};
 
-Widget _sectionText(BuildContext context, String s) => Text(s, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.bodyStrong.copyWith(color: context.ak.text));
+Widget _sectionText(BuildContext context, String s) => Text(
+  s,
+  maxLines: 1,
+  overflow: TextOverflow.ellipsis,
+  style: AkText.bodyStrong.copyWith(color: context.ak.text),
+);
 
 const _balanceGroups = <(String, int)>[('', 2), ('Ouverture', 2), ('Mouvements', 2), ('Clôture', 2)];
 
@@ -432,6 +487,7 @@ class _LedgerTab extends ConsumerWidget {
           subD = 0;
           subC = 0;
         }
+
         for (final l in list) {
           if (l.accountCode != current) {
             flush();
@@ -459,28 +515,36 @@ class _LedgerGrid extends StatelessWidget {
     final rows = <_GRow>[
       for (final it in items)
         switch (it) {
-          _LHead h => _GRow.section(Row(children: [_codeTxt(context, h.code, bold: true), const SizedBox(width: AkSpace.s2), Flexible(child: _sectionText(context, '— ${h.label}'))])),
+          _LHead h => _GRow.section(
+            Row(
+              children: [
+                _codeTxt(context, h.code, bold: true),
+                const SizedBox(width: AkSpace.s2),
+                Flexible(child: _sectionText(context, '— ${h.label}')),
+              ],
+            ),
+          ),
           _LLine(:final line) => _GRow([
-              _txt(context, Fmt.date(line.entryDate)),
-              _codeTxt(context, '${line.journalCode}-${line.number}'),
-              _codeTxt(context, line.reference ?? ''),
-              _txt(context, line.label),
-              _codeTxt(context, line.thirdPartyCode ?? ''),
-              _amt(Fmt.fcfa(line.debit)),
-              _amt(Fmt.fcfa(line.credit)),
-              _amt(Fmt.fcfa(line.runningBalance, showZero: true)),
-              _codeTxt(context, line.letterCode ?? ''),
-            ], onTap: () => context.go('/saisie/${line.entryId}')),
+            _txt(context, Fmt.date(line.entryDate)),
+            _codeTxt(context, '${line.journalCode}-${line.number}'),
+            _codeTxt(context, line.reference ?? ''),
+            _txt(context, line.label),
+            _codeTxt(context, line.thirdPartyCode ?? ''),
+            _amt(Fmt.fcfa(line.debit)),
+            _amt(Fmt.fcfa(line.credit)),
+            _amt(Fmt.fcfa(line.runningBalance, showZero: true)),
+            _codeTxt(context, line.letterCode ?? ''),
+          ], onTap: () => context.go('/saisie/${line.entryId}')),
           _LTotal tot => _GRow([
-              const SizedBox.shrink(),
-              const SizedBox.shrink(),
-              const SizedBox.shrink(),
-              _txt(context, 'Total compte', bold: true),
-              const SizedBox.shrink(),
-              _amt(Fmt.fcfa(tot.debit, showZero: true), bold: true),
-              _amt(Fmt.fcfa(tot.credit, showZero: true), bold: true),
-              _amt(Fmt.fcfa(tot.debit - tot.credit, showZero: true), bold: true),
-            ], kind: _RowKind.total),
+            const SizedBox.shrink(),
+            const SizedBox.shrink(),
+            const SizedBox.shrink(),
+            _txt(context, 'Total compte', bold: true),
+            const SizedBox.shrink(),
+            _amt(Fmt.fcfa(tot.debit, showZero: true), bold: true),
+            _amt(Fmt.fcfa(tot.credit, showZero: true), bold: true),
+            _amt(Fmt.fcfa(tot.debit - tot.credit, showZero: true), bold: true),
+          ], kind: _RowKind.total),
         },
     ];
     return _DataGrid(
@@ -516,25 +580,50 @@ class _LedgerList extends StatelessWidget {
           case _LHead h:
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s2),
-              decoration: BoxDecoration(color: t.surfaceSunken, border: Border(bottom: BorderSide(color: t.border))),
-              child: Row(children: [
-                Text(h.code, style: AkText.code.copyWith(color: t.text, fontWeight: FontWeight.w600)),
-                const SizedBox(width: AkSpace.s2),
-                Expanded(child: Text(h.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.bodyStrong.copyWith(color: t.text))),
-              ]),
+              decoration: BoxDecoration(
+                color: t.surfaceSunken,
+                border: Border(bottom: BorderSide(color: t.border)),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    h.code,
+                    style: AkText.code.copyWith(color: t.text, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: AkSpace.s2),
+                  Expanded(
+                    child: Text(
+                      h.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AkText.bodyStrong.copyWith(color: t.text),
+                    ),
+                  ),
+                ],
+              ),
             );
           case _LTotal tot:
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s2),
-              decoration: BoxDecoration(color: t.surfaceSunken, border: Border(bottom: BorderSide(color: t.border))),
-              child: Row(children: [
-                Expanded(child: Text('Total compte', style: AkText.bodyStrong.copyWith(color: t.text))),
-                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  AkAmountText('D ${Fmt.fcfa(tot.debit, showZero: true)}', bold: true),
-                  AkAmountText('C ${Fmt.fcfa(tot.credit, showZero: true)}', bold: true),
-                  AkAmountText('Solde ${Fmt.fcfa(tot.debit - tot.credit, showZero: true)}', bold: true),
-                ]),
-              ]),
+              decoration: BoxDecoration(
+                color: t.surfaceSunken,
+                border: Border(bottom: BorderSide(color: t.border)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text('Total compte', style: AkText.bodyStrong.copyWith(color: t.text)),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      AkAmountText('D ${Fmt.fcfa(tot.debit, showZero: true)}', bold: true),
+                      AkAmountText('C ${Fmt.fcfa(tot.credit, showZero: true)}', bold: true),
+                      AkAmountText('Solde ${Fmt.fcfa(tot.debit - tot.credit, showZero: true)}', bold: true),
+                    ],
+                  ),
+                ],
+              ),
             );
           case _LLine(:final line):
             final debit = line.debit != 0;
@@ -549,21 +638,50 @@ class _LedgerList extends StatelessWidget {
               child: Container(
                 constraints: const BoxConstraints(minHeight: 64),
                 padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: 10),
-                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.border))),
-                child: Row(children: [
-                  SizedBox(width: 84, child: Text(Fmt.date(line.entryDate), style: AkText.caption.copyWith(color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]))),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(line.label, maxLines: 2, overflow: TextOverflow.ellipsis, style: AkText.body.copyWith(color: t.text)),
-                      Text(meta, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.code.copyWith(fontSize: 12, color: t.textMuted)),
-                    ]),
-                  ),
-                  const SizedBox(width: AkSpace.s2),
-                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    AkAmountText('${debit ? 'D' : 'C'} ${Fmt.fcfa(debit ? line.debit : line.credit)}', bold: true),
-                    Text('Solde ${Fmt.fcfa(line.runningBalance, showZero: true)}', style: AkText.caption.copyWith(color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()])),
-                  ]),
-                ]),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: t.border)),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 84,
+                      child: Text(
+                        Fmt.date(line.entryDate),
+                        style: AkText.caption.copyWith(color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]),
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            line.label,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AkText.body.copyWith(color: t.text),
+                          ),
+                          Text(
+                            meta,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AkText.code.copyWith(color: t.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AkSpace.s2),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        AkAmountText('${debit ? 'D' : 'C'} ${Fmt.fcfa(debit ? line.debit : line.credit)}', bold: true),
+                        Text(
+                          'Solde ${Fmt.fcfa(line.runningBalance, showZero: true)}',
+                          style: AkText.caption.copyWith(color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
         }
@@ -603,29 +721,33 @@ class _BalanceTab extends ConsumerWidget {
             grid.add(_GRow.section(_sectionText(context, label.isEmpty ? 'Classe $cls' : 'Classe $cls · $label')));
           }
           final prev = prevByCode[r.accountCode];
-          grid.add(_GRow([
-            _codeTxt(context, r.accountCode),
-            _txt(context, r.accountLabel),
-            _amt(Fmt.fcfa(r.openingDebit)),
-            _amt(Fmt.fcfa(r.openingCredit)),
-            _amt(Fmt.fcfa(r.periodDebit)),
-            _amt(Fmt.fcfa(r.periodCredit)),
-            _amt(Fmt.fcfa(r.closingDebit)),
-            _amt(Fmt.fcfa(r.closingCredit)),
-            if (withPrev) _amt(Fmt.fcfa((prev?.closingDebit ?? 0) - (prev?.closingCredit ?? 0), showZero: true)),
-          ]));
+          grid.add(
+            _GRow([
+              _codeTxt(context, r.accountCode),
+              _txt(context, r.accountLabel),
+              _amt(Fmt.fcfa(r.openingDebit)),
+              _amt(Fmt.fcfa(r.openingCredit)),
+              _amt(Fmt.fcfa(r.periodDebit)),
+              _amt(Fmt.fcfa(r.periodCredit)),
+              _amt(Fmt.fcfa(r.closingDebit)),
+              _amt(Fmt.fcfa(r.closingCredit)),
+              if (withPrev) _amt(Fmt.fcfa((prev?.closingDebit ?? 0) - (prev?.closingCredit ?? 0), showZero: true)),
+            ]),
+          );
         }
-        grid.add(_GRow([
-          const SizedBox.shrink(),
-          _txt(context, 'Totaux', bold: true),
-          _amt(Fmt.fcfa(t((r) => r.openingDebit), showZero: true), bold: true),
-          _amt(Fmt.fcfa(t((r) => r.openingCredit), showZero: true), bold: true),
-          _amt(Fmt.fcfa(t((r) => r.periodDebit), showZero: true), bold: true),
-          _amt(Fmt.fcfa(t((r) => r.periodCredit), showZero: true), bold: true),
-          _amt(Fmt.fcfa(t((r) => r.closingDebit), showZero: true), bold: true),
-          _amt(Fmt.fcfa(t((r) => r.closingCredit), showZero: true), bold: true),
-          if (withPrev) const SizedBox.shrink(),
-        ], kind: _RowKind.total));
+        grid.add(
+          _GRow([
+            const SizedBox.shrink(),
+            _txt(context, 'Totaux', bold: true),
+            _amt(Fmt.fcfa(t((r) => r.openingDebit), showZero: true), bold: true),
+            _amt(Fmt.fcfa(t((r) => r.openingCredit), showZero: true), bold: true),
+            _amt(Fmt.fcfa(t((r) => r.periodDebit), showZero: true), bold: true),
+            _amt(Fmt.fcfa(t((r) => r.periodCredit), showZero: true), bold: true),
+            _amt(Fmt.fcfa(t((r) => r.closingDebit), showZero: true), bold: true),
+            _amt(Fmt.fcfa(t((r) => r.closingCredit), showZero: true), bold: true),
+            if (withPrev) const SizedBox.shrink(),
+          ], kind: _RowKind.total),
+        );
         return _DataGrid(
           groups: [..._balanceGroups, if (withPrev) ('', 1)],
           columns: [
@@ -663,33 +785,26 @@ class _AuxiliaryTab extends ConsumerWidget {
       onRetry: () => ref.invalidate(auxiliaryBalanceProvider(params)),
       builder: (list) {
         if (list.isEmpty) return const AkEmptyState('Aucun mouvement de tiers sur la période.');
-        return _DataGrid(
-          groups: const [('', 3), ('Ouverture', 2), ('Mouvements', 2), ('Clôture', 2)],
-          columns: const [
-            _Col('Collectif', 100),
-            _Col('Tiers', 96),
-            _Col('Nom', 240, grow: true),
-            _Col('Débit', 112, numeric: true),
-            _Col('Crédit', 112, numeric: true),
-            _Col('Débit', 112, numeric: true),
-            _Col('Crédit', 112, numeric: true),
-            _Col('Débit', 112, numeric: true),
-            _Col('Crédit', 112, numeric: true),
-          ],
-          rows: [
-            for (final r in list)
-              _GRow([
-                _codeTxt(context, r.accountCode),
-                _codeTxt(context, r.thirdPartyCode ?? ''),
-                _txt(context, r.thirdPartyName ?? ''),
-                _amt(Fmt.fcfa(r.openingDebit)),
-                _amt(Fmt.fcfa(r.openingCredit)),
-                _amt(Fmt.fcfa(r.periodDebit)),
-                _amt(Fmt.fcfa(r.periodCredit)),
-                _amt(Fmt.fcfa(r.closingDebit)),
-                _amt(Fmt.fcfa(r.closingCredit)),
-              ]),
-          ],
+        AkColumn<BalanceRow> code(String label, String Function(BalanceRow) f, double w) => AkColumn(label: label, width: w, cell: (c, r) => _codeTxt(c, f(r)));
+        AkColumn<BalanceRow> amount(String label, int Function(BalanceRow) f) =>
+            AkColumn(label: label, width: 112, numeric: true, cell: (c, r) => _amt(Fmt.fcfa(f(r))));
+        return SingleChildScrollView(
+          child: AkTable<BalanceRow>(
+            bare: true,
+            minWidth: 1100,
+            rows: list,
+            columns: [
+              code('Collectif', (r) => r.accountCode, 100),
+              code('Tiers', (r) => r.thirdPartyCode ?? '', 96),
+              AkColumn(label: 'Nom', flex: 1, cell: (c, r) => _txt(c, r.thirdPartyName ?? '')),
+              amount('Ouverture débit', (r) => r.openingDebit),
+              amount('Ouverture crédit', (r) => r.openingCredit),
+              amount('Mouvements débit', (r) => r.periodDebit),
+              amount('Mouvements crédit', (r) => r.periodCredit),
+              amount('Clôture débit', (r) => r.closingDebit),
+              amount('Clôture crédit', (r) => r.closingCredit),
+            ],
+          ),
         );
       },
     );
@@ -711,68 +826,60 @@ class _AgedTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.ak;
     final rows = ref.watch(agedBalanceProvider(params));
-    final h = akControlHeight(context);
-    return Column(children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(AkSpace.s4, AkSpace.s3, AkSpace.s4, AkSpace.s3),
-        child: Wrap(spacing: AkSpace.s3, runSpacing: AkSpace.s2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          SegmentedButton<String>(
-            showSelectedIcon: false,
-            style: SegmentedButton.styleFrom(
-              minimumSize: Size(0, h),
-              textStyle: AkText.table,
-              foregroundColor: t.text,
-              backgroundColor: t.surface,
-              selectedForegroundColor: t.brandText,
-              selectedBackgroundColor: t.brandTint,
-              side: BorderSide(color: t.borderControl),
-              shape: const RoundedRectangleBorder(borderRadius: AkRadius.mdAll),
-            ),
-            segments: const [ButtonSegment(value: 'debit', label: Text('Clients (débiteurs)')), ButtonSegment(value: 'credit', label: Text('Fournisseurs (créditeurs)'))],
-            selected: {side},
-            onSelectionChanged: (s) => onSide(s.first),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AkSpace.s4, AkSpace.s3, AkSpace.s4, AkSpace.s3),
+          child: Wrap(
+            spacing: AkSpace.s3,
+            runSpacing: AkSpace.s2,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              AkSegmented<String>(
+                options: const [AkOption('debit', 'Clients (débiteurs)'), AkOption('credit', 'Fournisseurs (créditeurs)')],
+                selected: side,
+                onChanged: onSide,
+              ),
+              Text('À la date du ${Fmt.date(params.to)} · lignes non lettrées', style: AkText.caption.copyWith(color: t.textMuted)),
+            ],
           ),
-          Text('À la date du ${Fmt.date(params.to)} · lignes non lettrées', style: AkText.caption.copyWith(color: t.textMuted)),
-        ]),
-      ),
-      Divider(height: 1, color: t.border),
-      Expanded(
-        child: AsyncView(
-          value: rows,
-          onRetry: () => ref.invalidate(agedBalanceProvider(params)),
-          builder: (list) {
-            if (list.isEmpty) return const AkEmptyState('Aucune ligne non lettrée à cette date.');
-            return _DataGrid(
-              columns: const [
-                _Col('Compte', 100),
-                _Col('Tiers', 96),
-                _Col('Nom', 220, grow: true),
-                _Col('0-30 j', 110, numeric: true),
-                _Col('31-60 j', 110, numeric: true),
-                _Col('61-90 j', 110, numeric: true),
-                _Col('91-180 j', 110, numeric: true),
-                _Col('> 180 j', 110, numeric: true),
-                _Col('Total', 130, numeric: true),
-              ],
-              rows: [
-                for (final r in list)
-                  _GRow([
-                    _codeTxt(context, r.accountCode),
-                    _codeTxt(context, r.thirdPartyCode),
-                    _txt(context, r.thirdPartyName),
-                    _amt(Fmt.fcfa(r.d0_30)),
-                    _amt(Fmt.fcfa(r.d31_60)),
-                    _amt(Fmt.fcfa(r.d61_90)),
-                    _amt(Fmt.fcfa(r.d91_180)),
-                    _amt(Fmt.fcfa(r.over180)),
-                    _amt(Fmt.fcfa(r.total, showZero: true), bold: true),
-                  ]),
-              ],
-            );
-          },
         ),
-      ),
-    ]);
+        Divider(height: 1, color: t.border),
+        Expanded(
+          child: AsyncView(
+            value: rows,
+            onRetry: () => ref.invalidate(agedBalanceProvider(params)),
+            builder: (list) {
+              if (list.isEmpty) return const AkEmptyState('Aucune ligne non lettrée à cette date.');
+              AkColumn<AgedRow> amount(String label, int Function(AgedRow) f, {double w = 110, bool bold = false}) => AkColumn(
+                label: label,
+                width: w,
+                numeric: true,
+                cell: (c, r) => _amt(Fmt.fcfa(f(r), showZero: bold), bold: bold),
+              );
+              return SingleChildScrollView(
+                child: AkTable<AgedRow>(
+                  bare: true,
+                  minWidth: 960,
+                  rows: list,
+                  columns: [
+                    AkColumn(label: 'Compte', width: 100, cell: (c, r) => _codeTxt(c, r.accountCode)),
+                    AkColumn(label: 'Tiers', width: 96, cell: (c, r) => _codeTxt(c, r.thirdPartyCode)),
+                    AkColumn(label: 'Nom', flex: 1, cell: (c, r) => _txt(c, r.thirdPartyName)),
+                    amount('0-30 j', (r) => r.d0_30),
+                    amount('31-60 j', (r) => r.d31_60),
+                    amount('61-90 j', (r) => r.d61_90),
+                    amount('91-180 j', (r) => r.d91_180),
+                    amount('> 180 j', (r) => r.over180),
+                    amount('Total', (r) => r.total, w: 130, bold: true),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -788,7 +895,13 @@ class _CentralizationTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (params.fiscalYearId == null) {
-      return Padding(padding: const EdgeInsets.all(AkSpace.s4), child: Align(alignment: Alignment.topLeft, child: AkBanner(kind: AkBannerKind.warning, child: const Text('Aucun exercice ne contient la date de début.'))));
+      return Padding(
+        padding: const EdgeInsets.all(AkSpace.s4),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: AkBanner(kind: AkBannerKind.warning, child: const Text('Aucun exercice ne contient la date de début.')),
+        ),
+      );
     }
     final rows = ref.watch(centralizationProvider(params));
     final journals = ref.watch(journalsProvider(params.entityId)).value ?? const [];
@@ -804,29 +917,38 @@ class _CentralizationTab extends ConsumerWidget {
         final grid = <_GRow>[];
         for (final e in byJournal.entries) {
           final label = journals.where((j) => j.code == e.key).firstOrNull?.label ?? e.value.first.journalLabel;
-          grid.add(_GRow.section(Row(children: [_codeTxt(context, e.key, bold: true), const SizedBox(width: AkSpace.s2), Flexible(child: _sectionText(context, '— $label'))])));
+          grid.add(
+            _GRow.section(
+              Row(
+                children: [
+                  _codeTxt(context, e.key, bold: true),
+                  const SizedBox(width: AkSpace.s2),
+                  Flexible(child: _sectionText(context, '— $label')),
+                ],
+              ),
+            ),
+          );
           for (final r in e.value) {
-            grid.add(_GRow([
-              _txt(context, Fmt.month(r.monthStart)),
-              _txt(context, '${r.entriesCount} écr.', muted: true),
-              _amt(Fmt.fcfa(r.totalDebit, showZero: true)),
-              _amt(Fmt.fcfa(r.totalCredit, showZero: true)),
-            ]));
+            grid.add(
+              _GRow([
+                _txt(context, Fmt.month(r.monthStart)),
+                _txt(context, '${r.entriesCount} écr.', muted: true),
+                _amt(Fmt.fcfa(r.totalDebit, showZero: true)),
+                _amt(Fmt.fcfa(r.totalCredit, showZero: true)),
+              ]),
+            );
           }
-          grid.add(_GRow([
-            _txt(context, 'Total journal', bold: true),
-            const SizedBox.shrink(),
-            _amt(Fmt.fcfa(e.value.fold<int>(0, (s, r) => s + r.totalDebit), showZero: true), bold: true),
-            _amt(Fmt.fcfa(e.value.fold<int>(0, (s, r) => s + r.totalCredit), showZero: true), bold: true),
-          ], kind: _RowKind.total));
+          grid.add(
+            _GRow([
+              _txt(context, 'Total journal', bold: true),
+              const SizedBox.shrink(),
+              _amt(Fmt.fcfa(e.value.fold<int>(0, (s, r) => s + r.totalDebit), showZero: true), bold: true),
+              _amt(Fmt.fcfa(e.value.fold<int>(0, (s, r) => s + r.totalCredit), showZero: true), bold: true),
+            ], kind: _RowKind.total),
+          );
         }
         return _DataGrid(
-          columns: const [
-            _Col('Mois', 200, grow: true),
-            _Col('Écritures', 100),
-            _Col('Débit', 140, numeric: true),
-            _Col('Crédit', 140, numeric: true),
-          ],
+          columns: const [_Col('Mois', 200, grow: true), _Col('Écritures', 100), _Col('Débit', 140, numeric: true), _Col('Crédit', 140, numeric: true)],
           rows: grid,
         );
       },

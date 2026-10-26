@@ -17,27 +17,22 @@ class UsersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profiles = ref.watch(profilesProvider);
     final t = context.ak;
-    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
     return AsyncView(
       value: profiles,
       onRetry: () => ref.invalidate(profilesProvider),
-      builder: (list) => ListView(
-        padding: EdgeInsets.all(pad),
+      builder: (list) => AkPage(
         children: [
           AkPageHead(
             title: 'Collaborateurs',
             subtitle: '${list.where((p) => p.isActive).length} actif${list.where((p) => p.isActive).length > 1 ? 's' : ''} sur ${list.length}',
             actions: [
-              OutlinedButton.icon(
-                onPressed: () => _importCsv(context, ref),
-                icon: const Icon(Icons.upload_file_outlined, size: 18),
-                label: const Text('Importer un CSV eABC'),
-              ),
-              FilledButton.icon(
+              AkButton.secondary('Importer un CSV eABC', icon: Icons.upload_file_outlined, dense: true, onPressed: () => _importCsv(context, ref)),
+              AkButton.primary(
+                'Inviter',
                 key: const Key('invite-user'),
+                icon: Icons.person_add_alt,
+                dense: true,
                 onPressed: () => showDialog(context: context, builder: (_) => const InviteUserDialog()),
-                icon: const Icon(Icons.person_add_alt, size: 18),
-                label: const Text('Inviter'),
               ),
             ],
           ),
@@ -53,34 +48,28 @@ class UsersScreen extends ConsumerWidget {
                     profile: list[i],
                     onToggle: (v) async {
                       final p = list[i];
-                      final ok = v || await _confirm(context, 'Désactiver ${p.fullName.isEmpty ? p.email : p.fullName} ? Le compte est conservé (aucune suppression), la connexion devient impossible.');
+                      final ok =
+                          v ||
+                          await showAkConfirm(
+                            context,
+                            title: 'Désactiver le collaborateur',
+                            message:
+                                'Désactiver ${p.fullName.isEmpty ? p.email : p.fullName} ? Le compte est conservé (aucune suppression), la connexion devient impossible.',
+                            danger: true,
+                          );
                       if (!ok) return;
                       await ref.read(adminRepositoryProvider).setActive(p.id, v);
                       ref.invalidate(profilesProvider);
                     },
                   ),
                 ],
-                if (list.isEmpty) const Padding(padding: EdgeInsets.all(AkSpace.s4), child: Text('Aucun collaborateur.')),
+                if (list.isEmpty) const AkEmptyState('Aucun collaborateur.'),
               ],
             ),
           ),
         ],
       ),
     );
-  }
-
-  Future<bool> _confirm(BuildContext context, String message) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            content: Text(message),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirmer')),
-            ],
-          ),
-        ) ??
-        false;
   }
 
   Future<void> _importCsv(BuildContext context, WidgetRef ref) async {
@@ -94,15 +83,16 @@ class UsersScreen extends ConsumerWidget {
     if (!context.mounted) return;
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Résultat de l\'import'),
-        content: SingleChildScrollView(
-          child: Text([
+      builder: (ctx) => AkDialog(
+        title: 'Résultat de l\'import',
+        content: Text(
+          [
             '${result.invited.length} invitation(s) envoyée(s).',
             if (result.failed.isNotEmpty) '\nÉchecs :\n${result.failed.join('\n')}',
             if (result.parseErrors.isNotEmpty) '\nLignes ignorées :\n${result.parseErrors.join('\n')}',
-          ].join('\n')),
+          ].join('\n'),
         ),
+        actions: [AkButton.primary('Fermer', onPressed: () => Navigator.pop(ctx))],
       ),
     );
   }
@@ -122,23 +112,31 @@ class _UserRow extends StatelessWidget {
     final name = p.fullName.isEmpty ? p.email : p.fullName;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s2),
-      child: Row(children: [
-        AkAvatar(name),
-        const SizedBox(width: AkSpace.s3),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: AkText.bodyStrong.copyWith(color: p.isActive ? t.text : t.textMuted, decoration: p.isActive ? null : TextDecoration.lineThrough)),
-            Text([p.email, if (p.jobTitle != null) p.jobTitle!].join(' · '), style: AkText.caption.copyWith(color: t.textMuted)),
-          ]),
-        ),
-        const SizedBox(width: AkSpace.s2),
-        if (p.isActive)
-          AkBadge(label: 'Actif', color: t.success, tint: t.successTint, icon: Icons.check_circle_outline)
-        else
-          AkBadge(label: 'Désactivé', color: t.textMuted, tint: t.surfaceSunken, icon: Icons.block),
-        const SizedBox(width: AkSpace.s2),
-        Switch(value: p.isActive, onChanged: onToggle),
-      ]),
+      child: Row(
+        children: [
+          AkAvatar(name),
+          const SizedBox(width: AkSpace.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: AkText.bodyStrong.copyWith(color: p.isActive ? t.text : t.textMuted, decoration: p.isActive ? null : TextDecoration.lineThrough),
+                ),
+                Text([p.email, if (p.jobTitle != null) p.jobTitle!].join(' · '), style: AkText.caption.copyWith(color: t.textMuted)),
+              ],
+            ),
+          ),
+          const SizedBox(width: AkSpace.s2),
+          if (p.isActive)
+            AkBadge(label: 'Actif', color: t.success, tint: t.successTint, icon: Icons.check_circle_outline)
+          else
+            AkBadge(label: 'Désactivé', color: t.textMuted, tint: t.surfaceSunken, icon: Icons.block),
+          const SizedBox(width: AkSpace.s2),
+          AkSwitch(value: p.isActive, onChanged: onToggle),
+        ],
+      ),
     );
   }
 }
@@ -174,7 +172,9 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
       _error = null;
     });
     try {
-      final r = await ref.read(adminRepositoryProvider).invite(email: _email.text.trim(), fullName: _name.text.trim(), jobTitle: _job.text.trim().isEmpty ? null : _job.text.trim());
+      final r = await ref
+          .read(adminRepositoryProvider)
+          .invite(email: _email.text.trim(), fullName: _name.text.trim(), jobTitle: _job.text.trim().isEmpty ? null : _job.text.trim());
       ref.invalidate(profilesProvider);
       if (!mounted) return;
       if (r.failed.isNotEmpty) {
@@ -192,28 +192,37 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Inviter un collaborateur'),
+    return AkDialog(
+      title: 'Inviter un collaborateur',
+      width: 380,
       content: Form(
         key: _form,
-        child: SizedBox(
-          width: 380,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(controller: _name, key: const Key('invite-name'), decoration: const InputDecoration(labelText: 'Nom complet'), validator: validateName, autofocus: true),
-              const SizedBox(height: 10),
-              TextFormField(controller: _email, key: const Key('invite-email'), decoration: const InputDecoration(labelText: 'Adresse e-mail'), validator: validateEmail, keyboardType: TextInputType.emailAddress),
-              const SizedBox(height: 10),
-              TextFormField(controller: _job, decoration: const InputDecoration(labelText: 'Fonction (facultatif)')),
-              if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: AkText.body.copyWith(color: context.ak.danger))),
-            ],
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AkTextField(controller: _name, key: const Key('invite-name'), label: 'Nom complet', validator: validateName, autofocus: true),
+            const SizedBox(height: AkSpace.s3),
+            AkTextField(
+              controller: _email,
+              key: const Key('invite-email'),
+              label: 'Adresse e-mail',
+              validator: validateEmail,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: AkSpace.s3),
+            AkTextField(controller: _job, label: 'Fonction (facultatif)'),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AkSpace.s3),
+                child: AkBanner(kind: AkBannerKind.danger, child: Text(_error!)),
+              ),
+          ],
         ),
       ),
       actions: [
-        TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Annuler')),
-        FilledButton(key: const Key('invite-submit'), onPressed: _busy ? null : _submit, child: const Text('Envoyer l\'invitation')),
+        AkButton.secondary('Annuler', onPressed: _busy ? null : () => Navigator.pop(context)),
+        AkButton.primary('Envoyer l\'invitation', key: const Key('invite-submit'), loading: _busy, onPressed: _submit),
       ],
     );
   }

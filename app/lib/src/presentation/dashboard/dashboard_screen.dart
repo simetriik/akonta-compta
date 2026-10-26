@@ -13,21 +13,27 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(entityDashboardProvider);
-    final pad = MediaQuery.sizeOf(context).width < 600 ? 16.0 : 24.0;
+    final pad = akPageMargin(context);
     return data.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Erreur de chargement : $e')),
+      loading: () => const AkLoading(),
+      error: (e, _) => AkErrorMessage('Erreur de chargement : $e', onRetry: () => ref.invalidate(entityDashboardProvider)),
       data: (entities) => RefreshIndicator(
         onRefresh: () async => ref.invalidate(entityDashboardProvider),
         child: entities.isEmpty
-            ? const Center(child: Text('Aucun dossier ne vous est affecté.'))
+            ? ListView(
+                padding: EdgeInsets.all(pad),
+                children: const [AkEmptyState('Aucun dossier ne vous est affecté.', icon: Icons.folder_off_outlined)],
+              )
             : ListView(
                 padding: EdgeInsets.all(pad),
                 children: [
-                  AkPageHead(title: 'Mes dossiers', subtitle: '${entities.length} dossier${entities.length > 1 ? 's' : ''} affecté${entities.length > 1 ? 's' : ''}'),
+                  AkPageHead(
+                    title: 'Mes dossiers',
+                    subtitle: '${entities.length} dossier${entities.length > 1 ? 's' : ''} affecté${entities.length > 1 ? 's' : ''}',
+                  ),
                   const SizedBox(height: AkSpace.s4),
                   _Totals(entities: entities),
-                  const SizedBox(height: AkSpace.s4),
+                  const SizedBox(height: AkSpace.s6),
                   _CardGrid(entities: entities),
                 ],
               ),
@@ -52,28 +58,49 @@ class _Totals extends StatelessWidget {
       ('À corriger', sum((e) => e.toCorrectCount), t.statusFix),
       ('Pièces en attente', sum((e) => e.inboxCount), t.textMuted),
     ];
-    return LayoutBuilder(builder: (context, c) {
-      final cols = c.maxWidth >= 720 ? 4 : 2;
-      const gap = 12.0;
-      final w = (c.maxWidth - gap * (cols - 1)) / cols;
-      return Wrap(spacing: gap, runSpacing: gap, children: [
-        for (final (label, value, color) in items)
-          SizedBox(
-            width: w,
-            child: AkCard(
-              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  _Dot(color: color),
-                  const SizedBox(width: 6),
-                  Flexible(child: Text(label, style: AkText.caption.copyWith(color: t.textMuted), overflow: TextOverflow.ellipsis)),
-                ]),
-                Text('$value', style: AkText.amount.copyWith(fontSize: 22, height: 28 / 22, fontWeight: FontWeight.w600, color: t.text)),
-              ]),
-            ),
-          ),
-      ]);
-    });
+    return LayoutBuilder(
+      builder: (context, c) {
+        final cols = c.maxWidth >= 720 ? 4 : 2;
+        const gap = AkSpace.s3;
+        final w = (c.maxWidth - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final (label, value, color) in items)
+              SizedBox(
+                width: w,
+                child: AkCard(
+                  padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          _Dot(color: color),
+                          const SizedBox(width: AkSpace.s2),
+                          Flexible(
+                            child: Text(
+                              label,
+                              style: AkText.caption.copyWith(color: t.textMuted),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AkSpace.s1),
+                      Text(
+                        '$value',
+                        style: AkText.amount.copyWith(fontSize: 24, height: 32 / 24, fontWeight: FontWeight.w600, color: t.text),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -84,14 +111,24 @@ class _CardGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, c) {
-      final cols = c.maxWidth >= 1000 ? 3 : (c.maxWidth >= 640 ? 2 : 1);
-      const gap = 16.0;
-      final w = (c.maxWidth - gap * (cols - 1)) / cols;
-      return Wrap(spacing: gap, runSpacing: gap, children: [
-        for (final e in entities) SizedBox(width: w, child: DossierCard(entity: e)),
-      ]);
-    });
+    return LayoutBuilder(
+      builder: (context, c) {
+        final cols = c.maxWidth >= 1000 ? 3 : (c.maxWidth >= 640 ? 2 : 1);
+        const gap = AkSpace.s4;
+        final w = (c.maxWidth - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final e in entities)
+              SizedBox(
+                width: w,
+                child: DossierCard(entity: e),
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -101,7 +138,11 @@ class _Dot extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle));
+  Widget build(BuildContext context) => Container(
+    width: 8,
+    height: 8,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 }
 
 class DossierCard extends ConsumerWidget {
@@ -113,75 +154,92 @@ class DossierCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.ak;
     final selected = ref.watch(currentEntityProvider)?.id == entity.id;
-    final meta = [
-      if (entity.lastEntryDate != null) 'Dernière écriture : ${Fmt.date(entity.lastEntryDate)}',
-      if (entity.fiscalYearStatus != null) 'Exercice ${_status(entity.fiscalYearStatus!)}',
-    ].join(' · ');
-    return InkWell(
-      borderRadius: AkRadius.lgAll,
+    final status = entity.fiscalYearStatus;
+    return AkCard(
+      selected: selected,
       onTap: () => ref.read(currentEntityProvider.notifier).select(entity),
-      child: AkCard(
-        selected: selected,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(selected ? Icons.folder_open : Icons.folder_outlined, size: 20, color: selected ? t.brandText : t.textMuted),
-            const SizedBox(width: AkSpace.s2),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(entity.dossierLabel, style: AkText.heading.copyWith(color: t.text)),
-                if (entity.managerNames != null) Text('Chef de mission : ${entity.managerNames}', style: AkText.caption.copyWith(color: t.textMuted)),
-              ]),
-            ),
-          ]),
-          if (meta.isNotEmpty || selected) ...[
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(selected ? Icons.folder_open : Icons.folder_outlined, size: 20, color: selected ? t.brandText : t.textMuted),
+              const SizedBox(width: AkSpace.s2),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(entity.dossierLabel, style: AkText.heading.copyWith(color: t.text)),
+                    if (entity.managerNames != null) Text('Chef de mission : ${entity.managerNames}', style: AkText.caption.copyWith(color: t.textMuted)),
+                  ],
+                ),
+              ),
+              if (status != null) ...[const SizedBox(width: AkSpace.s2), _FiscalYearBadge(status: status)],
+            ],
+          ),
+          if (entity.lastEntryDate != null || selected) ...[
             const SizedBox(height: AkSpace.s2),
-            Row(children: [
-              Expanded(child: Text(meta, style: AkText.caption.copyWith(color: t.textMuted))),
-              if (selected) Text('Dossier courant', style: AkText.label.copyWith(color: t.brandText)),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    entity.lastEntryDate == null ? '' : 'Dernière écriture : ${Fmt.date(entity.lastEntryDate)}',
+                    style: AkText.caption.copyWith(color: t.textMuted),
+                  ),
+                ),
+                if (selected) Text('Dossier courant', style: AkText.label.copyWith(color: t.brandText)),
+              ],
+            ),
           ],
           const SizedBox(height: AkSpace.s3),
-          Row(children: [
-            _Counter(label: 'brouillards', value: entity.draftCount, color: t.statusDraft),
-            _Counter(label: 'non revues', value: entity.unreviewedCount, color: t.statusReview),
-            _Counter(label: 'à corriger', value: entity.toCorrectCount, color: t.statusFix),
-            _Counter(label: 'pièces en attente', value: entity.inboxCount, color: t.textMuted),
-          ]),
-        ]),
+          Wrap(
+            spacing: AkSpace.s2,
+            runSpacing: AkSpace.s2,
+            children: [
+              _Counter(label: 'brouillards', value: entity.draftCount, color: t.statusDraft, tint: t.statusDraftTint),
+              _Counter(label: 'non revues', value: entity.unreviewedCount, color: t.statusReview, tint: t.statusReviewTint),
+              _Counter(label: 'à corriger', value: entity.toCorrectCount, color: t.statusFix, tint: t.statusFixTint),
+              _Counter(label: 'pièces en attente', value: entity.inboxCount, color: t.textMuted, tint: t.surfaceSunken),
+            ],
+          ),
+        ],
       ),
     );
   }
-
-  String _status(String s) => switch (s) {
-        'open' => 'ouvert',
-        'closing' => 'en clôture',
-        'closed' => 'clôturé',
-        _ => s,
-      };
 }
 
-class _Counter extends StatelessWidget {
-  const _Counter({required this.label, required this.value, required this.color});
+/// Statut de l'exercice du dossier : ouvert, en clôture ou clôturé.
+class _FiscalYearBadge extends StatelessWidget {
+  const _FiscalYearBadge({required this.status});
 
-  final String label;
-  final int value;
-  final Color color;
+  final String status;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
-    return Expanded(
-      child: Opacity(
-        opacity: value > 0 ? 1 : 0.55,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('$value', style: AkText.amount.copyWith(fontSize: 18, height: 24 / 18, fontWeight: FontWeight.w600, color: t.text)),
-          Row(children: [
-            _Dot(color: color),
-            const SizedBox(width: 4),
-            Flexible(child: Text(label, style: AkText.caption.copyWith(color: t.textMuted, fontSize: 11), overflow: TextOverflow.ellipsis)),
-          ]),
-        ]),
-      ),
-    );
+    final (label, color, tint, icon) = switch (status) {
+      'open' => ('Exercice ouvert', t.statusDraft, t.statusDraftTint, Icons.edit_note),
+      'closing' => ('Exercice en clôture', t.statusReview, t.statusReviewTint, Icons.hourglass_empty),
+      'closed' => ('Exercice clôturé', t.textMuted, t.surfaceSunken, Icons.lock_outline),
+      _ => ('Exercice $status', t.textMuted, t.surfaceSunken, Icons.info_outline),
+    };
+    return AkBadge(label: label, color: color, tint: tint, icon: icon);
+  }
+}
+
+/// Compteur d'un dossier : pastille colorée si la valeur est non nulle, atténuée sinon.
+class _Counter extends StatelessWidget {
+  const _Counter({required this.label, required this.value, required this.color, required this.tint});
+
+  final String label;
+  final int value;
+  final Color color;
+  final Color tint;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return value > 0 ? AkBadge(label: '$value $label', color: color, tint: tint) : AkBadge(label: '0 $label', color: t.textMuted, tint: Colors.transparent);
   }
 }

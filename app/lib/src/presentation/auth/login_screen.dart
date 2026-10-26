@@ -46,9 +46,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref
-          .read(authRepositoryProvider)
-          .signIn(email: _email.text, password: _password.text);
+      await ref.read(authRepositoryProvider).signIn(email: _email.text, password: _password.text);
       widget.onSignedIn?.call();
     } on AuthException catch (e) {
       setState(() => _error = _frenchAuthError(e));
@@ -72,20 +70,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _reset() async {
     final email = _email.text.trim();
     if (validateEmail(email) != null) {
-      setState(
-        () => _error = 'Saisissez votre adresse e-mail pour recevoir le lien de réinitialisation.',
-      );
+      setState(() => _error = 'Saisissez votre adresse e-mail pour recevoir le lien de réinitialisation.');
       return;
     }
     await ref.read(authRepositoryProvider).resetPassword(email);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Si le compte existe, un e-mail de réinitialisation a été envoyé.',
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Si le compte existe, un e-mail de réinitialisation a été envoyé.')));
   }
 
   @override
@@ -109,7 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Center(child: AkLogo(height: 72)),
-                const SizedBox(height: 28),
+                const SizedBox(height: AkSpace.s8),
                 AkCard(
                   padding: const EdgeInsets.all(AkSpace.s8),
                   child: Form(
@@ -119,113 +109,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            'Connexion',
-                            style: AkText.titleLg.copyWith(color: t.text),
-                          ),
-                          const SizedBox(height: 20),
-                          _FieldLabel('Adresse e-mail', t),
-                          TextFormField(
-                            controller: _email,
+                          Text('Connexion', style: AkText.titleLg.copyWith(color: t.text)),
+                          const SizedBox(height: AkSpace.s5),
+                          AkTextField(
                             key: const Key('login-email'),
+                            controller: _email,
+                            label: 'Adresse e-mail',
                             keyboardType: TextInputType.emailAddress,
                             autofillHints: const [AutofillHints.username],
                             validator: validateEmail,
                             textInputAction: TextInputAction.next,
                           ),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Flexible(child: _FieldLabel('Mot de passe', t)),
-                              const SizedBox(width: AkSpace.s2),
-                              Flexible(
-                                child: InkWell(
-                                  onTap: _busy ? null : _reset,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
-                                    child: Text(
-                                      'Mot de passe oublié ?',
-                                      style: AkText.caption.copyWith(
-                                        color: t.brandText,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          TextFormField(
-                            controller: _password,
+                          const SizedBox(height: AkSpace.s5),
+                          AkTextField(
                             key: const Key('login-password'),
+                            controller: _password,
+                            label: 'Mot de passe',
                             obscureText: _hidePassword,
                             autofillHints: const [AutofillHints.password],
                             validator: validatePassword,
-                            onFieldSubmitted: (_) => _submit(),
-                            decoration: InputDecoration(
-                              helperText:
-                                  '${AppConfig.minPasswordLength} caractères minimum',
-                              suffixIcon: IconButton(
-                                tooltip: _hidePassword
-                                    ? 'Afficher le mot de passe'
-                                    : 'Masquer le mot de passe',
-                                icon: Icon(
-                                  _hidePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
-                                  size: 18,
-                                ),
-                                onPressed: () => setState(
-                                  () => _hidePassword = !_hidePassword,
-                                ),
-                              ),
+                            onSubmitted: (_) => _submit(),
+                            helper: '${AppConfig.minPasswordLength} caractères minimum',
+                            suffix: AkIconButton(
+                              icon: _hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              tooltip: _hidePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe',
+                              dense: true,
+                              onPressed: () => setState(() => _hidePassword = !_hidePassword),
                             ),
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: AkButton.ghost('Mot de passe oublié ?', dense: true, onPressed: _busy ? null : _reset),
                           ),
                           if (_error != null) ...[
-                            const SizedBox(height: AkSpace.s3),
+                            const SizedBox(height: AkSpace.s2),
                             AkBanner(
                               kind: AkBannerKind.danger,
-                              child: Text(
-                                _error!,
-                                key: const Key('login-error'),
-                              ),
+                              child: Text(_error!, key: const Key('login-error')),
                             ),
                           ],
-                          const SizedBox(height: 20),
-                          FilledButton(
-                            key: const Key('login-submit'),
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(40),
-                            ),
-                            onPressed: _busy ? null : _submit,
-                            child: _busy
-                                ? SizedBox(
-                                    height: 18,
-                                    width: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: t.onBrand,
-                                    ),
-                                  )
-                                : const Text('Se connecter'),
-                          ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: AkSpace.s5),
+                          AkButton.primary('Se connecter', key: const Key('login-submit'), expand: true, loading: _busy, onPressed: _submit),
+                          const SizedBox(height: AkSpace.s5),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.lock_outline,
-                                size: 16,
-                                color: t.textMuted,
-                              ),
-                              const SizedBox(width: 6),
+                              Icon(Icons.lock_outline, size: 16, color: t.textMuted),
+                              const SizedBox(width: AkSpace.s2),
                               Expanded(
                                 child: Text(
                                   'Pour l\'associé et l\'administrateur, un code de vérification sera demandé ensuite.',
-                                  style: AkText.caption.copyWith(
-                                    color: t.textMuted,
-                                  ),
+                                  style: AkText.caption.copyWith(color: t.textMuted),
                                 ),
                               ),
                             ],
@@ -235,7 +169,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: AkSpace.s8),
                 Text(
                   'La comptabilité OHADA, sans rien oublier',
                   textAlign: TextAlign.center,
@@ -248,17 +182,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.text, this.t);
-
-  final String text;
-  final AkTokens t;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 4),
-    child: Text(text, style: AkText.label.copyWith(color: t.textMuted)),
-  );
 }
