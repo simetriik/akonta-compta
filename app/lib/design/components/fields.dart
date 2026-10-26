@@ -129,8 +129,14 @@ class AkTextField extends StatelessWidget {
     this.initialValue,
     this.autofillHints,
     this.onTap,
+    this.textCapitalization = TextCapitalization.none,
+    this.selectOnFocus = false,
   });
 
+  /// Sélectionne tout le contenu à l'arrivée dans le champ (saisie au clavier dans une grille).
+  final bool selectOnFocus;
+
+  final TextCapitalization textCapitalization;
   final TextEditingController? controller;
   final String? label;
   final String? hint;
@@ -168,6 +174,7 @@ class AkTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final field = TextFormField(
+      textCapitalization: textCapitalization,
       controller: controller,
       initialValue: controller == null ? initialValue : null,
       focusNode: focusNode,
@@ -199,8 +206,18 @@ class AkTextField extends StatelessWidget {
         hasError: errorText != null,
       ).copyWith(counterText: ''),
     );
-    if (dense && label == null && errorText == null && helper == null) return field;
-    return AkFieldFrame(label: label, required: required, helper: helper, error: errorText, child: field);
+    final focusAware = !selectOnFocus || controller == null
+        ? field
+        : Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onFocusChange: (has) {
+              if (has) controller!.selection = TextSelection(baseOffset: 0, extentOffset: controller!.text.length);
+            },
+            child: field,
+          );
+    if (dense && label == null && errorText == null && helper == null) return focusAware;
+    return AkFieldFrame(label: label, required: required, helper: helper, error: errorText, child: focusAware);
   }
 }
 
@@ -282,6 +299,7 @@ class AkAmountField extends StatelessWidget {
       onChanged: onChanged == null ? null : (v) => onChanged!(Fmt.parseAmount(v) ?? 0),
       onSubmitted: onSubmitted,
       mono: true,
+      selectOnFocus: dense,
     );
   }
 }
@@ -296,6 +314,7 @@ class AkDateField extends StatefulWidget {
     this.errorText,
     this.required = false,
     this.onChanged,
+    this.onSubmitted,
     this.enabled = true,
     this.dense = false,
     this.firstDate,
@@ -308,6 +327,9 @@ class AkDateField extends StatefulWidget {
   final String? errorText;
   final bool required;
   final ValueChanged<DateTime?>? onChanged;
+
+  /// Appelé à la validation clavier (Entrée) avec le texte saisi.
+  final ValueChanged<String>? onSubmitted;
   final bool enabled;
   final bool dense;
   final DateTime? firstDate;
@@ -366,6 +388,7 @@ class _AkDateFieldState extends State<AkDateField> {
       enabled: widget.enabled,
       dense: widget.dense,
       hint: 'jj/mm/aaaa',
+      onSubmitted: widget.onSubmitted,
       keyboardType: TextInputType.datetime,
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')), LengthLimitingTextInputFormatter(10)],
       suffix: widget.dense
@@ -475,7 +498,23 @@ class AkAutocompleteField<T extends Object> extends StatelessWidget {
     this.onChanged,
     this.optionLabel,
     this.optionsWidth,
+    this.resolved = false,
+    this.pickOnBlur = false,
+    this.onSubmittedPick,
+    this.unresolvedError,
   });
+
+  /// Message affiché quand le champ a perdu le focus avec une saisie non résolue.
+  final String? unresolvedError;
+
+  /// Une valeur est déjà retenue (pas de choix automatique à la sortie du champ).
+  final bool resolved;
+
+  /// Clavier : en quittant le champ (Tab) sans valeur retenue, la première proposition est choisie.
+  final bool pickOnBlur;
+
+  /// Appelé après un Entrée qui a choisi une proposition (ex. passer au champ suivant).
+  final VoidCallback? onSubmittedPick;
 
   /// Options correspondant à la saisie.
   final Iterable<T> Function(String query) options;
@@ -507,19 +546,38 @@ class AkAutocompleteField<T extends Object> extends StatelessWidget {
           displayStringForOption: display,
           optionsBuilder: (v) => options(v.text),
           onSelected: onSelected,
-          fieldViewBuilder: (context, controller, focus, onSubmit) => AkTextField(
-            controller: controller,
-            focusNode: focus,
-            label: label,
-            hint: hint,
-            helper: helper,
-            errorText: errorText,
-            required: required,
-            enabled: enabled,
-            dense: dense,
-            mono: mono,
-            onChanged: onChanged,
-            onSubmitted: (_) => onSubmit(),
+          fieldViewBuilder: (context, controller, focus, onSubmit) => Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onFocusChange: (has) {
+              if (has || !pickOnBlur || resolved || controller.text.trim().isEmpty) return;
+              final first = options(controller.text).firstOrNull;
+              if (first == null) return;
+              controller.text = display(first);
+              onSelected(first);
+            },
+            child: ListenableBuilder(
+              listenable: Listenable.merge([controller, focus]),
+              builder: (context, _) => AkTextField(
+                controller: controller,
+                focusNode: focus,
+                label: label,
+                hint: hint,
+                helper: helper,
+                errorText: errorText ?? (unresolvedError != null && !resolved && !focus.hasFocus && controller.text.trim().isNotEmpty ? unresolvedError : null),
+                required: required,
+                enabled: enabled,
+                dense: dense,
+                mono: mono,
+                textInputAction: TextInputAction.next,
+                onChanged: onChanged,
+                onSubmitted: (_) {
+                  final has = options(controller.text).isNotEmpty;
+                  onSubmit();
+                  if (has) onSubmittedPick?.call();
+                },
+              ),
+            ),
           ),
           optionsViewBuilder: (context, onSelect, opts) => Align(
             alignment: Alignment.topLeft,
@@ -578,7 +636,13 @@ class AkAccountField extends StatelessWidget {
     this.enabled = true,
     this.dense = false,
     this.invalid = false,
+    this.resolved,
+    this.onSubmittedPick,
   });
+
+  /// Un compte est retenu (par défaut : [selected] non nul).
+  final bool? resolved;
+  final VoidCallback? onSubmittedPick;
 
   final List<Account> accounts;
 
@@ -611,7 +675,11 @@ class AkAccountField extends StatelessWidget {
       enabled: enabled,
       dense: dense,
       mono: true,
+      pickOnBlur: true,
+      resolved: resolved ?? selected != null,
+      onSubmittedPick: onSubmittedPick,
       errorText: invalid ? 'Choisir dans la liste' : null,
+      unresolvedError: 'Choisir dans la liste',
       display: (a) => '${a.code} ${a.label}',
       options: (q) {
         final s = q.trim().toLowerCase();
@@ -642,8 +710,12 @@ class AkThirdPartyField extends StatelessWidget {
     this.hint = 'Code tiers',
     this.enabled = true,
     this.dense = false,
+    this.resolved = false,
+    this.onSubmittedPick,
   });
 
+  final bool resolved;
+  final VoidCallback? onSubmittedPick;
   final List<ThirdParty> thirdParties;
   final ValueChanged<ThirdParty> onSelected;
   final String initialCode;
@@ -661,6 +733,9 @@ class AkThirdPartyField extends StatelessWidget {
       enabled: enabled,
       dense: dense,
       mono: true,
+      pickOnBlur: true,
+      resolved: resolved,
+      onSubmittedPick: onSubmittedPick,
       display: (t) => t.code,
       optionLabel: (t) => '${t.code} · ${t.name}',
       options: (q) {
@@ -718,11 +793,13 @@ class AkCheckbox extends StatelessWidget {
 
 /// Interrupteur avec libellé.
 class AkSwitch extends StatelessWidget {
-  const AkSwitch({super.key, required this.value, required this.onChanged, required this.label});
+  const AkSwitch({super.key, required this.value, required this.onChanged, this.label});
 
   final bool value;
   final ValueChanged<bool>? onChanged;
-  final String label;
+
+  /// Libellé facultatif : sans libellé, l'interrupteur seul s'affiche (ligne de liste).
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -736,10 +813,12 @@ class AkSwitch extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Switch(value: value, onChanged: onChanged),
-            const SizedBox(width: AkSpace.s2),
-            Flexible(
-              child: Text(label, style: AkText.body.copyWith(color: t.text)),
-            ),
+            if (label != null) ...[
+              const SizedBox(width: AkSpace.s2),
+              Flexible(
+                child: Text(label!, style: AkText.body.copyWith(color: t.text)),
+              ),
+            ],
           ],
         ),
       ),

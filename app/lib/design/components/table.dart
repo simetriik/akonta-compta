@@ -40,6 +40,7 @@ class AkTable<R> extends StatelessWidget {
     this.rowColor,
     this.footerLabel,
     this.shrinkWrap = false,
+    this.bare = false,
   });
 
   final List<AkColumn<R>> columns;
@@ -54,6 +55,9 @@ class AkTable<R> extends StatelessWidget {
   /// Si non nul, une ligne de pied (totaux) est ajoutée avec les `footer` des colonnes.
   final String? footerLabel;
   final bool shrinkWrap;
+
+  /// Sans cadre de carte : le tableau s'insère dans une carte parente (onglets, panneaux).
+  final bool bare;
 
   Widget _cells(BuildContext context, List<Widget> cells) {
     return Row(
@@ -128,18 +132,16 @@ class AkTable<R> extends StatelessWidget {
         : Column(children: [for (final r in rows) row(r)]);
     final table = Column(mainAxisSize: MainAxisSize.min, children: [header, body, if (hasFooter && rows.isNotEmpty) footer()]);
 
-    return AkCard(
-      padding: EdgeInsets.zero,
-      clip: true,
-      child: LayoutBuilder(
-        builder: (context, c) {
-          if (c.maxWidth >= minWidth) return table;
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(width: minWidth, child: table),
-          );
-        },
-      ),
+    final scrollable = LayoutBuilder(
+      builder: (context, c) {
+        if (c.maxWidth >= minWidth) return table;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(width: minWidth, child: table),
+        );
+      },
     );
+    if (bare) return scrollable;
+    return AkCard(padding: EdgeInsets.zero, clip: true, child: scrollable);
   }
 }

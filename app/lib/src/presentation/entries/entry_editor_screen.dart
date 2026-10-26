@@ -22,7 +22,9 @@ class EntryEditorScreen extends StatelessWidget {
   final String? entryId;
 
   @override
-  Widget build(BuildContext context) => RequireEntity(builder: (entity) => _Editor(entity: entity, entryId: entryId));
+  Widget build(BuildContext context) => RequireEntity(
+    builder: (entity) => _Editor(entity: entity, entryId: entryId),
+  );
 }
 
 class _Editor extends ConsumerStatefulWidget {
@@ -75,7 +77,13 @@ class _EditorState extends ConsumerState<_Editor> {
       return;
     }
     _draft.entryDate = d;
-    final errors = validate ? _draft.validationErrors() : [if (_draft.journalId == null) 'Journal requis', if (_draft.label.trim().isEmpty) 'Libellé requis', if (_draft.nonEmptyLines.any((l) => l.accountId == null)) 'Chaque ligne saisie doit avoir un compte'];
+    final errors = validate
+        ? _draft.validationErrors()
+        : [
+            if (_draft.journalId == null) 'Journal requis',
+            if (_draft.label.trim().isEmpty) 'Libellé requis',
+            if (_draft.nonEmptyLines.any((l) => l.accountId == null)) 'Chaque ligne saisie doit avoir un compte',
+          ];
     if (errors.isNotEmpty) {
       setState(() => _errors = errors);
       return;
@@ -117,7 +125,10 @@ class _EditorState extends ConsumerState<_Editor> {
     final accounts = await ref.read(accountsProvider(widget.entity.id).future);
     final rates = await ref.read(taxRatesProvider.future);
     if (!mounted) return;
-    final result = await showDialog<(EntryTemplate, int)>(context: context, builder: (_) => _TemplatePicker(templates: templates));
+    final result = await showDialog<(EntryTemplate, int)>(
+      context: context,
+      builder: (_) => _TemplatePicker(templates: templates),
+    );
     if (result == null) return;
     final (template, amount) = result;
     final today = DateTime.now();
@@ -125,6 +136,7 @@ class _EditorState extends ConsumerState<_Editor> {
       final r = rates.where((r) => r.code == code && !r.validFrom.isAfter(today) && (r.validTo == null || !r.validTo!.isBefore(today))).firstOrNull;
       return r?.rate;
     }
+
     Account? resolve(String code) => accounts.where((a) => a.code == padAccountCode(code, accounts.first.code.length)).firstOrNull;
     setState(() {
       _draft.lines
@@ -135,160 +147,223 @@ class _EditorState extends ConsumerState<_Editor> {
     });
   }
 
+  /// Nouvelle ligne en fin de grille ; si l'écriture est déséquilibrée, la contrepartie est déjà proposée.
+  void _appendLine() {
+    final line = DraftLine();
+    final gap = _draft.balance;
+    if (gap > 0) line.credit = gap;
+    if (gap < 0) line.debit = -gap;
+    setState(() => _draft.lines.add(line));
+    // Le focus passe au compte de la nouvelle ligne une fois celle-ci construite.
+    WidgetsBinding.instance.addPostFrameCallback((_) => FocusManager.instance.primaryFocus?.nextFocus());
+  }
+
+  Future<void> _showShortcuts() => showDialog<void>(context: context, builder: (_) => const _ShortcutsDialog());
+
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const AkLoading();
     final journals = (ref.watch(journalsProvider(widget.entity.id)).value ?? const []).where((j) => j.isActive).toList();
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final canValidate = perms.has('entries.validate', entityId: widget.entity.id);
     final t = context.ak;
-    final mobile = MediaQuery.sizeOf(context).width < 600;
-    final gutter = mobile ? AkSpace.s4 : AkSpace.s6;
-    final control = mobile ? AkSpace.controlTouch : AkSpace.controlCompact;
-    final balanced = _draft.balance == 0;
-    final balanceColor = balanced ? t.success : t.danger;
+    final mobile = akIsCompact(context);
+    final gutter = akPageMargin(context);
     final title = _loaded == null ? 'Nouvelle écriture' : 'Écriture ${_loaded!.numberLabel}';
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyB, control: true): () => setState(_draft.autoBalance),
         const SingleActivator(LogicalKeyboardKey.keyS, control: true): () => _readOnly ? null : _save(),
+        const SingleActivator(LogicalKeyboardKey.f1): _showShortcuts,
       },
       child: Focus(
         autofocus: true,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(gutter, AkSpace.s4, gutter, AkSpace.s6),
+        child: Column(
           children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              IconButton(tooltip: 'Retour à la liste', icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/saisie')),
-              const SizedBox(width: AkSpace.s1),
-              Expanded(
-                child: AkPageHead(
-                  title: title,
-                  subtitle: _readOnly ? 'Écriture validée : lecture seule' : 'Grille au clavier',
-                  actions: [
-                    if (!_readOnly) ...[
-                      OutlinedButton.icon(style: OutlinedButton.styleFrom(minimumSize: Size(0, control)), onPressed: _applyTemplate, icon: const Icon(Icons.auto_fix_high_outlined, size: 18), label: const Text('Modèle')),
-                      OutlinedButton.icon(style: OutlinedButton.styleFrom(minimumSize: Size(0, control)), onPressed: () => setState(_draft.autoBalance), icon: const Icon(Icons.balance, size: 18), label: const Text('Contrepartie (Ctrl+B)')),
-                      if (_draft.id != null) OutlinedButton.icon(style: akDangerOutlinedStyle(context).merge(OutlinedButton.styleFrom(minimumSize: Size(0, control))), onPressed: _busy ? null : _delete, icon: const Icon(Icons.delete_outline, size: 18), label: const Text('Supprimer')),
-                    ],
-                  ],
-                ),
-              ),
-            ]),
-            const SizedBox(height: AkSpace.s3),
-            AkCard(
-              child: Wrap(
-                spacing: AkSpace.s3,
-                runSpacing: AkSpace.s3,
-                crossAxisAlignment: WrapCrossAlignment.end,
-                children: [
-                  SizedBox(
-                    width: 200,
-                    child: DropdownButtonFormField<String>(
-                      key: const Key('entry-journal'),
-                      isExpanded: true,
-                      initialValue: _draft.journalId,
-                      decoration: const InputDecoration(labelText: 'Journal'),
-                      items: [for (final j in journals) DropdownMenuItem(value: j.id, child: Text('${j.code} · ${j.label}', overflow: TextOverflow.ellipsis))],
-                      onChanged: _readOnly ? null : (v) => setState(() => _draft.journalId = v),
-                    ),
-                  ),
-                  SizedBox(width: 130, child: TextField(controller: _date, key: const Key('entry-date'), enabled: !_readOnly, decoration: const InputDecoration(labelText: 'Date'))),
-                  SizedBox(width: 160, child: TextField(controller: _reference, enabled: !_readOnly, style: AkText.code, decoration: const InputDecoration(labelText: 'Référence pièce'))),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 220, maxWidth: 720),
-                    child: SizedBox(
-                      width: mobile ? double.infinity : 420,
-                      child: TextField(controller: _label, key: const Key('entry-label'), enabled: !_readOnly, decoration: const InputDecoration(labelText: 'Libellé')),
-                    ),
-                  ),
-                  if (_loaded != null) AkStatusBadge(AkStatusBadge.of(status: _loaded!.status, reviewStatus: _loaded!.reviewStatus)) else const AkStatusBadge(AkEntryStatus.draft),
-                ],
-              ),
-            ),
-            const SizedBox(height: AkSpace.s3),
-            AkCard(
-              padding: EdgeInsets.zero,
-              clip: true,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                // Sur petit écran la grille défile horizontalement plutôt que de se comprimer.
-                LayoutBuilder(builder: (context, c) {
-                  final grid = Column(children: [
-                    const _GridHeader(),
-                    for (var i = 0; i < _draft.lines.length; i++)
-                      _LineRow(
-                        key: ValueKey(_draft.lines[i]),
-                        index: i,
-                        line: _draft.lines[i],
-                        entityId: widget.entity.id,
-                        readOnly: _readOnly,
-                        touch: mobile,
-                        onChanged: () => setState(() {}),
-                        onRemove: _readOnly || _draft.lines.length <= 2 ? null : () => setState(() => _draft.lines.removeAt(i)),
-                        onEnterOnLast: i == _draft.lines.length - 1 ? () => setState(() => _draft.lines.add(DraftLine())) : null,
+            Expanded(
+              child: FocusTraversalGroup(
+                policy: ReadingOrderTraversalPolicy(),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(gutter, AkSpace.s4, gutter, AkSpace.s4),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: AkSpace.pageMaxWidth),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              AkIconButton(tooltip: 'Retour à la liste', icon: Icons.arrow_back, onPressed: () => context.go('/saisie')),
+                              const SizedBox(width: AkSpace.s1),
+                              Expanded(
+                                child: AkPageHead(
+                                  title: title,
+                                  subtitle: _readOnly ? 'Écriture validée : lecture seule' : 'Grille au clavier',
+                                  actions: [
+                                    if (!_readOnly) ...[
+                                      AkButton.secondary('Modèle', icon: Icons.auto_fix_high_outlined, onPressed: _applyTemplate),
+                                      AkButton.secondary('Contrepartie (Ctrl+B)', icon: Icons.balance, onPressed: () => setState(_draft.autoBalance)),
+                                      if (_draft.id != null) AkButton.dangerOutline('Supprimer', icon: Icons.delete_outline, onPressed: _busy ? null : _delete),
+                                    ],
+                                    AkButton.ghost('Raccourcis (F1)', icon: Icons.keyboard_outlined, onPressed: _showShortcuts),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AkSpace.s3),
+                          AkCard(
+                            child: Wrap(
+                              spacing: AkSpace.s3,
+                              runSpacing: AkSpace.s3,
+                              crossAxisAlignment: WrapCrossAlignment.end,
+                              children: [
+                                SizedBox(
+                                  width: mobile ? double.infinity : 240,
+                                  child: AkDropdown<String>(
+                                    key: const Key('entry-journal'),
+                                    label: 'Journal',
+                                    value: _draft.journalId,
+                                    items: [for (final j in journals) AkOption(j.id, '${j.code} · ${j.label}')],
+                                    onChanged: _readOnly ? null : (v) => setState(() => _draft.journalId = v),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: mobile ? double.infinity : 160,
+                                  child: AkDateField(key: const Key('entry-date'), controller: _date, label: 'Date', enabled: !_readOnly),
+                                ),
+                                SizedBox(
+                                  width: mobile ? double.infinity : 180,
+                                  child: AkTextField(controller: _reference, label: 'Référence pièce', enabled: !_readOnly, mono: true),
+                                ),
+                                SizedBox(
+                                  width: mobile ? double.infinity : 420,
+                                  child: AkTextField(key: const Key('entry-label'), controller: _label, label: 'Libellé', enabled: !_readOnly),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _loaded != null
+                                      ? AkStatusBadge(AkStatusBadge.of(status: _loaded!.status, reviewStatus: _loaded!.reviewStatus))
+                                      : const AkStatusBadge(AkEntryStatus.draft),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: AkSpace.s3),
+                          AkCard(
+                            padding: EdgeInsets.zero,
+                            clip: true,
+                            // Sur petit écran la grille défile horizontalement plutôt que de se comprimer.
+                            child: LayoutBuilder(
+                              builder: (context, c) {
+                                final grid = Column(
+                                  children: [
+                                    const _GridHeader(),
+                                    for (var i = 0; i < _draft.lines.length; i++)
+                                      _LineRow(
+                                        key: ValueKey(_draft.lines[i]),
+                                        index: i,
+                                        line: _draft.lines[i],
+                                        entityId: widget.entity.id,
+                                        readOnly: _readOnly,
+                                        onChanged: () => setState(() {}),
+                                        onRemove: _readOnly || _draft.lines.length <= 2 ? null : () => setState(() => _draft.lines.removeAt(i)),
+                                        onEnterOnLast: i == _draft.lines.length - 1 ? _appendLine : null,
+                                      ),
+                                    // Pied de totaux : filet fort, montants alignés sur les colonnes Débit / Crédit.
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        border: Border(top: BorderSide(color: t.borderStrong, width: 2)),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2, vertical: AkSpace.s2),
+                                      child: Row(
+                                        children: [
+                                          const SizedBox(width: _kIndexW),
+                                          Expanded(
+                                            child: Text('Totaux', style: AkText.bodyStrong.copyWith(color: t.text)),
+                                          ),
+                                          const SizedBox(width: AkSpace.s2),
+                                          SizedBox(width: _kAmountW, child: AkAmountText(Fmt.fcfa(_draft.totalDebit, showZero: true), bold: true)),
+                                          const SizedBox(width: AkSpace.s2),
+                                          SizedBox(width: _kAmountW, child: AkAmountText(Fmt.fcfa(_draft.totalCredit, showZero: true), bold: true)),
+                                          const SizedBox(width: _kRemoveW),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                                if (c.maxWidth >= _kGridMinWidth) return grid;
+                                return SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: SizedBox(width: _kGridMinWidth, child: grid),
+                                );
+                              },
+                            ),
+                          ),
+                          if (!_readOnly)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: AkSpace.s2),
+                                child: AkButton.ghost('Ligne', icon: Icons.add, onPressed: _appendLine),
+                              ),
+                            ),
+                          if (_errors.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: AkSpace.s3),
+                              child: AkBanner(
+                                kind: AkBannerKind.danger,
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final e in _errors) Text('• $e')]),
+                              ),
+                            ),
+                          if (_loaded?.reviewComment != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: AkSpace.s3),
+                              child: AkBanner(kind: AkBannerKind.warning, child: Text('Revue : ${_loaded!.reviewComment}')),
+                            ),
+                          if (!_readOnly && !mobile)
+                            Padding(
+                              padding: const EdgeInsets.only(top: AkSpace.s3),
+                              child: Wrap(
+                                spacing: AkSpace.s4,
+                                runSpacing: AkSpace.s1,
+                                children: [
+                                  for (final (k, d) in const [
+                                    ('Tab', 'cellule suivante'),
+                                    ('Entrée', 'champ suivant ; en fin de ligne : nouvelle ligne'),
+                                    ('Ctrl B', 'contrepartie'),
+                                    ('Ctrl S', 'enregistrer le brouillard'),
+                                    ('F1', 'tous les raccourcis'),
+                                  ])
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        AkKbd(k),
+                                        const SizedBox(width: 6),
+                                        Text(d, style: AkText.caption.copyWith(color: t.textMuted)),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
-                    // Pied de totaux : filet fort, montants alignés sur les colonnes Débit / Crédit.
-                    Container(
-                      decoration: BoxDecoration(border: Border(top: BorderSide(color: t.borderStrong, width: 2))),
-                      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2, vertical: AkSpace.s2),
-                      child: Row(children: [
-                        const SizedBox(width: _kIndexW),
-                        Expanded(child: Text('Totaux', style: AkText.bodyStrong.copyWith(color: t.text))),
-                        const SizedBox(width: AkSpace.s2),
-                        SizedBox(width: _kAmountW, child: AkAmountText(Fmt.fcfa(_draft.totalDebit, showZero: true), bold: true)),
-                        const SizedBox(width: AkSpace.s2),
-                        SizedBox(width: _kAmountW, child: AkAmountText(Fmt.fcfa(_draft.totalCredit, showZero: true), bold: true)),
-                        const SizedBox(width: _kRemoveW),
-                      ]),
                     ),
-                  ]);
-                  if (c.maxWidth >= _kGridMinWidth) return grid;
-                  return SingleChildScrollView(scrollDirection: Axis.horizontal, child: SizedBox(width: _kGridMinWidth, child: grid));
-                }),
-                Divider(height: 1, color: t.border),
-                Padding(
-                  padding: const EdgeInsets.all(AkSpace.s3),
-                  child: Wrap(
-                    spacing: AkSpace.s3,
-                    runSpacing: AkSpace.s2,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (!_readOnly) TextButton.icon(onPressed: () => setState(() => _draft.lines.add(DraftLine())), icon: const Icon(Icons.add, size: 18), label: const Text('Ligne')),
-                      Row(key: const Key('balance-chip'), mainAxisSize: MainAxisSize.min, children: [
-                        Icon(balanced ? Icons.check_circle_outline : Icons.error_outline, size: 18, color: balanceColor),
-                        const SizedBox(width: 6),
-                        Text(balanced ? 'Équilibrée' : 'Écart ${Fmt.fcfa(_draft.balance, showZero: true)}', style: AkText.bodyStrong.copyWith(color: balanceColor)),
-                      ]),
-                      if (!_readOnly) ...[
-                        OutlinedButton(style: OutlinedButton.styleFrom(minimumSize: Size(0, control)), key: const Key('save-draft'), onPressed: _busy ? null : () => _save(), child: const Text('Enregistrer (Ctrl+S)')),
-                        if (canValidate) FilledButton(style: FilledButton.styleFrom(minimumSize: Size(0, control)), key: const Key('validate-entry'), onPressed: _busy ? null : () => _save(validate: true), child: const Text('Valider')),
-                      ],
-                    ],
                   ),
                 ),
-              ]),
+              ),
             ),
-            if (_errors.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: AkSpace.s3),
-                child: AkBanner(
-                  kind: AkBannerKind.danger,
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final e in _errors) Text('• $e')]),
-                ),
-              ),
-            if (_loaded?.reviewComment != null)
-              Padding(
-                padding: const EdgeInsets.only(top: AkSpace.s3),
-                child: AkBanner(kind: AkBannerKind.warning, child: Text('Revue : ${_loaded!.reviewComment}')),
-              ),
-            if (!_readOnly && !mobile)
-              Padding(
-                padding: const EdgeInsets.only(top: AkSpace.s3),
-                child: Wrap(spacing: AkSpace.s4, runSpacing: AkSpace.s1, children: [
-                  for (final (k, d) in const [('Tab', 'cellule suivante'), ('Entrée', 'en fin de ligne : nouvelle ligne'), ('Ctrl B', 'contrepartie'), ('Ctrl S', 'enregistrer le brouillard')])
-                    Row(mainAxisSize: MainAxisSize.min, children: [AkKbd(k), const SizedBox(width: 6), Text(d, style: AkText.caption.copyWith(color: t.textMuted))]),
-                ]),
-              ),
+            _BalanceBar(
+              debit: _draft.totalDebit,
+              credit: _draft.totalCredit,
+              balance: _draft.balance,
+              readOnly: _readOnly,
+              busy: _busy,
+              canValidate: canValidate,
+              onSave: () => _save(),
+              onValidate: () => _save(validate: true),
+            ),
           ],
         ),
       ),
@@ -296,11 +371,129 @@ class _EditorState extends ConsumerState<_Editor> {
   }
 }
 
+/// Barre fixe en bas de l'écran : totaux, équilibre de l'écriture (toujours visible) et actions d'enregistrement.
+class _BalanceBar extends StatelessWidget {
+  const _BalanceBar({
+    required this.debit,
+    required this.credit,
+    required this.balance,
+    required this.readOnly,
+    required this.busy,
+    required this.canValidate,
+    required this.onSave,
+    required this.onValidate,
+  });
+
+  final int debit;
+  final int credit;
+  final int balance;
+  final bool readOnly;
+  final bool busy;
+  final bool canValidate;
+  final VoidCallback onSave;
+  final VoidCallback onValidate;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    final balanced = balance == 0;
+    final color = balanced ? t.success : t.danger;
+    final mobile = akIsCompact(context);
+    Widget total(String label, int v) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('$label ', style: AkText.caption.copyWith(color: t.textMuted)),
+        Text(Fmt.fcfa(v, showZero: true), style: AkText.amount.copyWith(color: t.text)),
+      ],
+    );
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: akPageMargin(context), vertical: AkSpace.s3),
+      decoration: BoxDecoration(
+        color: t.surface,
+        border: Border(top: BorderSide(color: t.border)),
+      ),
+      child: Wrap(
+        spacing: AkSpace.s4,
+        runSpacing: AkSpace.s2,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        alignment: mobile ? WrapAlignment.start : WrapAlignment.end,
+        children: [
+          if (!mobile) ...[total('Débit', debit), total('Crédit', credit)],
+          Container(
+            key: const Key('balance-chip'),
+            padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: AkSpace.s1),
+            decoration: BoxDecoration(color: balanced ? t.successTint : t.dangerTint, borderRadius: AkRadius.mdAll),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(balanced ? Icons.check_circle_outline : Icons.error_outline, size: 20, color: color),
+                const SizedBox(width: AkSpace.s2),
+                Text(balanced ? 'Équilibrée' : 'Écart ${Fmt.fcfa(balance, showZero: true)}', style: AkText.bodyStrong.copyWith(color: color)),
+              ],
+            ),
+          ),
+          if (!readOnly) ...[
+            AkButton.secondary('Enregistrer (Ctrl+S)', key: const Key('save-draft'), onPressed: busy ? null : onSave),
+            if (canValidate) AkButton.primary('Valider', key: const Key('validate-entry'), onPressed: busy ? null : onValidate),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Aide : raccourcis clavier de la grille de saisie (F1).
+class _ShortcutsDialog extends StatelessWidget {
+  const _ShortcutsDialog();
+
+  static const _rows = [
+    ('Tab / Maj+Tab', 'Cellule suivante / précédente'),
+    ('Entrée', 'Passe au champ suivant ; dans une liste de comptes, choisit la proposition surlignée'),
+    ('Entrée (dernier montant)', 'Nouvelle ligne, avec la contrepartie déjà proposée si l\'écriture est déséquilibrée'),
+    ('↑ ↓', 'Parcourir les propositions de compte ou de tiers'),
+    ('Ctrl B', 'Contrepartie automatique sur la première ligne vide'),
+    ('Ctrl S', 'Enregistrer le brouillard'),
+    ('F1', 'Afficher cette aide'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return AkDialog(
+      title: 'Raccourcis clavier',
+      width: 560,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final (k, d) in _rows)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AkSpace.s3),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 190,
+                    child: Align(alignment: Alignment.centerLeft, child: AkKbd(k)),
+                  ),
+                  Expanded(
+                    child: Text(d, style: AkText.body.copyWith(color: t.text)),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+      actions: [AkButton.primary('Fermer', onPressed: () => Navigator.pop(context))],
+    );
+  }
+}
+
 // Largeurs des colonnes de la grille, partagées par l'en-tête, les lignes et le pied de totaux.
-const double _kIndexW = 24;
-const double _kAmountW = 130;
+const double _kIndexW = 32;
+const double _kAmountW = 150;
 const double _kRemoveW = 40;
-const double _kGridMinWidth = 820;
+const double _kGridMinWidth = 960;
 
 class _GridHeader extends StatelessWidget {
   const _GridHeader();
@@ -308,39 +501,53 @@ class _GridHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
-    final style = AkText.label.copyWith(color: t.textMuted, letterSpacing: 0);
+    final style = AkText.label.copyWith(color: t.textMuted);
     return Container(
       height: AkSpace.rowCompact,
       color: t.surfaceSunken,
       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
-      child: Row(children: [
-        const SizedBox(width: _kIndexW),
-        SizedBox(width: 220, child: Text('Compte', style: style)),
-        const SizedBox(width: AkSpace.s2),
-        SizedBox(width: 120, child: Text('Tiers', style: style)),
-        const SizedBox(width: AkSpace.s2),
-        Expanded(child: Text('Libellé', style: style)),
-        const SizedBox(width: AkSpace.s2),
-        SizedBox(width: _kAmountW, child: Text('Débit (FCFA)', style: style, textAlign: TextAlign.right)),
-        const SizedBox(width: AkSpace.s2),
-        SizedBox(width: _kAmountW, child: Text('Crédit (FCFA)', style: style, textAlign: TextAlign.right)),
-        const SizedBox(width: _kRemoveW),
-      ]),
+      child: Row(
+        children: [
+          const SizedBox(width: _kIndexW),
+          SizedBox(width: 260, child: Text('Compte', style: style)),
+          const SizedBox(width: AkSpace.s2),
+          SizedBox(width: 130, child: Text('Tiers', style: style)),
+          const SizedBox(width: AkSpace.s2),
+          Expanded(child: Text('Libellé', style: style)),
+          const SizedBox(width: AkSpace.s2),
+          SizedBox(
+            width: _kAmountW,
+            child: Text('Débit (FCFA)', style: style, textAlign: TextAlign.right),
+          ),
+          const SizedBox(width: AkSpace.s2),
+          SizedBox(
+            width: _kAmountW,
+            child: Text('Crédit (FCFA)', style: style, textAlign: TextAlign.right),
+          ),
+          const SizedBox(width: _kRemoveW),
+        ],
+      ),
     );
   }
 }
 
 /// Une ligne de la grille : compte avec autocomplétion (numéro ou intitulé), tiers si collectif, libellé, débit, crédit.
 class _LineRow extends ConsumerStatefulWidget {
-  const _LineRow({super.key, required this.index, required this.line, required this.entityId, required this.readOnly, this.touch = false, required this.onChanged, this.onRemove, this.onEnterOnLast});
+  const _LineRow({
+    super.key,
+    required this.index,
+    required this.line,
+    required this.entityId,
+    required this.readOnly,
+    required this.onChanged,
+    this.onRemove,
+    this.onEnterOnLast,
+  });
 
   final int index;
   final DraftLine line;
   final String entityId;
   final bool readOnly;
-
-  /// Cellules de 44 px sur mobile.
-  final bool touch;
   final VoidCallback onChanged;
   final VoidCallback? onRemove;
   final VoidCallback? onEnterOnLast;
@@ -353,6 +560,14 @@ class _LineRowState extends ConsumerState<_LineRow> {
   late final _label = TextEditingController(text: widget.line.label);
   late final _debit = TextEditingController(text: Fmt.fcfa(widget.line.debit));
   late final _credit = TextEditingController(text: Fmt.fcfa(widget.line.credit));
+
+  @override
+  void dispose() {
+    _label.dispose();
+    _debit.dispose();
+    _credit.dispose();
+    super.dispose();
+  }
 
   /// Applique le compte choisi (liste ou code tapé) à la ligne.
   void _selectAccount(DraftLine l, Account a) {
@@ -367,90 +582,114 @@ class _LineRowState extends ConsumerState<_LineRow> {
     widget.onChanged();
   }
 
+  void _next() => FocusScope.of(context).nextFocus();
+
   @override
   Widget build(BuildContext context) {
     final accounts = (ref.watch(accountsProvider(widget.entityId)).value ?? const <Account>[]).where((a) => a.isActive && a.allowPosting).toList();
     final thirdParties = (ref.watch(thirdPartiesProvider(widget.entityId)).value ?? const <ThirdParty>[]).where((t) => t.isActive).toList();
     final l = widget.line;
     final t = context.ak;
+    final mobile = akIsCompact(context);
     return Container(
-      constraints: BoxConstraints(minHeight: widget.touch ? AkSpace.rowTouch : AkSpace.rowCompact),
+      constraints: BoxConstraints(minHeight: mobile ? AkSpace.rowTouch : AkSpace.control + 4),
       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2, vertical: 2),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.border))),
-      child: Row(children: [
-        SizedBox(width: _kIndexW, child: Text('${widget.index + 1}', style: AkText.caption.copyWith(color: t.textMuted))),
-        SizedBox(
-          width: 220,
-          child: Autocomplete<Account>(
-            key: Key('line-account-${widget.index}'),
-            initialValue: TextEditingValue(text: l.accountCode.isEmpty ? '' : '${l.accountCode} ${l.accountLabel}'),
-            displayStringForOption: (a) => '${a.code} ${a.label}',
-            optionsBuilder: (v) {
-              final q = v.text.trim().toLowerCase();
-              if (q.isEmpty) return const Iterable<Account>.empty();
-              return accounts.where((a) => a.code.startsWith(q) || a.label.toLowerCase().contains(q)).take(12);
-            },
-            onSelected: (a) => _selectAccount(l, a),
-            fieldViewBuilder: (context, controller, focus, onSubmit) => TextField(
-              controller: controller,
-              focusNode: focus,
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: t.border)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: _kIndexW,
+            child: Text('${widget.index + 1}', style: AkText.caption.copyWith(color: t.textMuted)),
+          ),
+          SizedBox(
+            width: 260,
+            child: AkAccountField(
+              key: Key('line-account-${widget.index}'),
+              accounts: accounts,
+              dense: !mobile,
               enabled: !widget.readOnly,
-              style: AkText.code,
-              decoration: InputDecoration(isDense: true, hintText: 'Numéro ou intitulé', errorText: controller.text.isNotEmpty && l.accountId == null ? 'Choisir dans la liste' : null),
-              onChanged: (v) {
-                final typed = matchAccountCode(accounts, v);
-                if (typed != null) {
-                  _selectAccount(l, typed);
-                } else if (l.accountId != null) {
+              selected: l.accountCode.isEmpty
+                  ? null
+                  : Account(
+                      id: l.accountId ?? '',
+                      code: l.accountCode,
+                      label: l.accountLabel,
+                      classNo: 0,
+                      normalSide: 'debit',
+                      isCollective: l.isCollective,
+                      isLetterable: false,
+                      allowPosting: true,
+                      isActive: true,
+                    ),
+              resolved: l.accountId != null,
+              onSelected: (a) => _selectAccount(l, a),
+              onCleared: () {
+                if (l.accountId != null) {
                   l.accountId = null;
                   l.accountCode = '';
                   widget.onChanged();
                 }
               },
+              onSubmittedPick: _next,
             ),
           ),
-        ),
-        const SizedBox(width: AkSpace.s2),
-        SizedBox(
-          width: 120,
-          child: l.isCollective
-              ? Autocomplete<ThirdParty>(
-                  initialValue: TextEditingValue(text: l.thirdPartyCode),
-                  displayStringForOption: (t) => t.code,
-                  optionsBuilder: (v) {
-                    final q = v.text.trim().toUpperCase();
-                    return thirdParties.where((t) => q.isEmpty || t.code.contains(q) || t.name.toUpperCase().contains(q)).take(12);
-                  },
-                  onSelected: (t) {
-                    l.thirdPartyId = t.id;
-                    l.thirdPartyCode = t.code;
-                    widget.onChanged();
-                  },
-                  fieldViewBuilder: (context, controller, focus, onSubmit) => TextField(controller: controller, focusNode: focus, enabled: !widget.readOnly, decoration: const InputDecoration(isDense: true, hintText: 'Code tiers')),
-                )
-              : const SizedBox.shrink(),
-        ),
-        const SizedBox(width: AkSpace.s2),
-        Expanded(child: TextField(controller: _label, enabled: !widget.readOnly, decoration: const InputDecoration(isDense: true), onChanged: (v) => l.label = v)),
-        const SizedBox(width: AkSpace.s2),
-        SizedBox(width: _kAmountW, child: _amountField(_debit, (v) => l.debit = v, () => l.credit = 0, _credit)),
-        const SizedBox(width: AkSpace.s2),
-        SizedBox(width: _kAmountW, child: _amountField(_credit, (v) => l.credit = v, () => l.debit = 0, _debit, last: true)),
-        SizedBox(width: _kRemoveW, child: widget.onRemove == null ? null : IconButton(tooltip: 'Supprimer la ligne', icon: const Icon(Icons.close, size: 16), onPressed: widget.onRemove)),
-      ]),
+          const SizedBox(width: AkSpace.s2),
+          SizedBox(
+            width: 130,
+            child: l.isCollective
+                ? AkThirdPartyField(
+                    thirdParties: thirdParties,
+                    dense: !mobile,
+                    enabled: !widget.readOnly,
+                    initialCode: l.thirdPartyCode,
+                    resolved: l.thirdPartyId != null,
+                    onSelected: (t) {
+                      l.thirdPartyId = t.id;
+                      l.thirdPartyCode = t.code;
+                      widget.onChanged();
+                    },
+                    onSubmittedPick: _next,
+                  )
+                : const SizedBox.shrink(),
+          ),
+          const SizedBox(width: AkSpace.s2),
+          Expanded(
+            child: AkTextField(
+              controller: _label,
+              dense: !mobile,
+              enabled: !widget.readOnly,
+              textInputAction: TextInputAction.next,
+              onChanged: (v) => l.label = v,
+              onSubmitted: (_) => _next(),
+            ),
+          ),
+          const SizedBox(width: AkSpace.s2),
+          SizedBox(width: _kAmountW, child: _amountField(_debit, (v) => l.debit = v, () => l.credit = 0, _credit)),
+          const SizedBox(width: AkSpace.s2),
+          SizedBox(width: _kAmountW, child: _amountField(_credit, (v) => l.credit = v, () => l.debit = 0, _debit, last: true)),
+          SizedBox(
+            width: _kRemoveW,
+            // Hors du parcours au clavier : Tab va de ligne en ligne sans s'arrêter sur la suppression.
+            child: widget.onRemove == null
+                ? null
+                : ExcludeFocus(
+                    child: AkIconButton(tooltip: 'Supprimer la ligne', icon: Icons.close, size: 18, dense: true, onPressed: widget.onRemove),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _amountField(TextEditingController c, void Function(int) set, VoidCallback clearOther, TextEditingController other, {bool last = false}) {
-    return TextField(
+    return AkAmountField(
       controller: c,
       enabled: !widget.readOnly,
-      textAlign: TextAlign.right,
-      style: AkText.amount,
-      decoration: const InputDecoration(isDense: true),
-      keyboardType: TextInputType.number,
-      onChanged: (v) {
-        final n = Fmt.parseAmount(v) ?? 0;
+      dense: !akIsCompact(context),
+      textInputAction: TextInputAction.next,
+      onChanged: (n) {
         set(n);
         if (n > 0) {
           clearOther();
@@ -458,7 +697,7 @@ class _LineRowState extends ConsumerState<_LineRow> {
         }
         widget.onChanged();
       },
-      onSubmitted: (_) => last ? widget.onEnterOnLast?.call() : null,
+      onSubmitted: (_) => last && widget.onEnterOnLast != null ? widget.onEnterOnLast!() : _next(),
     );
   }
 }
@@ -479,24 +718,28 @@ class _TemplatePickerState extends State<_TemplatePicker> {
   @override
   Widget build(BuildContext context) {
     final amount = Fmt.parseAmount(_amount.text);
-    return AlertDialog(
-      title: const Text('Appliquer un modèle'),
-      content: SizedBox(
-        width: 420,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          DropdownButtonFormField<EntryTemplate>(
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Modèle'),
-            items: [for (final t in widget.templates) DropdownMenuItem(value: t, child: Text('${t.code} — ${t.label}', overflow: TextOverflow.ellipsis))],
+    return AkDialog(
+      title: 'Appliquer un modèle',
+      width: 420,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AkDropdown<EntryTemplate>(
+            label: 'Modèle',
+            value: _template,
+            items: [for (final t in widget.templates) AkOption(t, '${t.code} — ${t.label}')],
             onChanged: (v) => setState(() => _template = v),
           ),
-          const SizedBox(height: 8),
-          TextField(controller: _amount, decoration: const InputDecoration(labelText: 'Montant de base (FCFA)'), keyboardType: TextInputType.number, onChanged: (_) => setState(() {})),
-        ]),
+          const SizedBox(height: AkSpace.s3),
+          AkAmountField(controller: _amount, label: 'Montant de base', onChanged: (_) => setState(() {})),
+        ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-        FilledButton(onPressed: _template == null || amount == null || amount <= 0 ? null : () => Navigator.pop(context, (_template!, amount)), child: const Text('Appliquer')),
+        AkButton.secondary('Annuler', onPressed: () => Navigator.pop(context)),
+        AkButton.primary(
+          'Appliquer',
+          onPressed: _template == null || amount == null || amount <= 0 ? null : () => Navigator.pop(context, (_template!, amount)),
+        ),
       ],
     );
   }

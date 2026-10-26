@@ -110,6 +110,21 @@ class AppShell extends ConsumerWidget {
         ),
       ),
       body: child,
+      // Mobile : navigation réduite, centrée sur la capture des pièces ; le reste est dans le tiroir.
+      bottomNavigationBar: Builder(builder: (context) {
+        const quick = ['/pieces', '/', '/consultation'];
+        final items = [for (final r in quick) ...visible.where((d) => d.route == r)];
+        final current = items.indexWhere((d) => d.route == '/' ? location == '/' : location.startsWith(d.route));
+        return NavigationBar(
+          height: 64,
+          selectedIndex: current < 0 ? items.length : current,
+          onDestinationSelected: (i) => i == items.length ? Scaffold.of(context).openDrawer() : context.go(items[i].route),
+          destinations: [
+            for (final d in items) NavigationDestination(icon: Icon(d.icon), label: d.label),
+            const NavigationDestination(icon: Icon(Icons.menu), label: 'Menu'),
+          ],
+        );
+      }),
     );
   }
 }
@@ -142,7 +157,7 @@ class _Rail extends StatelessWidget {
             Padding(padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4), child: Divider(height: 1, color: t.border)),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 6, 10, 2),
-              child: Text('Administration', style: AkText.label.copyWith(fontSize: 11, color: t.textMuted)),
+              child: Text('Administration', style: AkText.label.copyWith(color: t.textMuted)),
             ),
             for (final i in admin) tile(i),
           ],
@@ -176,7 +191,7 @@ class _RailItem extends StatelessWidget {
             selected: active,
             button: true,
             child: SizedBox(
-              height: 34,
+              height: 40,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Row(
@@ -226,13 +241,12 @@ class _TopBar extends ConsumerWidget {
           if (toCorrect > 0)
             Tooltip(
               message: '$toCorrect écriture(s) à corriger',
-              child: IconButton(
-                onPressed: () => context.go('/saisie'),
-                icon: Badge(
-                  label: Text('$toCorrect'),
-                  backgroundColor: t.danger,
-                  textColor: t.surface,
-                  child: const Icon(Icons.notifications_outlined),
+              child: InkWell(
+                borderRadius: AkRadius.mdAll,
+                onTap: () => context.go('/saisie'),
+                child: Padding(
+                  padding: const EdgeInsets.all(AkSpace.s2),
+                  child: Badge(label: Text('$toCorrect'), backgroundColor: t.danger, textColor: t.surface, child: const Icon(Icons.notifications_outlined)),
                 ),
               ),
             ),
@@ -275,7 +289,7 @@ class _UserMenu extends StatelessWidget {
                 children: [
                   Text(name, style: AkText.table.copyWith(color: t.text, fontWeight: FontWeight.w600)),
                   if (profile.jobTitle != null && profile.jobTitle!.isNotEmpty)
-                    Text(profile.jobTitle!, style: AkText.caption.copyWith(fontSize: 11, color: t.textMuted)),
+                    Text(profile.jobTitle!, style: AkText.caption.copyWith(color: t.textMuted)),
                 ],
               ),
             ],
@@ -296,40 +310,16 @@ class _CurrentEntitySelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final t = context.ak;
     final entities = ref.watch(entityDashboardProvider).value ?? const <EntitySummary>[];
     final current = entities.where((e) => e.id == entity?.id).firstOrNull;   // dossier absent de la liste (changement d'utilisateur)
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
-      decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.borderControl), borderRadius: AkRadius.mdAll),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          key: const Key('current-entity'),
-          isExpanded: true,
-          isDense: true,
-          dropdownColor: t.surface,
-          borderRadius: AkRadius.mdAll,
-          icon: Icon(Icons.expand_more, size: 18, color: t.textMuted),
-          value: current?.id,
-          hint: Text('Choisir un dossier', style: AkText.table.copyWith(color: t.textMuted)),
-          selectedItemBuilder: (_) => [
-            for (final e in entities)
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!mobile) Text('Dossier courant', style: AkText.label.copyWith(fontSize: 11, height: 14 / 11, color: t.textMuted)),
-                  Text(e.dossierLabel, overflow: TextOverflow.ellipsis, style: AkText.table.copyWith(color: t.text, fontWeight: FontWeight.w600)),
-                ],
-              ),
-          ],
-          items: [
-            for (final e in entities)
-              DropdownMenuItem(value: e.id, child: Text(e.dossierLabel, overflow: TextOverflow.ellipsis, style: AkText.table.copyWith(color: t.text))),
-          ],
-          onChanged: (id) => ref.read(currentEntityProvider.notifier).select(entities.where((e) => e.id == id).firstOrNull),
-        ),
+    return SizedBox(
+      width: mobile ? null : 420,
+      child: AkDropdown<String>(
+        key: const Key('current-entity'),
+        hint: 'Choisir un dossier',
+        value: current?.id,
+        items: [for (final e in entities) AkOption(e.id, e.dossierLabel)],
+        onChanged: (id) => ref.read(currentEntityProvider.notifier).select(entities.where((e) => e.id == id).firstOrNull),
       ),
     );
   }
