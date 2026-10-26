@@ -21,6 +21,8 @@ class AkontaApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Akonta',
       theme: buildAkontaTheme(),
+      darkTheme: buildAkontaDarkTheme(),
+      themeMode: ThemeMode.system,
       locale: const Locale('fr', 'FR'),
       supportedLocales: const [Locale('fr', 'FR')],
       localizationsDelegates: const [
