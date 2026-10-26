@@ -1,13 +1,14 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/import_repository.dart';
 import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
+import '../inventory/inventory_screen.dart' show showErrorSnack;
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 
@@ -40,65 +41,98 @@ class _ImportBodyState extends ConsumerState<_ImportBody> {
   Widget build(BuildContext context) {
     final batches = ref.watch(importBatchesProvider(widget.entity.id));
     final journals = (ref.watch(journalsProvider(widget.entity.id)).value ?? const []).where((j) => j.isActive).toList();
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    final t = context.ak;
+    return AkPage(
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Nouvel import', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              const Text('Formats : export texte Perfecto (tabulations, Windows-1252) ou CSV. Les numéros de compte sont repris tels quels puis complétés à la longueur du plan ; les comptes de tiers collés (4110CHU) sont scindés en collectif + code tiers.'),
-              const SizedBox(height: 12),
-              Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                DropdownButton<String>(
-                  value: _kind,
-                  items: const [
-                    DropdownMenuItem(value: 'journal', child: Text('Journal Perfecto')),
-                    DropdownMenuItem(value: 'balance', child: Text('Balance générale (soldes d\'ouverture)')),
-                    DropdownMenuItem(value: 'aux_balance', child: Text('Balance auxiliaire')),
-                  ],
-                  onChanged: (v) => setState(() => _kind = v ?? 'journal'),
-                ),
-                if (_kind == 'journal')
-                  DropdownButton<String?>(
-                    value: _journalId,
-                    hint: const Text('Journal cible'),
-                    items: [for (final j in journals) DropdownMenuItem(value: j.id, child: Text('${j.code} · ${j.label}'))],
-                    onChanged: (v) => setState(() => _journalId = v),
+        const AkPageHead(title: 'Import Perfecto', subtitle: 'Journal, balance générale ou balance auxiliaire'),
+        const SizedBox(height: AkSpace.s4),
+        AkCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AkSectionTitle('Nouvel import'),
+              const SizedBox(height: AkSpace.s2),
+              Text(
+                'Formats : export texte Perfecto (tabulations, Windows-1252) ou CSV. Les numéros de compte sont repris tels quels puis complétés à la longueur du plan ; les comptes de tiers collés (4110CHU) sont scindés en collectif + code tiers.',
+                style: AkText.body.copyWith(color: t.textMuted),
+              ),
+              const SizedBox(height: AkSpace.s3),
+              Wrap(
+                spacing: AkSpace.s3,
+                runSpacing: AkSpace.s2,
+                crossAxisAlignment: WrapCrossAlignment.end,
+                children: [
+                  SizedBox(
+                    width: 320,
+                    child: AkDropdown<String>(
+                      label: 'Type d\'import',
+                      value: _kind,
+                      items: const [
+                        AkOption('journal', 'Journal Perfecto'),
+                        AkOption('balance', 'Balance générale (soldes d\'ouverture)'),
+                        AkOption('aux_balance', 'Balance auxiliaire'),
+                      ],
+                      onChanged: (v) => setState(() => _kind = v ?? 'journal'),
+                    ),
                   ),
-                FilledButton.icon(key: const Key('import-pick'), onPressed: _busy ? null : _pick, icon: const Icon(Icons.upload_file_outlined), label: const Text('Choisir le fichier et analyser')),
-                if (_busy) const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-              ]),
-            ]),
+                  if (_kind == 'journal')
+                    SizedBox(
+                      width: 320,
+                      child: AkDropdown<String>(
+                        label: 'Journal cible',
+                        value: _journalId,
+                        items: [for (final j in journals) AkOption(j.id, '${j.code} · ${j.label}')],
+                        onChanged: (v) => setState(() => _journalId = v),
+                      ),
+                    ),
+                  AkButton.primary(
+                    'Choisir le fichier et analyser',
+                    key: const Key('import-pick'),
+                    icon: Icons.upload_file_outlined,
+                    loading: _busy,
+                    onPressed: _busy ? null : _pick,
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
         if (_current != null) ...[
-          const SizedBox(height: 16),
-          _BatchPanel(entity: widget.entity, batch: _current!, report: _report, onChanged: (b, r) => setState(() {
-            _current = b;
-            _report = r;
-          })),
+          const SizedBox(height: AkSpace.s4),
+          _BatchPanel(
+            entity: widget.entity,
+            batch: _current!,
+            report: _report,
+            onChanged: (b, r) => setState(() {
+              _current = b;
+              _report = r;
+            }),
+          ),
         ],
-        const SizedBox(height: 16),
-        Text('Imports précédents', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: AkSpace.s6),
+        const AkSectionTitle('Imports précédents'),
+        const SizedBox(height: AkSpace.s2),
         AsyncView(
           value: batches,
-          builder: (list) => Card(
-            child: Column(children: [
-              for (final b in list)
-                ListTile(
-                  dense: true,
-                  title: Text('${b.sourceFileName ?? b.kind} · ${b.statusLabel}'),
-                  subtitle: Text('${Fmt.date(b.createdAt)} · ${b.report['lines'] ?? 0} lignes · ${b.report['entries'] ?? 0} écritures · ${b.report['error_count'] ?? 0} erreur(s)'),
-                  onTap: b.status == 'applied' || b.status == 'cancelled' ? null : () => setState(() {
-                    _current = b;
-                    _report = b.report;
-                  }),
-                ),
-              if (list.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('Aucun import.')),
-            ]),
+          builder: (list) => AkTable<ImportBatch>(
+            minWidth: 720,
+            rows: list,
+            emptyMessage: 'Aucun import.',
+            onRowTap: (b) {
+              if (b.status == 'applied' || b.status == 'cancelled') return;
+              setState(() {
+                _current = b;
+                _report = b.report;
+              });
+            },
+            columns: [
+              AkColumn.text(label: 'Fichier', flex: 3, text: (b) => b.sourceFileName ?? b.kind),
+              AkColumn.text(label: 'Statut', flex: 2, text: (b) => b.statusLabel),
+              AkColumn.text(label: 'Date', width: 100, text: (b) => Fmt.date(b.createdAt)),
+              AkColumn.text(label: 'Lignes', width: 80, numeric: true, text: (b) => '${b.report['lines'] ?? 0}'),
+              AkColumn.text(label: 'Écritures', width: 90, numeric: true, text: (b) => '${b.report['entries'] ?? 0}'),
+              AkColumn.text(label: 'Erreurs', width: 80, numeric: true, text: (b) => '${b.report['error_count'] ?? 0}'),
+            ],
           ),
         ),
       ],
@@ -118,7 +152,13 @@ class _ImportBodyState extends ConsumerState<_ImportBody> {
       final text = decodePerfectoText(await file.readAsBytes());
       final cabinet = await ref.read(currentCabinetProvider.future);
       final repo = ref.read(importRepositoryProvider);
-      final batch = await repo.createBatch(cabinetId: cabinet!.id, entityId: widget.entity.id, kind: _kind, fileName: file.name, targetJournalId: _kind == 'journal' ? _journalId : null);
+      final batch = await repo.createBatch(
+        cabinetId: cabinet!.id,
+        entityId: widget.entity.id,
+        kind: _kind,
+        fileName: file.name,
+        targetJournalId: _kind == 'journal' ? _journalId : null,
+      );
       Map<String, dynamic> report;
       if (_kind == 'journal') {
         report = await repo.parseJournalText(batch.id, text);
@@ -133,7 +173,7 @@ class _ImportBodyState extends ConsumerState<_ImportBody> {
         _report = report;
       });
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Analyse impossible : $e'), backgroundColor: AkColors.toCorrect));
+      if (mounted) showErrorSnack(context, 'Analyse impossible : $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -175,75 +215,164 @@ class _BatchPanelState extends ConsumerState<_BatchPanel> {
   Widget build(BuildContext context) {
     final b = widget.batch;
     final r = widget.report ?? b.report;
+    final t = context.ak;
     final mappings = ref.watch(importMappingsProvider((widget.entity.id, b.id)));
     final errors = (r['errors'] as List?) ?? (r['parse_errors'] as List?) ?? const [];
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Lot ${b.sourceFileName ?? ''} · ${b.statusLabel}', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text([
-            if (b.sourceJournal != null) 'journal source ${b.sourceJournal}',
-            if (b.periodFrom != null) 'du ${Fmt.date(b.periodFrom)} au ${Fmt.date(b.periodTo)}',
-            '${r['lines'] ?? 0} lignes',
-            if (r['pieces'] != null) '${r['pieces']} pièces',
-            '${r['accounts'] ?? 0} comptes dont ${r['unknown_accounts'] ?? 0} inconnus',
-            '${r['new_third_parties'] ?? 0} tiers à créer',
-            if (r['subtotal_errors'] != null) '${r['subtotal_errors']} sous-totaux incohérents',
-          ].join(' · ')),
-          const SizedBox(height: 12),
-          Text('Correspondances (modifiables avant l\'import)', style: Theme.of(context).textTheme.titleMedium),
+    return AkCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Lot ${b.sourceFileName ?? ''} · ${b.statusLabel}', style: AkText.title.copyWith(color: t.text)),
+          const SizedBox(height: AkSpace.s1),
+          Text(
+            [
+              if (b.sourceJournal != null) 'journal source ${b.sourceJournal}',
+              if (b.periodFrom != null) 'du ${Fmt.date(b.periodFrom)} au ${Fmt.date(b.periodTo)}',
+              '${r['lines'] ?? 0} lignes',
+              if (r['pieces'] != null) '${r['pieces']} pièces',
+              '${r['accounts'] ?? 0} comptes dont ${r['unknown_accounts'] ?? 0} inconnus',
+              '${r['new_third_parties'] ?? 0} tiers à créer',
+              if (r['subtotal_errors'] != null) '${r['subtotal_errors']} sous-totaux incohérents',
+            ].join(' · '),
+            style: AkText.table.copyWith(color: t.textMuted),
+          ),
+          const SizedBox(height: AkSpace.s4),
+          const AkSectionTitle('Correspondances (modifiables avant l\'import)'),
+          const SizedBox(height: AkSpace.s2),
           AsyncView(
             value: mappings,
-            builder: (list) => SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(AkColors.sand),
-                columns: const [DataColumn(label: Text('Compte Perfecto')), DataColumn(label: Text('Compte Akonta')), DataColumn(label: Text('Code tiers')), DataColumn(label: Text('Nom du tiers')), DataColumn(label: Text('Créer le tiers')), DataColumn(label: Text('Remarque'))],
-                rows: [
-                  for (final m in list)
-                    DataRow(cells: [
-                      DataCell(Text(m.rawAccount, style: const TextStyle(fontFamily: 'monospace'))),
-                      DataCell(_Editable(value: m.accountCode, hint: 'ex. 4452000', onSaved: (v) => _update(m.id, accountCode: v))),
-                      DataCell(_Editable(value: m.thirdPartyCode, hint: '—', onSaved: (v) => _update(m.id, thirdPartyCode: v))),
-                      DataCell(_Editable(value: m.thirdPartyName, hint: '—', onSaved: (v) => _update(m.id, thirdPartyName: v))),
-                      DataCell(Checkbox(value: m.createThirdParty, onChanged: m.thirdPartyCode == null ? null : (v) => _update(m.id, createThirdParty: v))),
-                      DataCell(Text(m.note ?? '', style: const TextStyle(color: AkColors.toCorrect, fontSize: 12))),
-                    ]),
-                ],
-              ),
+            builder: (list) => AkTable<AccountMapping>(
+              minWidth: 960,
+              rows: list,
+              columns: [
+                AkColumn(
+                  label: 'Compte Perfecto',
+                  width: 130,
+                  cell: (c, m) => Text(m.rawAccount, style: AkText.code.copyWith(color: c.ak.text)),
+                ),
+                AkColumn(
+                  label: 'Compte Akonta',
+                  width: 150,
+                  cell: (c, m) => _Editable(
+                    value: m.accountCode,
+                    hint: 'ex. 4452000',
+                    mono: true,
+                    onSaved: (v) => _update(m.id, accountCode: v),
+                  ),
+                ),
+                AkColumn(
+                  label: 'Code tiers',
+                  width: 150,
+                  cell: (c, m) => _Editable(
+                    value: m.thirdPartyCode,
+                    hint: '—',
+                    mono: true,
+                    onSaved: (v) => _update(m.id, thirdPartyCode: v),
+                  ),
+                ),
+                AkColumn(
+                  label: 'Nom du tiers',
+                  width: 180,
+                  cell: (c, m) => _Editable(
+                    value: m.thirdPartyName,
+                    hint: '—',
+                    onSaved: (v) => _update(m.id, thirdPartyName: v),
+                  ),
+                ),
+                AkColumn(
+                  label: 'Créer le tiers',
+                  width: 120,
+                  cell: (c, m) => AkCheckbox(
+                    value: m.createThirdParty,
+                    dense: true,
+                    onChanged: m.thirdPartyCode == null ? null : (v) => _update(m.id, createThirdParty: v),
+                  ),
+                ),
+                AkColumn(
+                  label: 'Remarque',
+                  flex: 1,
+                  cell: (c, m) => m.note == null || m.note!.isEmpty
+                      ? const SizedBox.shrink()
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline, size: 16, color: c.ak.danger),
+                            const SizedBox(width: AkSpace.s1),
+                            Flexible(
+                              child: Text(m.note!, style: AkText.caption.copyWith(color: c.ak.danger)),
+                            ),
+                          ],
+                        ),
+                ),
+              ],
             ),
           ),
           if (errors.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text('Erreurs (${errors.length})', style: const TextStyle(fontWeight: FontWeight.w600, color: AkColors.toCorrect)),
-            for (final e in errors.take(30)) Text('• ${e is Map ? [if (e['piece'] != null) 'pièce ${e['piece']}', if (e['line'] != null) 'ligne ${e['line']}', e['error']].join(' · ') : e}', style: const TextStyle(fontSize: 12)),
-            if (errors.length > 30) Text('… et ${errors.length - 30} autres'),
-          ],
-          const SizedBox(height: 12),
-          Row(children: [
-            OutlinedButton.icon(key: const Key('import-dry-run'), onPressed: _busy ? null : () => _apply(dryRun: true), icon: const Icon(Icons.science_outlined), label: const Text('Essai (sans écriture)')),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              key: const Key('import-apply'),
-              onPressed: _busy || b.status != 'dry_run' || (r['error_count'] ?? 0) != 0 ? null : () => _apply(dryRun: false),
-              icon: const Icon(Icons.playlist_add_check),
-              label: const Text('Importer en brouillard'),
+            const SizedBox(height: AkSpace.s3),
+            AkBanner(
+              kind: AkBannerKind.danger,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Erreurs (${errors.length})', style: AkText.bodyStrong.copyWith(color: t.text)),
+                  for (final e in errors.take(30))
+                    Text(
+                      '• ${e is Map ? [if (e['piece'] != null) 'pièce ${e['piece']}', if (e['line'] != null) 'ligne ${e['line']}', e['error']].join(' · ') : e}',
+                      style: AkText.caption.copyWith(color: t.text),
+                    ),
+                  if (errors.length > 30) Text('… et ${errors.length - 30} autres', style: AkText.caption.copyWith(color: t.text)),
+                ],
+              ),
             ),
-            const SizedBox(width: 12),
-            if (b.status == 'dry_run') Text('Essai : ${r['entries']} écriture(s), ${r['third_parties_created']} tiers, ${r['error_count']} erreur(s).'),
-            if (b.status == 'applied') Text('Importé : ${r['entries']} brouillard(s) à valider par le chef de mission.', style: const TextStyle(color: AkColors.validated)),
-          ]),
-          const SizedBox(height: 4),
-          const Text('L\'import réel n\'est possible qu\'après un essai sans erreur. Les écritures arrivent en brouillard, marquées « générée ».', style: TextStyle(fontSize: 12)),
-        ]),
+          ],
+          const SizedBox(height: AkSpace.s3),
+          Wrap(
+            spacing: AkSpace.s3,
+            runSpacing: AkSpace.s2,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              AkButton.secondary(
+                'Essai (sans écriture)',
+                key: const Key('import-dry-run'),
+                icon: Icons.science_outlined,
+                onPressed: _busy ? null : () => _apply(dryRun: true),
+              ),
+              AkButton.primary(
+                'Importer en brouillard',
+                key: const Key('import-apply'),
+                icon: Icons.playlist_add_check,
+                onPressed: _busy || b.status != 'dry_run' || (r['error_count'] ?? 0) != 0 ? null : () => _apply(dryRun: false),
+              ),
+              if (b.status == 'dry_run')
+                Text(
+                  'Essai : ${r['entries']} écriture(s), ${r['third_parties_created']} tiers, ${r['error_count']} erreur(s).',
+                  style: AkText.table.copyWith(color: t.text),
+                ),
+              if (b.status == 'applied')
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_outline, size: 16, color: t.success),
+                    const SizedBox(width: 4),
+                    Text('Importé : ${r['entries']} brouillard(s) à valider par le chef de mission.', style: AkText.table.copyWith(color: t.success)),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: AkSpace.s1),
+          Text(
+            'L\'import réel n\'est possible qu\'après un essai sans erreur. Les écritures arrivent en brouillard, marquées « générée ».',
+            style: AkText.caption.copyWith(color: t.textMuted),
+          ),
+        ],
       ),
     );
   }
 
   Future<void> _update(String id, {String? accountCode, String? thirdPartyCode, String? thirdPartyName, bool? createThirdParty}) async {
-    await ref.read(importRepositoryProvider).updateMapping(id, accountCode: accountCode, thirdPartyCode: thirdPartyCode, thirdPartyName: thirdPartyName, createThirdParty: createThirdParty);
+    await ref
+        .read(importRepositoryProvider)
+        .updateMapping(id, accountCode: accountCode, thirdPartyCode: thirdPartyCode, thirdPartyName: thirdPartyName, createThirdParty: createThirdParty);
     ref.invalidate(importMappingsProvider((widget.entity.id, widget.batch.id)));
   }
 
@@ -257,26 +386,42 @@ class _BatchPanelState extends ConsumerState<_BatchPanel> {
       final refreshed = (await repo.batches(widget.entity.id)).firstWhere((x) => x.id == widget.batch.id);
       widget.onChanged(refreshed, report);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AkColors.toCorrect));
+      if (mounted) showErrorSnack(context, '$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 }
 
-class _Editable extends StatelessWidget {
-  const _Editable({required this.value, required this.hint, required this.onSaved});
+/// Cellule éditable : enregistre à la validation (Entrée) ou à la perte du focus si le texte a changé.
+class _Editable extends StatefulWidget {
+  const _Editable({required this.value, required this.hint, required this.onSaved, this.mono = false});
 
   final String? value;
   final String hint;
   final ValueChanged<String> onSaved;
+  final bool mono;
+
+  @override
+  State<_Editable> createState() => _EditableState();
+}
+
+class _EditableState extends State<_Editable> {
+  late final _controller = TextEditingController(text: widget.value ?? '');
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final c = TextEditingController(text: value ?? '');
-    return SizedBox(
-      width: 150,
-      child: TextField(controller: c, decoration: InputDecoration(isDense: true, hintText: hint, border: InputBorder.none), onSubmitted: onSaved, onTapOutside: (_) => c.text != (value ?? '') ? onSaved(c.text) : null),
+    return Focus(
+      onFocusChange: (focused) {
+        if (!focused && _controller.text != (widget.value ?? '')) widget.onSaved(_controller.text);
+      },
+      child: AkTextField(controller: _controller, dense: true, mono: widget.mono, hint: widget.hint, onSubmitted: widget.onSaved),
     );
   }
 }

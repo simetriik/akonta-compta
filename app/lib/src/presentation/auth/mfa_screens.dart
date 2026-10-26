@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:akonta/design/design.dart';
 
-import '../../core/theme.dart';
 import '../../data/auth_repository.dart';
-import '../widgets/akonta_logo.dart';
 
 /// Saisie du code TOTP à la connexion (facteur déjà enrôlé).
 class MfaChallengeScreen extends ConsumerStatefulWidget {
@@ -49,10 +48,11 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
         const Text('Saisissez le code à 6 chiffres de votre application d\'authentification.'),
         const SizedBox(height: 16),
         CodeField(controller: _code, onSubmitted: _verify),
-        if (_error != null) ...[const SizedBox(height: 8), Text(_error!, style: const TextStyle(color: AkColors.toCorrect))],
+        if (_error != null) ...[const SizedBox(height: 8), AkBanner(kind: AkBannerKind.danger, child: Text(_error!))],
         const SizedBox(height: 16),
-        FilledButton(onPressed: _busy ? null : _verify, child: const Text('Vérifier')),
-        TextButton(onPressed: () => ref.read(authRepositoryProvider).signOut(), child: const Text('Se déconnecter')),
+        AkButton.primary('Vérifier', expand: true, loading: _busy, onPressed: _verify),
+        const SizedBox(height: AkSpace.s2),
+        AkButton.ghost('Se déconnecter', onPressed: () => ref.read(authRepositoryProvider).signOut()),
       ],
     );
   }
@@ -115,23 +115,28 @@ class _MfaEnrollScreenState extends ConsumerState<MfaEnrollScreen> {
     return MfaScaffold(
       title: 'Activer la vérification en deux étapes',
       children: [
-        Text(widget.mandatory
-            ? 'Votre rôle exige une application d\'authentification (TOTP) : Google Authenticator, Aegis, Microsoft Authenticator…'
-            : 'Protégez votre compte avec une application d\'authentification (recommandé).'),
+        Text(
+          widget.mandatory
+              ? 'Votre rôle exige une application d\'authentification (TOTP) : Google Authenticator, Aegis, Microsoft Authenticator…'
+              : 'Protégez votre compte avec une application d\'authentification (recommandé).',
+        ),
         const SizedBox(height: 16),
-        if (e == null && _error == null) const Center(child: CircularProgressIndicator()),
+        if (e == null && _error == null) const AkLoading(),
         if (e != null && totp != null) ...[
-          Center(child: QrImageView(data: totp.uri, size: 180, backgroundColor: Colors.white)),
+          Center(
+            child: QrImageView(data: totp.uri, size: 180, backgroundColor: Colors.white),
+          ),
           const SizedBox(height: 8),
-          SelectableText('Clé manuelle : ${totp.secret}', style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+          SelectableText('Clé manuelle : ${totp.secret}', style: AkText.code.copyWith(color: context.ak.text)),
           const SizedBox(height: 16),
           CodeField(controller: _code, onSubmitted: _confirm),
         ],
-        if (_error != null) ...[const SizedBox(height: 8), Text(_error!, style: const TextStyle(color: AkColors.toCorrect))],
+        if (_error != null) ...[const SizedBox(height: 8), AkBanner(kind: AkBannerKind.danger, child: Text(_error!))],
         const SizedBox(height: 16),
-        FilledButton(onPressed: _busy || e == null ? null : _confirm, child: const Text('Confirmer')),
-        if (!widget.mandatory) TextButton(onPressed: widget.onDone, child: const Text('Plus tard')),
-        if (widget.mandatory) TextButton(onPressed: () => ref.read(authRepositoryProvider).signOut(), child: const Text('Se déconnecter')),
+        AkButton.primary('Confirmer', expand: true, loading: _busy, onPressed: e == null ? null : _confirm),
+        const SizedBox(height: AkSpace.s2),
+        if (!widget.mandatory) AkButton.ghost('Plus tard', onPressed: widget.onDone),
+        if (widget.mandatory) AkButton.ghost('Se déconnecter', onPressed: () => ref.read(authRepositoryProvider).signOut()),
       ],
     );
   }
@@ -145,15 +150,15 @@ class CodeField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
+    return AkTextField(
       key: const Key('mfa-code'),
+      controller: controller,
+      label: 'Code à 6 chiffres',
       autofocus: true,
       keyboardType: TextInputType.number,
       maxLength: 6,
       textAlign: TextAlign.center,
-      style: const TextStyle(fontSize: 22, letterSpacing: 8),
-      decoration: const InputDecoration(labelText: 'Code à 6 chiffres', counterText: ''),
+      mono: true,
       onSubmitted: (_) => onSubmitted(),
     );
   }
@@ -167,27 +172,32 @@ class MfaScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AkSpace.s6),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Center(child: AkontaLogo(height: 48)),
-                    const SizedBox(height: 8),
-                    Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    ...children,
-                  ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Center(child: AkLogo(height: 56)),
+                const SizedBox(height: AkSpace.s6),
+                AkCard(
+                  padding: const EdgeInsets.all(AkSpace.s8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(title, style: AkText.titleLg.copyWith(color: t.text)),
+                      const SizedBox(height: AkSpace.s4),
+                      ...children,
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/config.dart';
-import '../../core/theme.dart';
 import '../../data/auth_repository.dart';
-import '../widgets/akonta_logo.dart';
 
 /// Connexion e-mail + mot de passe (12 caractères minimum) et lien de réinitialisation.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -23,6 +22,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _hidePassword = true;
   String? _error;
 
   static String? validateEmail(String? v) {
@@ -87,63 +87,95 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AkSpace.s6),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Form(
-                  key: _form,
-                  child: AutofillGroup(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Center(child: AkontaLogo(height: 56)),
-                        const SizedBox(height: 8),
-                        Text('Connexion', style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _email,
-                          key: const Key('login-email'),
-                          decoration: const InputDecoration(labelText: 'Adresse e-mail'),
-                          keyboardType: TextInputType.emailAddress,
-                          autofillHints: const [AutofillHints.username],
-                          validator: validateEmail,
-                          textInputAction: TextInputAction.next,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _password,
-                          key: const Key('login-password'),
-                          decoration: const InputDecoration(labelText: 'Mot de passe'),
-                          obscureText: true,
-                          autofillHints: const [AutofillHints.password],
-                          validator: validatePassword,
-                          onFieldSubmitted: (_) => _submit(),
-                        ),
-                        if (_error != null) ...[
-                          const SizedBox(height: 12),
-                          Text(_error!, key: const Key('login-error'), style: const TextStyle(color: AkColors.toCorrect)),
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Center(child: AkLogo(height: 72)),
+                const SizedBox(height: AkSpace.s8),
+                AkCard(
+                  padding: const EdgeInsets.all(AkSpace.s8),
+                  child: Form(
+                    key: _form,
+                    child: AutofillGroup(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text('Connexion', style: AkText.titleLg.copyWith(color: t.text)),
+                          const SizedBox(height: AkSpace.s5),
+                          AkTextField(
+                            key: const Key('login-email'),
+                            controller: _email,
+                            label: 'Adresse e-mail',
+                            keyboardType: TextInputType.emailAddress,
+                            autofillHints: const [AutofillHints.username],
+                            validator: validateEmail,
+                            textInputAction: TextInputAction.next,
+                          ),
+                          const SizedBox(height: AkSpace.s5),
+                          AkTextField(
+                            key: const Key('login-password'),
+                            controller: _password,
+                            label: 'Mot de passe',
+                            obscureText: _hidePassword,
+                            autofillHints: const [AutofillHints.password],
+                            validator: validatePassword,
+                            onSubmitted: (_) => _submit(),
+                            helper: '${AppConfig.minPasswordLength} caractères minimum',
+                            suffix: AkIconButton(
+                              icon: _hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              tooltip: _hidePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe',
+                              dense: true,
+                              onPressed: () => setState(() => _hidePassword = !_hidePassword),
+                            ),
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: AkButton.ghost('Mot de passe oublié ?', dense: true, onPressed: _busy ? null : _reset),
+                          ),
+                          if (_error != null) ...[
+                            const SizedBox(height: AkSpace.s2),
+                            AkBanner(
+                              kind: AkBannerKind.danger,
+                              child: Text(_error!, key: const Key('login-error')),
+                            ),
+                          ],
+                          const SizedBox(height: AkSpace.s5),
+                          AkButton.primary('Se connecter', key: const Key('login-submit'), expand: true, loading: _busy, onPressed: _submit),
+                          const SizedBox(height: AkSpace.s5),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.lock_outline, size: 16, color: t.textMuted),
+                              const SizedBox(width: AkSpace.s2),
+                              Expanded(
+                                child: Text(
+                                  'Pour l\'associé et l\'administrateur, un code de vérification sera demandé ensuite.',
+                                  style: AkText.caption.copyWith(color: t.textMuted),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
-                        const SizedBox(height: 20),
-                        FilledButton(
-                          key: const Key('login-submit'),
-                          onPressed: _busy ? null : _submit,
-                          child: _busy
-                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Text('Se connecter'),
-                        ),
-                        TextButton(onPressed: _busy ? null : _reset, child: const Text('Mot de passe oublié ?')),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(height: AkSpace.s8),
+                Text(
+                  'La comptabilité OHADA, sans rien oublier',
+                  textAlign: TextAlign.center,
+                  style: AkText.caption.copyWith(color: t.textMuted),
+                ),
+              ],
             ),
           ),
         ),

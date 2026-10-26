@@ -1,3 +1,4 @@
+import 'package:akonta/design/design.dart';
 import 'package:akonta/src/data/references_repository.dart';
 import 'package:akonta/src/data/supabase_providers.dart';
 import 'package:akonta/src/domain/models.dart';
@@ -43,7 +44,7 @@ void main() {
     expect(find.text('Équilibrée'), findsOneWidget);
 
     // Saisie d'un débit de 100 000 sur la première ligne
-    final debitFields = find.byWidgetPredicate((w) => w is TextField && w.textAlign == TextAlign.right);
+    final debitFields = find.byType(AkAmountField);
     await tester.enterText(debitFields.at(0), '100000');
     await tester.pumpAndSettle();
     expect(find.textContaining('Écart'), findsOneWidget);

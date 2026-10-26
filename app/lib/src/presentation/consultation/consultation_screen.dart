@@ -4,9 +4,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/consultation_repository.dart';
 import '../../data/entities_repository.dart';
 import '../../data/references_repository.dart';
@@ -61,7 +61,15 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
 
   ConsultationParams? _previousYear(ConsultationParams p) {
     try {
-      return ConsultationParams(entityId: p.entityId, from: DateTime(p.from.year - 1, p.from.month, p.from.day), to: DateTime(p.to.year - 1, p.to.month, p.to.day), accountFrom: p.accountFrom, accountTo: p.accountTo, classNo: p.classNo, side: p.side);
+      return ConsultationParams(
+        entityId: p.entityId,
+        from: DateTime(p.from.year - 1, p.from.month, p.from.day),
+        to: DateTime(p.to.year - 1, p.to.month, p.to.day),
+        accountFrom: p.accountFrom,
+        accountTo: p.accountTo,
+        classNo: p.classNo,
+        side: p.side,
+      );
     } catch (_) {
       return null;
     }
@@ -71,51 +79,137 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
   Widget build(BuildContext context) {
     ref.watch(fiscalYearsProvider(widget.entity.id));
     final p = _params();
-    return Column(children: [
-      Material(
-        color: Colors.white,
-        child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-              SizedBox(width: 120, child: TextField(controller: _from, decoration: const InputDecoration(labelText: 'Du'), onSubmitted: (_) => setState(() {}))),
-              SizedBox(width: 120, child: TextField(controller: _to, decoration: const InputDecoration(labelText: 'Au'), onSubmitted: (_) => setState(() {}))),
-              SizedBox(width: 120, child: TextField(controller: _accountFrom, decoration: const InputDecoration(labelText: 'Compte de'), onSubmitted: (_) => setState(() {}))),
-              SizedBox(width: 120, child: TextField(controller: _accountTo, decoration: const InputDecoration(labelText: 'à'), onSubmitted: (_) => setState(() {}))),
-              DropdownButton<int?>(value: _classNo, hint: const Text('Classe'), items: [const DropdownMenuItem(value: null, child: Text('Toutes classes')), for (var c = 1; c <= 8; c++) DropdownMenuItem(value: c, child: Text('Classe $c'))], onChanged: (v) => setState(() => _classNo = v)),
-              FilterChip(label: const Text('Comparer N-1'), selected: _compare, onSelected: (v) => setState(() => _compare = v)),
-              FilledButton.tonal(onPressed: () => setState(() {}), child: const Text('Actualiser')),
-              const SizedBox(width: 8),
-              if (_exporting) const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-              if (!_exporting) PopupMenuButton<String>(
-                tooltip: 'Exporter',
-                icon: const Icon(Icons.download_outlined),
-                onSelected: (v) => _export(v),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'trial_balance:pdf', child: Text('Balance — PDF')),
-                  PopupMenuItem(value: 'trial_balance:xlsx', child: Text('Balance — Excel')),
-                  PopupMenuItem(value: 'general_ledger:pdf', child: Text('Grand livre — PDF')),
-                  PopupMenuItem(value: 'general_ledger:xlsx', child: Text('Grand livre — Excel')),
-                  PopupMenuItem(value: 'aged_balance:pdf', child: Text('Balance âgée — PDF')),
+    final t = context.ak;
+    final margin = akPageMargin(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(margin, AkSpace.s4, margin, AkSpace.s4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AkPageHead(title: 'Consultation', subtitle: widget.entity.dossierLabel, actions: [_exportMenu(context)]),
+          const SizedBox(height: AkSpace.s3),
+          Expanded(
+            child: AkCard(
+              padding: EdgeInsets.zero,
+              clip: true,
+              child: Column(
+                children: [
+                  TabBar(
+                    controller: _tabs,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
+                    tabs: const [
+                      Tab(text: 'Grand livre'),
+                      Tab(text: 'Balance générale'),
+                      Tab(text: 'Balance auxiliaire'),
+                      Tab(text: 'Balance âgée'),
+                      Tab(text: 'Centralisateur'),
+                    ],
+                  ),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: t.border)),
+                    ),
+                    child: _filters(context),
+                  ),
+                  Expanded(
+                    child: p == null
+                        ? Padding(
+                            padding: const EdgeInsets.all(AkSpace.s4),
+                            child: Align(
+                              alignment: Alignment.topLeft,
+                              child: AkBanner(kind: AkBannerKind.warning, child: const Text('Dates invalides (jj/mm/aaaa).')),
+                            ),
+                          )
+                        : TabBarView(
+                            controller: _tabs,
+                            children: [
+                              _LedgerTab(params: p),
+                              _BalanceTab(params: p, previous: _compare ? _previousYear(p) : null),
+                              _AuxiliaryTab(params: p),
+                              _AgedTab(params: p, side: _side, onSide: (s) => setState(() => _side = s)),
+                              _CentralizationTab(params: p),
+                            ],
+                          ),
+                  ),
                 ],
               ),
-            ]),
+            ),
           ),
-          TabBar(controller: _tabs, isScrollable: true, tabs: const [Tab(text: 'Grand livre'), Tab(text: 'Balance générale'), Tab(text: 'Balance auxiliaire'), Tab(text: 'Balance âgée'), Tab(text: 'Centralisateur')]),
-        ]),
+        ],
       ),
-      Expanded(
-        child: p == null
-            ? const Center(child: Text('Dates invalides (jj/mm/aaaa).'))
-            : TabBarView(controller: _tabs, children: [
-                _LedgerTab(params: p),
-                _BalanceTab(params: p, previous: _compare ? _previousYear(p) : null),
-                _AuxiliaryTab(params: p),
-                _AgedTab(params: p, side: _side, onSide: (s) => setState(() => _side = s)),
-                _CentralizationTab(params: p),
-              ]),
+    );
+  }
+
+  /// Filtres de période, de comptes et de classe ; l'actualisation relit les champs.
+  Widget _filters(BuildContext context) {
+    Widget sized(double width, Widget child) => SizedBox(width: width, child: child);
+    return Wrap(
+      spacing: AkSpace.s3,
+      runSpacing: AkSpace.s2,
+      crossAxisAlignment: WrapCrossAlignment.end,
+      children: [
+        sized(176, AkDateField(controller: _from, label: 'Du', onSubmitted: (_) => setState(() {}))),
+        sized(176, AkDateField(controller: _to, label: 'Au', onSubmitted: (_) => setState(() {}))),
+        sized(136, AkTextField(controller: _accountFrom, label: 'Compte de', mono: true, onSubmitted: (_) => setState(() {}))),
+        sized(136, AkTextField(controller: _accountTo, label: 'Compte à', mono: true, onSubmitted: (_) => setState(() {}))),
+        sized(
+          176,
+          AkDropdown<int?>(
+            label: 'Classe',
+            value: _classNo,
+            items: [const AkOption<int?>(null, 'Toutes classes'), for (var c = 1; c <= 8; c++) AkOption<int?>(c, 'Classe $c')],
+            onChanged: (v) => setState(() => _classNo = v),
+          ),
+        ),
+        SizedBox(
+          height: akControlHeight(context),
+          child: AkCheckbox(value: _compare, label: 'Comparer N-1', onChanged: (v) => setState(() => _compare = v)),
+        ),
+        AkButton.secondary('Actualiser', icon: Icons.refresh, onPressed: () => setState(() {})),
+      ],
+    );
+  }
+
+  /// Menu d'export (PDF ou Excel) placé dans l'en-tête de l'écran.
+  Widget _exportMenu(BuildContext context) {
+    final t = context.ak;
+    final h = akControlHeight(context);
+    return PopupMenuButton<String>(
+      tooltip: 'Exporter',
+      enabled: !_exporting,
+      onSelected: _export,
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: 'trial_balance:pdf', child: Text('Balance — PDF')),
+        PopupMenuItem(value: 'trial_balance:xlsx', child: Text('Balance — Excel')),
+        PopupMenuItem(value: 'general_ledger:pdf', child: Text('Grand livre — PDF')),
+        PopupMenuItem(value: 'general_ledger:xlsx', child: Text('Grand livre — Excel')),
+        PopupMenuItem(value: 'aged_balance:pdf', child: Text('Balance âgée — PDF')),
+      ],
+      child: Container(
+        height: h,
+        padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3),
+        decoration: BoxDecoration(
+          color: t.surface,
+          border: Border.all(color: t.borderStrong),
+          borderRadius: AkRadius.mdAll,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_exporting)
+              const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+            else
+              Icon(Icons.download_outlined, size: 18, color: t.text),
+            const SizedBox(width: 6),
+            Text('Exporter', style: AkText.bodyStrong.copyWith(color: t.text)),
+          ],
+        ),
       ),
-    ]);
+    );
   }
 
   Future<void> _export(String choice) async {
@@ -130,16 +224,247 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
         final f = File(uri.toFilePath());
         if (!await f.exists() || await f.length() == 0) await f.writeAsBytes(bytes);
       }
-      if (mounted && uri != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export enregistré : ${uri.scheme == 'file' ? uri.toFilePath() : uri}')));
+      if (mounted && uri != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export enregistré : ${uri.scheme == 'file' ? uri.toFilePath() : uri}')));
+      }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AkColors.toCorrect));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: context.ak.danger));
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
   }
 }
 
-TextStyle get _mono => const TextStyle(fontFamily: 'monospace', fontSize: 12);
+// ---------------------------------------------------------------------------
+// Tableau commun : en-tête fixe, lignes de section, ligne de totaux en gras
+// ---------------------------------------------------------------------------
+
+/// Colonne du tableau ; `grow` absorbe la largeur disponible en plus de la largeur minimale.
+class _Col {
+  const _Col(this.label, this.width, {this.numeric = false, this.grow = false});
+
+  final String label;
+  final double width;
+  final bool numeric;
+  final bool grow;
+}
+
+enum _RowKind { normal, section, total }
+
+class _GRow {
+  const _GRow(this.cells, {this.kind = _RowKind.normal, this.onTap}) : sectionChild = null;
+
+  /// Ligne de section pleine largeur (classe, compte, journal).
+  const _GRow.section(Widget this.sectionChild) : cells = const [], kind = _RowKind.section, onTap = null;
+
+  final List<Widget> cells;
+  final _RowKind kind;
+  final VoidCallback? onTap;
+  final Widget? sectionChild;
+}
+
+Widget _txt(BuildContext context, String s, {bool bold = false, bool muted = false}) => Text(
+  s,
+  maxLines: 1,
+  overflow: TextOverflow.ellipsis,
+  style: AkText.table.copyWith(color: muted ? context.ak.textMuted : context.ak.text, fontWeight: bold ? FontWeight.w600 : null),
+);
+
+Widget _codeTxt(BuildContext context, String s, {bool bold = false}) => Text(
+  s,
+  maxLines: 1,
+  overflow: TextOverflow.ellipsis,
+  style: AkText.code.copyWith(color: context.ak.text, fontWeight: bold ? FontWeight.w600 : null),
+);
+
+Widget _amt(String s, {bool bold = false}) => AkAmountText(s, bold: bold);
+
+class _DataGrid extends StatelessWidget {
+  const _DataGrid({required this.columns, required this.rows, this.groups});
+
+  final List<_Col> columns;
+  final List<_GRow> rows;
+
+  /// Regroupements d'en-têtes (libellé, nombre de colonnes) ; libellé vide = pas de regroupement.
+  final List<(String, int)>? groups;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    final rowH = akIsCompact(context) ? AkSpace.rowTouch : AkSpace.rowCompact;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final base = columns.fold<double>(0, (s, col) => s + col.width);
+        final extra = c.maxWidth.isFinite && c.maxWidth > base ? c.maxWidth - base : 0.0;
+        final widths = [for (final col in columns) col.width + (col.grow ? extra : 0)];
+        final total = base + extra;
+        // Colonnes qui ouvrent un groupe : filet vertical à gauche.
+        final starts = <int>{};
+        if (groups != null) {
+          var i = 0;
+          for (final g in groups!) {
+            if (g.$1.isNotEmpty) starts.add(i);
+            i += g.$2;
+          }
+        }
+        BoxDecoration? sep(int j) => starts.contains(j)
+            ? BoxDecoration(
+                border: Border(left: BorderSide(color: t.border)),
+              )
+            : null;
+
+        Widget headerCell(int j) => Container(
+          width: widths[j],
+          padding: EdgeInsets.symmetric(horizontal: j == 0 ? AkSpace.s4 : AkSpace.s3),
+          alignment: columns[j].numeric ? Alignment.centerRight : Alignment.centerLeft,
+          decoration: sep(j),
+          child: Text(
+            columns[j].label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AkText.label.copyWith(color: t.textMuted),
+          ),
+        );
+        final groupCells = <Widget>[];
+        if (groups != null) {
+          var i = 0;
+          for (final g in groups!) {
+            final start = i;
+            i += g.$2;
+            final w = widths.sublist(start, start + g.$2).fold<double>(0, (s, x) => s + x);
+            groupCells.add(
+              Container(
+                width: w,
+                alignment: Alignment.center,
+                decoration: sep(start),
+                child: Text(g.$1, style: AkText.label.copyWith(color: t.textMuted)),
+              ),
+            );
+          }
+        }
+        final header = Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (groups != null)
+              Container(
+                height: rowH,
+                color: t.surfaceSunken,
+                child: Row(children: groupCells),
+              ),
+            Container(
+              height: rowH,
+              decoration: BoxDecoration(
+                color: t.surfaceSunken,
+                border: Border(bottom: BorderSide(color: t.border)),
+              ),
+              child: Row(children: [for (var j = 0; j < columns.length; j++) headerCell(j)]),
+            ),
+          ],
+        );
+
+        Widget rowAt(int i) {
+          final r = rows[i];
+          if (r.kind == _RowKind.section) {
+            return Container(
+              width: total,
+              height: rowH,
+              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4),
+              alignment: Alignment.centerLeft,
+              decoration: BoxDecoration(
+                color: t.surfaceSunken,
+                border: Border(bottom: BorderSide(color: t.border)),
+              ),
+              child: r.sectionChild,
+            );
+          }
+          final isTotal = r.kind == _RowKind.total;
+          Widget row = Container(
+            height: rowH,
+            decoration: BoxDecoration(
+              color: isTotal ? t.surfaceSunken : null,
+              border: Border(
+                top: isTotal ? BorderSide(color: t.borderStrong) : BorderSide.none,
+                bottom: BorderSide(color: t.border),
+              ),
+            ),
+            child: Row(
+              children: [
+                for (var j = 0; j < columns.length; j++)
+                  Container(
+                    width: widths[j],
+                    padding: EdgeInsets.symmetric(horizontal: j == 0 ? AkSpace.s4 : AkSpace.s3),
+                    alignment: columns[j].numeric ? Alignment.centerRight : Alignment.centerLeft,
+                    decoration: sep(j),
+                    child: j < r.cells.length ? r.cells[j] : null,
+                  ),
+              ],
+            ),
+          );
+          if (r.onTap != null) row = InkWell(onTap: r.onTap, child: row);
+          return row;
+        }
+
+        final content = Column(
+          children: [
+            header,
+            Expanded(
+              child: ListView.builder(itemCount: rows.length, itemBuilder: (_, i) => rowAt(i)),
+            ),
+          ],
+        );
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(width: total, child: content),
+        );
+      },
+    );
+  }
+}
+
+/// Libellé de classe SYSCOHADA pour les lignes de section de la balance.
+String _classLabel(int c) => switch (c) {
+  1 => 'Ressources durables',
+  2 => 'Actif immobilisé',
+  3 => 'Stocks',
+  4 => 'Tiers',
+  5 => 'Trésorerie',
+  6 => 'Charges des activités ordinaires',
+  7 => 'Produits des activités ordinaires',
+  8 => 'Autres charges et produits',
+  _ => '',
+};
+
+Widget _sectionText(BuildContext context, String s) => Text(
+  s,
+  maxLines: 1,
+  overflow: TextOverflow.ellipsis,
+  style: AkText.bodyStrong.copyWith(color: context.ak.text),
+);
+
+const _balanceGroups = <(String, int)>[('', 2), ('Ouverture', 2), ('Mouvements', 2), ('Clôture', 2)];
+
+// ---------------------------------------------------------------------------
+// Grand livre
+// ---------------------------------------------------------------------------
+
+sealed class _LItem {}
+
+class _LHead extends _LItem {
+  _LHead(this.code, this.label);
+  final String code;
+  final String label;
+}
+
+class _LLine extends _LItem {
+  _LLine(this.line);
+  final LedgerLine line;
+}
+
+class _LTotal extends _LItem {
+  _LTotal(this.debit, this.credit);
+  final int debit;
+  final int credit;
+}
 
 class _LedgerTab extends ConsumerWidget {
   const _LedgerTab({required this.params});
@@ -153,49 +478,221 @@ class _LedgerTab extends ConsumerWidget {
       value: lines,
       onRetry: () => ref.invalidate(generalLedgerProvider(params)),
       builder: (list) {
-        if (list.isEmpty) return const Center(child: Text('Aucune écriture validée sur la période.'));
-        final widgets = <Widget>[];
+        if (list.isEmpty) return const AkEmptyState('Aucune écriture validée sur la période.');
+        final items = <_LItem>[];
         String? current;
         var subD = 0, subC = 0;
         void flush() {
-          if (current != null) {
-            widgets.add(Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(children: [const Spacer(), Text('Total compte : D ${Fmt.fcfa(subD, showZero: true)} · C ${Fmt.fcfa(subC, showZero: true)} · solde ${Fmt.fcfa(subD - subC, showZero: true)}', style: const TextStyle(fontWeight: FontWeight.w600))])));
-          }
+          if (current != null) items.add(_LTotal(subD, subC));
           subD = 0;
           subC = 0;
         }
+
         for (final l in list) {
           if (l.accountCode != current) {
             flush();
             current = l.accountCode;
-            widgets.add(Padding(padding: const EdgeInsets.only(top: 8, bottom: 4), child: Text('${l.accountCode} — ${l.accountLabel}', style: const TextStyle(fontWeight: FontWeight.bold))));
+            items.add(_LHead(l.accountCode, l.accountLabel));
           }
           subD += l.debit;
           subC += l.credit;
-          widgets.add(InkWell(
-            onTap: () => context.go('/saisie/${l.entryId}'),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(children: [
-                SizedBox(width: 90, child: Text(Fmt.date(l.entryDate), style: _mono)),
-                SizedBox(width: 80, child: Text('${l.journalCode}-${l.number}', style: _mono)),
-                SizedBox(width: 90, child: Text(l.reference ?? '', style: _mono, overflow: TextOverflow.ellipsis)),
-                Expanded(child: Text(l.label, overflow: TextOverflow.ellipsis)),
-                SizedBox(width: 70, child: Text(l.thirdPartyCode ?? '', style: _mono)),
-                SizedBox(width: 110, child: Text(Fmt.fcfa(l.debit), textAlign: TextAlign.right, style: _mono)),
-                SizedBox(width: 110, child: Text(Fmt.fcfa(l.credit), textAlign: TextAlign.right, style: _mono)),
-                SizedBox(width: 120, child: Text(Fmt.fcfa(l.runningBalance, showZero: true), textAlign: TextAlign.right, style: _mono)),
-                SizedBox(width: 30, child: Text(l.letterCode ?? '', style: _mono)),
-              ]),
-            ),
-          ));
+          items.add(_LLine(l));
         }
         flush();
-        return ListView(padding: const EdgeInsets.all(16), children: widgets);
+        return akIsCompact(context) ? _LedgerList(items: items) : _LedgerGrid(items: items);
       },
     );
   }
 }
+
+class _LedgerGrid extends StatelessWidget {
+  const _LedgerGrid({required this.items});
+
+  final List<_LItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <_GRow>[
+      for (final it in items)
+        switch (it) {
+          _LHead h => _GRow.section(
+            Row(
+              children: [
+                _codeTxt(context, h.code, bold: true),
+                const SizedBox(width: AkSpace.s2),
+                Flexible(child: _sectionText(context, '— ${h.label}')),
+              ],
+            ),
+          ),
+          _LLine(:final line) => _GRow([
+            _txt(context, Fmt.date(line.entryDate)),
+            _codeTxt(context, '${line.journalCode}-${line.number}'),
+            _codeTxt(context, line.reference ?? ''),
+            _txt(context, line.label),
+            _codeTxt(context, line.thirdPartyCode ?? ''),
+            _amt(Fmt.fcfa(line.debit)),
+            _amt(Fmt.fcfa(line.credit)),
+            _amt(Fmt.fcfa(line.runningBalance, showZero: true)),
+            _codeTxt(context, line.letterCode ?? ''),
+          ], onTap: () => context.go('/saisie/${line.entryId}')),
+          _LTotal tot => _GRow([
+            const SizedBox.shrink(),
+            const SizedBox.shrink(),
+            const SizedBox.shrink(),
+            _txt(context, 'Total compte', bold: true),
+            const SizedBox.shrink(),
+            _amt(Fmt.fcfa(tot.debit, showZero: true), bold: true),
+            _amt(Fmt.fcfa(tot.credit, showZero: true), bold: true),
+            _amt(Fmt.fcfa(tot.debit - tot.credit, showZero: true), bold: true),
+          ], kind: _RowKind.total),
+        },
+    ];
+    return _DataGrid(
+      columns: const [
+        _Col('Date', 116),
+        _Col('Pièce', 124),
+        _Col('Référence', 110),
+        _Col('Libellé', 240, grow: true),
+        _Col('Tiers', 90),
+        _Col('Débit', 120, numeric: true),
+        _Col('Crédit', 120, numeric: true),
+        _Col('Solde', 130, numeric: true),
+        _Col('Lettre', 70),
+      ],
+      rows: rows,
+    );
+  }
+}
+
+/// Grand livre sur mobile : une ligne tactile par mouvement, lecture seule (maquette MobileCompte).
+class _LedgerList extends StatelessWidget {
+  const _LedgerList({required this.items});
+
+  final List<_LItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (context, i) {
+        switch (items[i]) {
+          case _LHead h:
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s2),
+              decoration: BoxDecoration(
+                color: t.surfaceSunken,
+                border: Border(bottom: BorderSide(color: t.border)),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    h.code,
+                    style: AkText.code.copyWith(color: t.text, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: AkSpace.s2),
+                  Expanded(
+                    child: Text(
+                      h.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AkText.bodyStrong.copyWith(color: t.text),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          case _LTotal tot:
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s2),
+              decoration: BoxDecoration(
+                color: t.surfaceSunken,
+                border: Border(bottom: BorderSide(color: t.border)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text('Total compte', style: AkText.bodyStrong.copyWith(color: t.text)),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      AkAmountText('D ${Fmt.fcfa(tot.debit, showZero: true)}', bold: true),
+                      AkAmountText('C ${Fmt.fcfa(tot.credit, showZero: true)}', bold: true),
+                      AkAmountText('Solde ${Fmt.fcfa(tot.debit - tot.credit, showZero: true)}', bold: true),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          case _LLine(:final line):
+            final debit = line.debit != 0;
+            final meta = [
+              '${line.journalCode}-${line.number}',
+              if (line.reference != null && line.reference!.isNotEmpty) line.reference!,
+              if (line.thirdPartyCode != null) line.thirdPartyCode!,
+              if (line.letterCode != null) 'lettre ${line.letterCode}',
+            ].join(' · ');
+            return InkWell(
+              onTap: () => context.go('/saisie/${line.entryId}'),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 64),
+                padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: 10),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: t.border)),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 84,
+                      child: Text(
+                        Fmt.date(line.entryDate),
+                        style: AkText.caption.copyWith(color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]),
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            line.label,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AkText.body.copyWith(color: t.text),
+                          ),
+                          Text(
+                            meta,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AkText.code.copyWith(color: t.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AkSpace.s2),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        AkAmountText('${debit ? 'D' : 'C'} ${Fmt.fcfa(debit ? line.debit : line.credit)}', bold: true),
+                        Text(
+                          'Solde ${Fmt.fcfa(line.runningBalance, showZero: true)}',
+                          style: AkText.caption.copyWith(color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+        }
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Balance générale
+// ---------------------------------------------------------------------------
 
 class _BalanceTab extends ConsumerWidget {
   const _BalanceTab({required this.params, this.previous});
@@ -213,56 +710,67 @@ class _BalanceTab extends ConsumerWidget {
       builder: (list) {
         final prevByCode = {for (final r in prevRows ?? const <BalanceRow>[]) r.accountCode: r};
         int t(int Function(BalanceRow) f) => list.fold(0, (s, r) => s + f(r));
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(AkColors.sand),
-              columnSpacing: 16,
-              columns: [
-                const DataColumn(label: Text('Compte')),
-                const DataColumn(label: Text('Intitulé')),
-                const DataColumn(label: Text('Ouverture D'), numeric: true),
-                const DataColumn(label: Text('Ouverture C'), numeric: true),
-                const DataColumn(label: Text('Mouvements D'), numeric: true),
-                const DataColumn(label: Text('Mouvements C'), numeric: true),
-                const DataColumn(label: Text('Solde D'), numeric: true),
-                const DataColumn(label: Text('Solde C'), numeric: true),
-                if (previous != null) const DataColumn(label: Text('Solde N-1'), numeric: true),
-              ],
-              rows: [
-                for (final r in list)
-                  DataRow(cells: [
-                    DataCell(Text(r.accountCode, style: _mono)),
-                    DataCell(SizedBox(width: 260, child: Text(r.accountLabel, overflow: TextOverflow.ellipsis))),
-                    DataCell(Text(Fmt.fcfa(r.openingDebit), style: _mono)),
-                    DataCell(Text(Fmt.fcfa(r.openingCredit), style: _mono)),
-                    DataCell(Text(Fmt.fcfa(r.periodDebit), style: _mono)),
-                    DataCell(Text(Fmt.fcfa(r.periodCredit), style: _mono)),
-                    DataCell(Text(Fmt.fcfa(r.closingDebit), style: _mono)),
-                    DataCell(Text(Fmt.fcfa(r.closingCredit), style: _mono)),
-                    if (previous != null) DataCell(Text(Fmt.fcfa((prevByCode[r.accountCode]?.closingDebit ?? 0) - (prevByCode[r.accountCode]?.closingCredit ?? 0), showZero: true), style: _mono)),
-                  ]),
-                DataRow(color: WidgetStateProperty.all(AkColors.sand), cells: [
-                  const DataCell(Text('')),
-                  const DataCell(Text('Totaux', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataCell(Text(Fmt.fcfa(t((r) => r.openingDebit), showZero: true), style: _mono)),
-                  DataCell(Text(Fmt.fcfa(t((r) => r.openingCredit), showZero: true), style: _mono)),
-                  DataCell(Text(Fmt.fcfa(t((r) => r.periodDebit), showZero: true), style: _mono)),
-                  DataCell(Text(Fmt.fcfa(t((r) => r.periodCredit), showZero: true), style: _mono)),
-                  DataCell(Text(Fmt.fcfa(t((r) => r.closingDebit), showZero: true), style: _mono)),
-                  DataCell(Text(Fmt.fcfa(t((r) => r.closingCredit), showZero: true), style: _mono)),
-                  if (previous != null) const DataCell(Text('')),
-                ]),
-              ],
-            ),
-          ),
+        final withPrev = previous != null;
+        final grid = <_GRow>[];
+        int? lastClass;
+        for (final r in list) {
+          final cls = r.accountCode.isEmpty ? null : int.tryParse(r.accountCode[0]);
+          if (cls != null && cls != lastClass) {
+            lastClass = cls;
+            final label = _classLabel(cls);
+            grid.add(_GRow.section(_sectionText(context, label.isEmpty ? 'Classe $cls' : 'Classe $cls · $label')));
+          }
+          final prev = prevByCode[r.accountCode];
+          grid.add(
+            _GRow([
+              _codeTxt(context, r.accountCode),
+              _txt(context, r.accountLabel),
+              _amt(Fmt.fcfa(r.openingDebit)),
+              _amt(Fmt.fcfa(r.openingCredit)),
+              _amt(Fmt.fcfa(r.periodDebit)),
+              _amt(Fmt.fcfa(r.periodCredit)),
+              _amt(Fmt.fcfa(r.closingDebit)),
+              _amt(Fmt.fcfa(r.closingCredit)),
+              if (withPrev) _amt(Fmt.fcfa((prev?.closingDebit ?? 0) - (prev?.closingCredit ?? 0), showZero: true)),
+            ]),
+          );
+        }
+        grid.add(
+          _GRow([
+            const SizedBox.shrink(),
+            _txt(context, 'Totaux', bold: true),
+            _amt(Fmt.fcfa(t((r) => r.openingDebit), showZero: true), bold: true),
+            _amt(Fmt.fcfa(t((r) => r.openingCredit), showZero: true), bold: true),
+            _amt(Fmt.fcfa(t((r) => r.periodDebit), showZero: true), bold: true),
+            _amt(Fmt.fcfa(t((r) => r.periodCredit), showZero: true), bold: true),
+            _amt(Fmt.fcfa(t((r) => r.closingDebit), showZero: true), bold: true),
+            _amt(Fmt.fcfa(t((r) => r.closingCredit), showZero: true), bold: true),
+            if (withPrev) const SizedBox.shrink(),
+          ], kind: _RowKind.total),
+        );
+        return _DataGrid(
+          groups: [..._balanceGroups, if (withPrev) ('', 1)],
+          columns: [
+            const _Col('Compte', 110),
+            const _Col('Intitulé', 260, grow: true),
+            const _Col('Débit', 112, numeric: true),
+            const _Col('Crédit', 112, numeric: true),
+            const _Col('Débit', 112, numeric: true),
+            const _Col('Crédit', 112, numeric: true),
+            const _Col('Débit', 112, numeric: true),
+            const _Col('Crédit', 112, numeric: true),
+            if (withPrev) const _Col('Solde N-1', 120, numeric: true),
+          ],
+          rows: grid,
         );
       },
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Balance auxiliaire
+// ---------------------------------------------------------------------------
 
 class _AuxiliaryTab extends ConsumerWidget {
   const _AuxiliaryTab({required this.params});
@@ -274,34 +782,38 @@ class _AuxiliaryTab extends ConsumerWidget {
     final rows = ref.watch(auxiliaryBalanceProvider(params));
     return AsyncView(
       value: rows,
-      builder: (list) => SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            headingRowColor: WidgetStateProperty.all(AkColors.sand),
-            columnSpacing: 16,
-            columns: const [DataColumn(label: Text('Collectif')), DataColumn(label: Text('Tiers')), DataColumn(label: Text('Nom')), DataColumn(label: Text('Ouverture D'), numeric: true), DataColumn(label: Text('Ouverture C'), numeric: true), DataColumn(label: Text('Mouvements D'), numeric: true), DataColumn(label: Text('Mouvements C'), numeric: true), DataColumn(label: Text('Solde D'), numeric: true), DataColumn(label: Text('Solde C'), numeric: true)],
-            rows: [
-              for (final r in list)
-                DataRow(cells: [
-                  DataCell(Text(r.accountCode, style: _mono)),
-                  DataCell(Text(r.thirdPartyCode ?? '', style: _mono)),
-                  DataCell(SizedBox(width: 220, child: Text(r.thirdPartyName ?? '', overflow: TextOverflow.ellipsis))),
-                  DataCell(Text(Fmt.fcfa(r.openingDebit), style: _mono)),
-                  DataCell(Text(Fmt.fcfa(r.openingCredit), style: _mono)),
-                  DataCell(Text(Fmt.fcfa(r.periodDebit), style: _mono)),
-                  DataCell(Text(Fmt.fcfa(r.periodCredit), style: _mono)),
-                  DataCell(Text(Fmt.fcfa(r.closingDebit), style: _mono)),
-                  DataCell(Text(Fmt.fcfa(r.closingCredit), style: _mono)),
-                ]),
+      onRetry: () => ref.invalidate(auxiliaryBalanceProvider(params)),
+      builder: (list) {
+        if (list.isEmpty) return const AkEmptyState('Aucun mouvement de tiers sur la période.');
+        AkColumn<BalanceRow> code(String label, String Function(BalanceRow) f, double w) => AkColumn(label: label, width: w, cell: (c, r) => _codeTxt(c, f(r)));
+        AkColumn<BalanceRow> amount(String label, int Function(BalanceRow) f) =>
+            AkColumn(label: label, width: 112, numeric: true, cell: (c, r) => _amt(Fmt.fcfa(f(r))));
+        return SingleChildScrollView(
+          child: AkTable<BalanceRow>(
+            bare: true,
+            minWidth: 1100,
+            rows: list,
+            columns: [
+              code('Collectif', (r) => r.accountCode, 100),
+              code('Tiers', (r) => r.thirdPartyCode ?? '', 96),
+              AkColumn(label: 'Nom', flex: 1, cell: (c, r) => _txt(c, r.thirdPartyName ?? '')),
+              amount('Ouverture débit', (r) => r.openingDebit),
+              amount('Ouverture crédit', (r) => r.openingCredit),
+              amount('Mouvements débit', (r) => r.periodDebit),
+              amount('Mouvements crédit', (r) => r.periodCredit),
+              amount('Clôture débit', (r) => r.closingDebit),
+              amount('Clôture crédit', (r) => r.closingCredit),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Balance âgée
+// ---------------------------------------------------------------------------
 
 class _AgedTab extends ConsumerWidget {
   const _AgedTab({required this.params, required this.side, required this.onSide});
@@ -312,49 +824,68 @@ class _AgedTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.ak;
     final rows = ref.watch(agedBalanceProvider(params));
-    return Column(children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        child: Row(children: [
-          SegmentedButton<String>(segments: const [ButtonSegment(value: 'debit', label: Text('Clients (débiteurs)')), ButtonSegment(value: 'credit', label: Text('Fournisseurs (créditeurs)'))], selected: {side}, onSelectionChanged: (s) => onSide(s.first)),
-          const SizedBox(width: 12),
-          Text('À la date du ${Fmt.date(params.to)} · lignes non lettrées'),
-        ]),
-      ),
-      Expanded(
-        child: AsyncView(
-          value: rows,
-          builder: (list) => SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(AkColors.sand),
-                columnSpacing: 16,
-                columns: const [DataColumn(label: Text('Compte')), DataColumn(label: Text('Tiers')), DataColumn(label: Text('Nom')), DataColumn(label: Text('0-30 j'), numeric: true), DataColumn(label: Text('31-60 j'), numeric: true), DataColumn(label: Text('61-90 j'), numeric: true), DataColumn(label: Text('91-180 j'), numeric: true), DataColumn(label: Text('> 180 j'), numeric: true), DataColumn(label: Text('Total'), numeric: true)],
-                rows: [
-                  for (final r in list)
-                    DataRow(cells: [
-                      DataCell(Text(r.accountCode, style: _mono)),
-                      DataCell(Text(r.thirdPartyCode, style: _mono)),
-                      DataCell(SizedBox(width: 200, child: Text(r.thirdPartyName, overflow: TextOverflow.ellipsis))),
-                      DataCell(Text(Fmt.fcfa(r.d0_30), style: _mono)),
-                      DataCell(Text(Fmt.fcfa(r.d31_60), style: _mono)),
-                      DataCell(Text(Fmt.fcfa(r.d61_90), style: _mono)),
-                      DataCell(Text(Fmt.fcfa(r.d91_180), style: _mono)),
-                      DataCell(Text(Fmt.fcfa(r.over180), style: _mono)),
-                      DataCell(Text(Fmt.fcfa(r.total, showZero: true), style: _mono.copyWith(fontWeight: FontWeight.bold))),
-                    ]),
-                ],
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AkSpace.s4, AkSpace.s3, AkSpace.s4, AkSpace.s3),
+          child: Wrap(
+            spacing: AkSpace.s3,
+            runSpacing: AkSpace.s2,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              AkSegmented<String>(
+                options: const [AkOption('debit', 'Clients (débiteurs)'), AkOption('credit', 'Fournisseurs (créditeurs)')],
+                selected: side,
+                onChanged: onSide,
               ),
-            ),
+              Text('À la date du ${Fmt.date(params.to)} · lignes non lettrées', style: AkText.caption.copyWith(color: t.textMuted)),
+            ],
           ),
         ),
-      ),
-    ]);
+        Divider(height: 1, color: t.border),
+        Expanded(
+          child: AsyncView(
+            value: rows,
+            onRetry: () => ref.invalidate(agedBalanceProvider(params)),
+            builder: (list) {
+              if (list.isEmpty) return const AkEmptyState('Aucune ligne non lettrée à cette date.');
+              AkColumn<AgedRow> amount(String label, int Function(AgedRow) f, {double w = 110, bool bold = false}) => AkColumn(
+                label: label,
+                width: w,
+                numeric: true,
+                cell: (c, r) => _amt(Fmt.fcfa(f(r), showZero: bold), bold: bold),
+              );
+              return SingleChildScrollView(
+                child: AkTable<AgedRow>(
+                  bare: true,
+                  minWidth: 960,
+                  rows: list,
+                  columns: [
+                    AkColumn(label: 'Compte', width: 100, cell: (c, r) => _codeTxt(c, r.accountCode)),
+                    AkColumn(label: 'Tiers', width: 96, cell: (c, r) => _codeTxt(c, r.thirdPartyCode)),
+                    AkColumn(label: 'Nom', flex: 1, cell: (c, r) => _txt(c, r.thirdPartyName)),
+                    amount('0-30 j', (r) => r.d0_30),
+                    amount('31-60 j', (r) => r.d31_60),
+                    amount('61-90 j', (r) => r.d61_90),
+                    amount('91-180 j', (r) => r.d91_180),
+                    amount('> 180 j', (r) => r.over180),
+                    amount('Total', (r) => r.total, w: 130, bold: true),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Centralisateur
+// ---------------------------------------------------------------------------
 
 class _CentralizationTab extends ConsumerWidget {
   const _CentralizationTab({required this.params});
@@ -363,46 +894,62 @@ class _CentralizationTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (params.fiscalYearId == null) return const Center(child: Text('Aucun exercice ne contient la date de début.'));
+    if (params.fiscalYearId == null) {
+      return Padding(
+        padding: const EdgeInsets.all(AkSpace.s4),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: AkBanner(kind: AkBannerKind.warning, child: const Text('Aucun exercice ne contient la date de début.')),
+        ),
+      );
+    }
     final rows = ref.watch(centralizationProvider(params));
     final journals = ref.watch(journalsProvider(params.entityId)).value ?? const [];
     return AsyncView(
       value: rows,
+      onRetry: () => ref.invalidate(centralizationProvider(params)),
       builder: (list) {
+        if (list.isEmpty) return const AkEmptyState('Aucune écriture validée sur cet exercice.');
         final byJournal = <String, List<CentralizationRow>>{};
         for (final r in list) {
           byJournal.putIfAbsent(r.journalCode, () => []).add(r);
         }
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            for (final e in byJournal.entries)
-              Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('${e.key} — ${journals.where((j) => j.code == e.key).firstOrNull?.label ?? e.value.first.journalLabel}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    for (final r in e.value)
-                      Row(children: [
-                        SizedBox(width: 160, child: Text(Fmt.month(r.monthStart))),
-                        SizedBox(width: 90, child: Text('${r.entriesCount} écr.')),
-                        SizedBox(width: 130, child: Text(Fmt.fcfa(r.totalDebit, showZero: true), textAlign: TextAlign.right, style: _mono)),
-                        SizedBox(width: 130, child: Text(Fmt.fcfa(r.totalCredit, showZero: true), textAlign: TextAlign.right, style: _mono)),
-                      ]),
-                    const Divider(),
-                    Row(children: [
-                      const SizedBox(width: 160, child: Text('Total journal', style: TextStyle(fontWeight: FontWeight.w600))),
-                      const SizedBox(width: 90),
-                      SizedBox(width: 130, child: Text(Fmt.fcfa(e.value.fold<int>(0, (s, r) => s + r.totalDebit), showZero: true), textAlign: TextAlign.right, style: _mono)),
-                      SizedBox(width: 130, child: Text(Fmt.fcfa(e.value.fold<int>(0, (s, r) => s + r.totalCredit), showZero: true), textAlign: TextAlign.right, style: _mono)),
-                    ]),
-                  ]),
-                ),
+        final grid = <_GRow>[];
+        for (final e in byJournal.entries) {
+          final label = journals.where((j) => j.code == e.key).firstOrNull?.label ?? e.value.first.journalLabel;
+          grid.add(
+            _GRow.section(
+              Row(
+                children: [
+                  _codeTxt(context, e.key, bold: true),
+                  const SizedBox(width: AkSpace.s2),
+                  Flexible(child: _sectionText(context, '— $label')),
+                ],
               ),
-            if (list.isEmpty) const Text('Aucune écriture validée sur cet exercice.'),
-          ],
+            ),
+          );
+          for (final r in e.value) {
+            grid.add(
+              _GRow([
+                _txt(context, Fmt.month(r.monthStart)),
+                _txt(context, '${r.entriesCount} écr.', muted: true),
+                _amt(Fmt.fcfa(r.totalDebit, showZero: true)),
+                _amt(Fmt.fcfa(r.totalCredit, showZero: true)),
+              ]),
+            );
+          }
+          grid.add(
+            _GRow([
+              _txt(context, 'Total journal', bold: true),
+              const SizedBox.shrink(),
+              _amt(Fmt.fcfa(e.value.fold<int>(0, (s, r) => s + r.totalDebit), showZero: true), bold: true),
+              _amt(Fmt.fcfa(e.value.fold<int>(0, (s, r) => s + r.totalCredit), showZero: true), bold: true),
+            ], kind: _RowKind.total),
+          );
+        }
+        return _DataGrid(
+          columns: const [_Col('Mois', 200, grow: true), _Col('Écritures', 100), _Col('Débit', 140, numeric: true), _Col('Crédit', 140, numeric: true)],
+          rows: grid,
         );
       },
     );

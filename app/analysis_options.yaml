@@ -9,3 +9,6 @@ analyzer:
     - macos/**
     - linux/**
     - web/**
+
+formatter:
+  page_width: 160

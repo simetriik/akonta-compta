@@ -1,0 +1,100 @@
+{
+  "segments": [
+    {
+      "title": "Akonta",
+      "beats": [
+        {"card": "Parcours de recette", "subtitle": "Lots 1 à 3 · jeu de démonstration", "text": "Bienvenue dans Akonta, le logiciel comptable SYSCOHADA révisé du cabinet ABC Expertise Comptable. Cette vidéo déroule le parcours de recette des trois lots sur le jeu de démonstration."},
+        {"card": "Dix étapes", "subtitle": "connexion · dossiers · saisie · consultation · pièces · lettrage · rapprochement · inventaire · clôture · arrêté", "text": "Nous suivons le scénario global du compte rendu de livraison du lot trois : de la connexion jusqu'à l'arrêté définitif d'un exercice et l'ouverture du suivant."}
+      ]
+    },
+    {
+      "title": "1 · Connexion et tableau de bord",
+      "beats": [
+        {"frame": "f01-connexion.png", "text": "Chaque collaborateur se connecte avec son adresse e-mail et un mot de passe d'au moins douze caractères. Nous commençons avec le chef de mission, Kofi Mensah."},
+        {"frame": "f02-dashboard.png", "text": "Le tableau de bord liste les dossiers affectés et, pour chacun, les brouillards en attente, les écritures non revues, celles à corriger et les pièces à traiter."}
+      ]
+    },
+    {
+      "title": "2 · Dossiers et exercices",
+      "beats": [
+        {"frame": "f03-dossiers.png", "text": "Un dossier est une entité et un exercice. La liste rappelle la forme juridique, l'IFU et la longueur fixe des comptes, figée dès que le plan existe."},
+        {"frame": "f04-fiche-dossier.png", "text": "La fiche reprend les champs d'identification de la liasse DGI : dénomination, siège, IFU, RCCM, régime fiscal, activité et paramètres comptables."},
+        {"frame": "f04b-exercices.png", "text": "L'onglet Exercices et périodes montre le verrouillage mensuel. Sur SARL Démo Distribution, janvier, février et mars sont verrouillés ; le déverrouillage est réservé à l'associé, avec motif consigné."}
+      ]
+    },
+    {
+      "title": "3 · Saisie, validation et revue",
+      "beats": [
+        {"frame": "f05-saisie-liste.png", "text": "Le module Saisie affiche le brouillard et les écritures validées, filtrables par journal, par mois et par statut. Chaque statut a sa couleur : brouillard, validée, revue, à corriger."},
+        {"frame": "f06-editeur.png", "text": "L'éditeur est pensé pour le clavier : journal, date, pièce, libellé, puis une grille de lignes. Tabulation passe à la cellule suivante, Contrôle B appelle la contrepartie, Contrôle S enregistre le brouillard."},
+        {"frame": "f07-editeur-equilibre.png", "text": "Un modèle, ici Achat avec TVA, pré-remplit les lignes à partir d'un montant hors taxes. La pastille indique en permanence si l'écriture est équilibrée ; une écriture déséquilibrée reste en brouillard, jamais validée."},
+        {"frame": "f08-saisie-validee.png", "text": "La validation est une fonction de la base : elle contrôle l'équilibre, la période et les comptes, puis attribue le numéro séquentiel sans trou, ici AC-21. Une écriture validée ne se modifie plus : on la contre-passe."},
+        {"frame": "f08b-revue-dialog.png", "text": "Le chef de mission revoit chaque écriture validée : conforme, ou à corriger avec un commentaire obligatoire."},
+        {"frame": "f08c-revue-liste.png", "text": "Le statut de revue et le commentaire apparaissent dans la liste, et le tableau de bord compte les écritures à reprendre."}
+      ]
+    },
+    {
+      "title": "4 · Consultation",
+      "beats": [
+        {"frame": "f09-grand-livre.png", "text": "Le grand livre, les balances et le centralisateur sont calculés à la demande par la base : aucun solde n'est stocké. Chaque compte affiche ses mouvements, son total et son solde."},
+        {"frame": "f10-balance.png", "text": "La balance générale présente ouverture, mouvements et clôture par classe, se compare à l'exercice précédent et s'exporte. Les mêmes calculs alimentent les états financiers."}
+      ]
+    },
+    {
+      "title": "5 · Pièces justificatives",
+      "beats": [
+        {"frame": "f11-pieces.png", "text": "Les pièces, PDF ou photos, arrivent du bureau ou du mobile dans une boîte de réception, puis sont rattachées aux écritures. Chaque fichier reçoit une empreinte SHA-256 ; une pièce rattachée à une écriture validée ne se supprime pas."}
+      ]
+    },
+    {
+      "title": "6 · Lettrage",
+      "beats": [
+        {"frame": "f12-lettrage-propositions.png", "text": "Sur un compte de tiers, Akonta propose les lettrages évidents, ici neuf règlements SOBEB de même montant. Voir présélectionne les lignes, Confirmer lettre."},
+        {"frame": "f13-lettrage-confirme.png", "text": "La proposition confirmée disparaît et les lignes sont lettrées. Les lettrages partiels restent ouverts jusqu'au solde ; le délettrage est possible tant que la période n'est pas verrouillée."}
+      ]
+    },
+    {
+      "title": "7 · Rapprochement bancaire",
+      "beats": [
+        {"frame": "f14-rappro-etat.png", "text": "Pour chaque journal de banque, l'état de rapprochement confronte le solde comptable et le solde du relevé, et liste les lignes non pointées de chaque côté. Les relevés s'importent en CSV avec un gabarit mémorisé par banque."},
+        {"frame": "f15-rappro-ecriture.png", "text": "Une ligne de relevé sans écriture, ici des agios, se comptabilise directement depuis le rapprochement. Sa période de février est verrouillée : on date l'écriture dans une période ouverte."},
+        {"frame": "f16-rappro-pointe.png", "text": "L'écriture est validée dans le journal de banque et pointée aussitôt : écart zéro. À écart nul, l'état du mois se fige et s'exporte en PDF."}
+      ]
+    },
+    {
+      "title": "8 · Travaux d'inventaire",
+      "beats": [
+        {"frame": "f17a-immo-dialog.png", "text": "Une immobilisation se déclare avec son compte, ses dates, sa valeur brute et sa durée : ici un véhicule de douze millions sur cinq ans, mis en service le premier avril."},
+        {"frame": "f17-inventaire-immo.png", "text": "Le tableau d'amortissement est calculé au prorata, sur une base de trois cent soixante jours."},
+        {"frame": "f17c-dotations.png", "text": "Générer les dotations crée l'écriture d'amortissement en brouillard, marquée générée. Elle se valide ensuite dans la saisie, comme toute écriture."},
+        {"frame": "f18-inventaire-stocks.png", "text": "Les autres onglets couvrent les stocks avec leur variation, les provisions sur créances, les régularisations de charges et de produits, et les écarts de conversion au cours de clôture."}
+      ]
+    },
+    {
+      "title": "9 · Clôture",
+      "beats": [
+        {"frame": "f19-cloture-controles.png", "text": "La clôture commence par les contrôles. Les bloquants, comme un brouillard en attente ou un grand livre déséquilibré, empêchent de continuer ; les alertes se lèvent avec un commentaire."},
+        {"frame": "f20a-lever-dialog.png", "text": "Chaque levée d'alerte est tracée dans la piste d'audit avec son auteur et son motif."},
+        {"frame": "f20-fiscalite.png", "text": "L'onglet Fiscalité passe du résultat comptable au résultat fiscal par réintégrations et déductions, calcule l'impôt sur les sociétés avec le minimum de perception, et génère l'écriture d'impôt."},
+        {"frame": "f21-cloture-etats.png", "text": "Les états financiers SYSCOHADA sont générés depuis la balance par une table de correspondance versionnée, avec deux contrôles de cohérence, puis exportés en PDF et dans la liasse DGI Excel, macros conservées."}
+      ]
+    },
+    {
+      "title": "10 · Arrêté définitif et exercice suivant",
+      "beats": [
+        {"frame": "f23a-etats-2026-arretes.png", "text": "Sur SA Alpha Services, l'exercice 2026 est entièrement clôturé : les états financiers sont marqués arrêtés et les deux contrôles de cohérence sont verts."},
+        {"frame": "f23-arrete.png", "text": "L'arrêté définitif est réservé à l'associé. L'exercice devient intangible : plus aucune réouverture, états financiers, grand livre et balance archivés avec leurs empreintes SHA-256."},
+        {"frame": "f24-exercice-suivant.png", "text": "L'exercice 2027 est ouvert avec ses à-nouveaux générés par tiers, le résultat en instance d'affectation, puis l'affectation : réserve légale et report à nouveau."}
+      ]
+    },
+    {
+      "title": "Sécurité, cloisonnement et piste d'audit",
+      "beats": [
+        {"frame": "f22-mfa.png", "text": "Le rôle d'associé impose la vérification en deux étapes : à la première connexion, une application d'authentification est enrôlée par QR code ou clé manuelle."},
+        {"frame": "f25-piste-audit.png", "text": "Toute action sensible alimente une piste d'audit en ajout seul, chaînée par empreintes SHA-256. Vérifier la chaîne confirme qu'aucune ligne n'a été altérée."},
+        {"frame": "f26-collaborateurs.png", "text": "Les droits reposent sur les affectations collaborateur, dossier, rôle, appliquées par la base elle-même : un cabinet ne voit jamais les données d'un autre."},
+        {"card": "Bonne recette", "subtitle": "Scénarios détaillés : docs/livraison-lot1.md, lot2.md, lot3.md", "text": "Les scénarios pas à pas, les décisions prises pendant le développement et les questions encore ouvertes sont dans le dossier docs du dépôt. Bonne recette."}
+      ]
+    }
+  ]
+}

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/documents_repository.dart';
 import '../../data/entries_repository.dart';
 import '../../data/supabase_providers.dart';
@@ -40,54 +40,104 @@ class _DocumentsBodyState extends ConsumerState<_DocumentsBody> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.ak;
     final docs = ref.watch(documentsProvider(widget.entity.id));
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final canAttach = perms.has('documents.attach', entityId: widget.entity.id);
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: !canAttach
-          ? null
-          : Row(mainAxisSize: MainAxisSize.min, children: [
-              if (_isMobile) ...[
-                FloatingActionButton.extended(heroTag: 'photo', onPressed: _busy ? null : _capturePhoto, icon: const Icon(Icons.photo_camera_outlined), label: const Text('Photographier')),
-                const SizedBox(width: 12),
-              ],
-              FloatingActionButton.extended(key: const Key('upload-document'), heroTag: 'file', onPressed: _busy ? null : _pickFiles, icon: const Icon(Icons.upload_file_outlined), label: const Text('Déposer')),
-            ]),
-      body: Column(children: [
-        Material(
-          color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Row(children: [
-              SegmentedButton<bool>(
-                segments: const [ButtonSegment(value: true, label: Text('Boîte de réception')), ButtonSegment(value: false, label: Text('Toutes les pièces'))],
-                selected: {_inboxOnly},
-                onSelectionChanged: (s) => setState(() => _inboxOnly = s.first),
+    final compact = akIsCompact(context);
+    final margin = akPageMargin(context);
+    final list = docs.value;
+    final inboxCount = list?.where((d) => d.isInInbox).length;
+    final onMobile = canAttach && _isMobile;
+
+    Widget uploadButton({required bool primary}) {
+      const key = Key('upload-document');
+      return primary
+          ? AkButton.primary('Déposer', key: key, icon: Icons.upload_file_outlined, onPressed: _busy ? null : _pickFiles, expand: compact)
+          : AkButton.secondary('Déposer', key: key, icon: Icons.upload_file_outlined, onPressed: _busy ? null : _pickFiles, expand: compact);
+    }
+
+    String withCount(String label, int? n) => n == null ? label : '$label ($n)';
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(margin, AkSpace.s4, margin, AkSpace.s4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AkPageHead(
+            title: 'Pièces',
+            subtitle: widget.entity.dossierLabel,
+            actions: [
+              if (canAttach && !compact) uploadButton(primary: !_isMobile),
+              if (onMobile && !compact) AkButton.primary('Photographier', icon: Icons.photo_camera_outlined, onPressed: _busy ? null : _capturePhoto),
+            ],
+          ),
+          const SizedBox(height: AkSpace.s3),
+          if (onMobile && compact) ...[
+            _CaptureButton(busy: _busy, onPressed: _capturePhoto),
+            const SizedBox(height: AkSpace.s2),
+            uploadButton(primary: false),
+            const SizedBox(height: AkSpace.s3),
+          ] else if (canAttach && compact) ...[
+            uploadButton(primary: true),
+            const SizedBox(height: AkSpace.s3),
+          ],
+          Expanded(
+            child: AkCard(
+              padding: EdgeInsets.zero,
+              clip: true,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(AkSpace.s3),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: AkSegmented<bool>(
+                        options: [AkOption(true, withCount('Boîte de réception', inboxCount)), AkOption(false, withCount('Toutes les pièces', list?.length))],
+                        selected: _inboxOnly,
+                        onChanged: (v) => setState(() => _inboxOnly = v),
+                      ),
+                    ),
+                  ),
+                  Divider(height: 1, color: t.border),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s2),
+                    color: t.surfaceSunken,
+                    child: Row(
+                      children: [
+                        if (_busy)
+                          const Padding(
+                            padding: EdgeInsets.only(right: AkSpace.s2),
+                            child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                          ),
+                        Expanded(
+                          child: Text('PDF, JPEG, PNG, HEIC · 20 Mo max · empreinte SHA-256', style: AkText.caption.copyWith(color: t.textMuted)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: t.border),
+                  Expanded(
+                    child: AsyncView(
+                      value: docs,
+                      onRetry: () => ref.invalidate(documentsProvider(widget.entity.id)),
+                      builder: (all) {
+                        final shown = _inboxOnly ? all.where((d) => d.isInInbox).toList() : all;
+                        if (shown.isEmpty) return AkEmptyState(_inboxOnly ? 'Boîte de réception vide.' : 'Aucune pièce.');
+                        return ListView.builder(
+                          itemCount: shown.length,
+                          itemBuilder: (_, i) => DocumentTile(document: shown[i], entity: widget.entity, canAttach: canAttach),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
-              const Spacer(),
-              if (_busy) const Padding(padding: EdgeInsets.only(right: 12), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
-              const Text('PDF, JPEG, PNG, HEIC · 20 Mo max · empreinte SHA-256', style: TextStyle(fontSize: 12)),
-            ]),
+            ),
           ),
-        ),
-        Expanded(
-          child: AsyncView(
-            value: docs,
-            onRetry: () => ref.invalidate(documentsProvider(widget.entity.id)),
-            builder: (list) {
-              final shown = _inboxOnly ? list.where((d) => d.isInInbox).toList() : list;
-              if (shown.isEmpty) return Center(child: Text(_inboxOnly ? 'Boîte de réception vide.' : 'Aucune pièce.'));
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                itemCount: shown.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (_, i) => DocumentTile(document: shown[i], entity: widget.entity, canAttach: canAttach),
-              );
-            },
-          ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 
@@ -113,7 +163,7 @@ class _DocumentsBodyState extends ConsumerState<_DocumentsBody> {
       ref.invalidate(documentsProvider(widget.entity.id));
       ref.invalidate(entityDashboardProvider);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dépôt refusé : $e'), backgroundColor: AkColors.toCorrect));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dépôt refusé : $e'), backgroundColor: context.ak.danger));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -129,40 +179,128 @@ class DocumentTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.ak;
     final d = document;
-    return ListTile(
-      leading: Icon(d.isImage ? Icons.image_outlined : Icons.picture_as_pdf_outlined, color: AkColors.terracotta),
-      title: Text(d.fileName),
-      subtitle: Text('${Fmt.date(d.capturedAt)} · ${(d.sizeBytes / 1024).toStringAsFixed(0)} Ko · ${d.capturedVia == 'mobile' ? 'capture mobile' : 'dépôt'} · ${d.sha256.substring(0, 12)}… · ${d.isInInbox ? 'non rattachée' : '${d.entryIds.length} écriture(s)'}'),
-      onTap: () => showDialog(context: context, builder: (_) => DocumentViewer(document: d)),
-      trailing: !canAttach
-          ? null
-          : PopupMenuButton<String>(
-              onSelected: (v) async {
-                switch (v) {
-                  case 'attach':
-                    final entryId = await showDialog<String>(context: context, builder: (_) => _EntryPicker(entity: entity));
-                    if (entryId == null) return;
-                    await ref.read(documentsRepositoryProvider).attach(entryId, d.id);
-                  case 'draft':
-                    if (context.mounted) context.go('/saisie/nouvelle?document=${d.id}');
-                    return;
-                  case 'delete':
-                    try {
-                      await ref.read(documentsRepositoryProvider).delete(d);
-                    } catch (e) {
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pièce liée à une écriture validée : non supprimable.')));
-                    }
-                }
-                ref.invalidate(documentsProvider(entity.id));
-                ref.invalidate(entityDashboardProvider);
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: 'attach', child: Text('Rattacher à une écriture…')),
-                if (d.isInInbox) const PopupMenuItem(value: 'draft', child: Text('Créer un brouillard avec cette pièce')),
-                if (d.isInInbox) const PopupMenuItem(value: 'delete', child: Text('Supprimer')),
-              ],
+    final compact = akIsCompact(context);
+    final meta = '${Fmt.date(d.capturedAt)} · ${(d.sizeBytes / 1024).toStringAsFixed(0)} Ko · ${d.capturedVia == 'mobile' ? 'capture mobile' : 'dépôt'}';
+    final status = d.isInInbox
+        ? AkBadge(label: 'À rattacher', color: t.warning, tint: t.warningTint, icon: Icons.inbox_outlined)
+        : AkBadge(label: '${d.entryIds.length} écriture(s)', color: t.success, tint: t.successTint, icon: Icons.link);
+    return InkWell(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => DocumentViewer(document: d),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 64),
+        padding: const EdgeInsets.only(left: AkSpace.s4, top: 10, bottom: 10, right: AkSpace.s2),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: t.border)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 48,
+              decoration: BoxDecoration(color: t.surfaceSunken, borderRadius: AkRadius.smAll),
+              child: Icon(d.isImage ? Icons.image_outlined : Icons.picture_as_pdf_outlined, color: t.textMuted),
             ),
+            const SizedBox(width: AkSpace.s3),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    d.fileName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AkText.bodyStrong.copyWith(color: t.text),
+                  ),
+                  Text(
+                    meta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AkText.caption.copyWith(color: t.textMuted),
+                  ),
+                  if (compact)
+                    Padding(padding: const EdgeInsets.only(top: 4), child: status)
+                  else
+                    Text('${d.sha256.substring(0, 12)}…', style: AkText.code.copyWith(color: t.textMuted)),
+                ],
+              ),
+            ),
+            if (!compact) ...[status, const SizedBox(width: AkSpace.s2)],
+            if (canAttach)
+              PopupMenuButton<String>(
+                onSelected: (v) async {
+                  switch (v) {
+                    case 'attach':
+                      final entryId = await showDialog<String>(
+                        context: context,
+                        builder: (_) => _EntryPicker(entity: entity),
+                      );
+                      if (entryId == null) return;
+                      await ref.read(documentsRepositoryProvider).attach(entryId, d.id);
+                    case 'draft':
+                      if (context.mounted) context.go('/saisie/nouvelle?document=${d.id}');
+                      return;
+                    case 'delete':
+                      try {
+                        await ref.read(documentsRepositoryProvider).delete(d);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pièce liée à une écriture validée : non supprimable.')));
+                        }
+                      }
+                  }
+                  ref.invalidate(documentsProvider(entity.id));
+                  ref.invalidate(entityDashboardProvider);
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'attach', child: Text('Rattacher à une écriture…')),
+                  if (d.isInInbox) const PopupMenuItem(value: 'draft', child: Text('Créer un brouillard avec cette pièce')),
+                  if (d.isInInbox) const PopupMenuItem(value: 'delete', child: Text('Supprimer')),
+                ],
+              )
+            else
+              const SizedBox(width: AkSpace.s2),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Gros bouton de capture (mobile) : photographier une pièce avec la caméra, elle arrive dans la boîte de réception.
+class _CaptureButton extends StatelessWidget {
+  const _CaptureButton({required this.busy, required this.onPressed});
+
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return Material(
+      color: busy ? t.disabledFill : t.brand,
+      borderRadius: AkRadius.lgAll,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: const Key('capture-document'),
+        onTap: busy ? null : onPressed,
+        hoverColor: t.brandHover,
+        child: SizedBox(
+          height: 72,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.photo_camera_outlined, size: 28, color: busy ? t.textDisabled : t.onBrand),
+              const SizedBox(width: AkSpace.s3),
+              Text('Photographier une pièce', style: AkText.title.copyWith(color: busy ? t.textDisabled : t.onBrand)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -175,30 +313,44 @@ class DocumentViewer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.ak;
     final repo = ref.watch(documentsRepositoryProvider);
-    return Dialog(
-      child: SizedBox(
-        width: 760,
-        height: 640,
-        child: Column(children: [
-          ListTile(title: Text(document.fileName), subtitle: Text('SHA-256 ${document.sha256}'), trailing: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context))),
-          Expanded(
-            child: document.isImage
+    final size = MediaQuery.sizeOf(context);
+    final d = document;
+    final double width = size.width < 840 ? size.width - 80 : 760;
+    return AkDialog(
+      title: d.fileName,
+      width: width,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${Fmt.date(d.capturedAt)} · ${(d.sizeBytes / 1024).toStringAsFixed(0)} Ko · ${d.capturedVia == 'mobile' ? 'capture mobile' : 'dépôt'}',
+            style: AkText.caption.copyWith(color: t.textMuted),
+          ),
+          Text('SHA-256 ${d.sha256}', style: AkText.code.copyWith(color: t.textMuted)),
+          const SizedBox(height: AkSpace.s3),
+          Container(
+            height: size.height < 704 ? size.height - 280 : 480,
+            decoration: BoxDecoration(color: t.surfaceSunken, borderRadius: AkRadius.mdAll),
+            clipBehavior: Clip.antiAlias,
+            child: d.isImage
                 ? FutureBuilder<Uint8List>(
-                    future: repo.download(document),
-                    builder: (_, snap) => snap.hasData ? InteractiveViewer(child: Image.memory(snap.data!)) : const Center(child: CircularProgressIndicator()),
+                    future: repo.download(d),
+                    builder: (_, snap) => snap.hasData ? InteractiveViewer(child: Image.memory(snap.data!)) : const AkLoading(),
                   )
                 : FutureBuilder<String>(
-                    future: repo.signedUrl(document),
+                    future: repo.signedUrl(d),
                     builder: (_, snap) => Center(
                       child: snap.hasData
-                          ? FilledButton.icon(onPressed: () => _open(snap.data!), icon: const Icon(Icons.open_in_new), label: const Text('Ouvrir le PDF (lien signé, 10 min)'))
-                          : const CircularProgressIndicator(),
+                          ? AkButton.primary('Ouvrir le PDF (lien signé, 10 min)', icon: Icons.open_in_new, onPressed: () => _open(snap.data!))
+                          : const AkLoading(),
                     ),
                   ),
           ),
-        ]),
+        ],
       ),
+      actions: [AkButton.secondary('Fermer', onPressed: () => Navigator.pop(context))],
     );
   }
 
@@ -213,22 +365,57 @@ class _EntryPicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.ak;
     final entries = ref.watch(entriesListProvider(entity.id));
-    return AlertDialog(
-      title: const Text('Rattacher à une écriture'),
+    final width = MediaQuery.sizeOf(context).width;
+    return AkDialog(
+      title: 'Rattacher à une écriture',
+      width: width < 620 ? width - 80 : 560,
       content: SizedBox(
-        width: 560,
         height: 420,
         child: AsyncView(
           value: entries,
-          builder: (list) => ListView(children: [
-            for (final e in list)
-              ListTile(dense: true, title: Text('${Fmt.date(e.entryDate)} · ${e.numberLabel} · ${e.label}'), subtitle: Text(Fmt.fcfa(e.totalDebit, showZero: true)), onTap: () => Navigator.pop(context, e.id)),
-            if (list.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Aucune écriture dans le mois filtré (changez le filtre dans Saisie).')),
-          ]),
+          builder: (list) {
+            if (list.isEmpty) return const AkEmptyState('Aucune écriture dans le mois filtré (changez le filtre dans Saisie).');
+            return ListView(
+              children: [
+                for (final e in list)
+                  InkWell(
+                    onTap: () => Navigator.pop(context, e.id),
+                    child: Container(
+                      constraints: BoxConstraints(minHeight: akIsCompact(context) ? AkSpace.rowTouch : AkSpace.rowCompact + 8),
+                      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: 6),
+                      decoration: BoxDecoration(
+                        border: Border(bottom: BorderSide(color: t.border)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  e.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AkText.table.copyWith(color: t.text),
+                                ),
+                                Text('${Fmt.date(e.entryDate)} · ${e.numberLabel}', style: AkText.code.copyWith(color: t.textMuted)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AkSpace.s2),
+                          AkAmountText(Fmt.fcfa(e.totalDebit, showZero: true)),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))],
+      actions: [AkButton.secondary('Annuler', onPressed: () => Navigator.pop(context))],
     );
   }
 }

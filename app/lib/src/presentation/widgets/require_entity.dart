@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
@@ -14,10 +15,13 @@ class RequireEntity extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entity = ref.watch(currentEntityProvider);
     if (entity == null) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('Choisissez un dossier dans la barre supérieure pour continuer.', textAlign: TextAlign.center),
+          padding: const EdgeInsets.all(AkSpace.s6),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: const AkEmptyState('Choisissez un dossier dans la barre supérieure pour continuer.', icon: Icons.folder_open),
+          ),
         ),
       );
     }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/admin_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
@@ -14,13 +14,33 @@ class CabinetScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pad = akPageMargin(context);
     return DefaultTabController(
       length: 4,
       child: Column(
         children: [
-          const Material(
-            color: Colors.white,
-            child: TabBar(tabs: [Tab(text: 'Paramètres'), Tab(text: 'Rôles'), Tab(text: 'Affectations'), Tab(text: 'Piste d\'audit')]),
+          Padding(
+            padding: EdgeInsets.fromLTRB(pad, AkSpace.s4, pad, AkSpace.s2),
+            child: const Align(
+              alignment: Alignment.centerLeft,
+              child: AkPageHead(title: 'Cabinet', subtitle: 'Paramètres, rôles, affectations et piste d\'audit'),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: pad),
+            child: const Align(
+              alignment: Alignment.centerLeft,
+              child: TabBar(
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                tabs: [
+                  Tab(text: 'Paramètres'),
+                  Tab(text: 'Rôles'),
+                  Tab(text: 'Affectations'),
+                  Tab(text: 'Piste d\'audit'),
+                ],
+              ),
+            ),
           ),
           const Expanded(child: TabBarView(children: [CabinetSettingsTab(), RolesTab(), AssignmentsTab(), AuditTab()])),
         ],
@@ -48,35 +68,42 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
     return AsyncView(
       value: cabinet,
       builder: (c) {
-        if (c == null) return const Center(child: Text('Aucun cabinet.'));
+        if (c == null) return const AkEmptyState('Aucun cabinet.');
         if (!_loaded) {
           _name.text = c.name;
           _length.text = '${c.defaultAccountLength}';
           _inactivity.text = '${c.inactivityMinutes}';
           _loaded = true;
         }
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return AkPage(
           children: [
-            Text('Paramètres du cabinet', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(controller: _name, decoration: const InputDecoration(labelText: 'Raison sociale')),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(child: TextField(controller: _length, decoration: const InputDecoration(labelText: 'Longueur des comptes par défaut (6 à 12)'), keyboardType: TextInputType.number)),
-                        const SizedBox(width: 12),
-                        Expanded(child: TextField(controller: _inactivity, decoration: const InputDecoration(labelText: 'Déconnexion après inactivité (minutes)'), keyboardType: TextInputType.number)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
+            AkCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AkSectionTitle('Identité et sécurité'),
+                  const SizedBox(height: AkSpace.s3),
+                  AkTextField(controller: _name, label: 'Raison sociale'),
+                  const SizedBox(height: AkSpace.s3),
+                  Wrap(
+                    spacing: AkSpace.s3,
+                    runSpacing: AkSpace.s3,
+                    children: [
+                      SizedBox(
+                        width: 320,
+                        child: AkTextField(controller: _length, label: 'Longueur des comptes par défaut (6 à 12)', keyboardType: TextInputType.number),
+                      ),
+                      SizedBox(
+                        width: 320,
+                        child: AkTextField(controller: _inactivity, label: 'Déconnexion après inactivité (minutes)', keyboardType: TextInputType.number),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AkSpace.s4),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: AkButton.primary(
+                      'Enregistrer',
                       onPressed: () async {
                         final len = int.tryParse(_length.text);
                         final min = int.tryParse(_inactivity.text);
@@ -84,14 +111,17 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Longueur 6-12, inactivité 5-480 minutes.')));
                           return;
                         }
-                        await ref.read(adminRepositoryProvider).updateCabinet(c.id, {'name': _name.text.trim(), 'default_account_length': len, 'inactivity_minutes': min});
+                        await ref.read(adminRepositoryProvider).updateCabinet(c.id, {
+                          'name': _name.text.trim(),
+                          'default_account_length': len,
+                          'inactivity_minutes': min,
+                        });
                         ref.invalidate(currentCabinetProvider);
                         if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paramètres enregistrés.')));
                       },
-                      child: const Text('Enregistrer'),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -115,30 +145,32 @@ class RolesTab extends ConsumerWidget {
         value: perms,
         builder: (permList) {
           final visibleRoles = roleList.where((r) => r.code != 'tech_admin').toList();
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(AkColors.sand),
-                columns: [const DataColumn(label: Text('Permission')), for (final r in visibleRoles) DataColumn(label: Text(r.name))],
-                rows: [
-                  for (final p in permList)
-                    DataRow(cells: [
-                      DataCell(Text(p.label)),
-                      for (final r in visibleRoles)
-                        DataCell(Checkbox(
-                          value: r.permissions.contains(p.code),
-                          onChanged: (v) async {
-                            await ref.read(adminRepositoryProvider).setRolePermission(r.id, p.code, v ?? false);
-                            ref.invalidate(rolesProvider);
-                            ref.invalidate(permissionsProvider);
-                          },
-                        )),
-                    ]),
+          return AkPage(
+            children: [
+              const AkSectionTitle('Rôles et permissions'),
+              const SizedBox(height: AkSpace.s3),
+              AkTable<PermissionDef>(
+                minWidth: 280 + 120.0 * visibleRoles.length,
+                rows: permList,
+                columns: [
+                  AkColumn<PermissionDef>.text(label: 'Permission', text: (p) => p.label, flex: 3),
+                  for (final r in visibleRoles)
+                    AkColumn<PermissionDef>(
+                      label: r.name,
+                      width: 120,
+                      cell: (context, p) => AkCheckbox(
+                        dense: true,
+                        value: r.permissions.contains(p.code),
+                        onChanged: (v) async {
+                          await ref.read(adminRepositoryProvider).setRolePermission(r.id, p.code, v);
+                          ref.invalidate(rolesProvider);
+                          ref.invalidate(permissionsProvider);
+                        },
+                      ),
+                    ),
                 ],
               ),
-            ),
+            ],
           );
         },
       ),
@@ -153,65 +185,76 @@ class AssignmentsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(assignmentsProvider);
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: 'reassign',
-            onPressed: () => showDialog(context: context, builder: (_) => const ReassignDialog()),
-            icon: const Icon(Icons.swap_horiz),
-            label: const Text('Réaffecter en masse'),
-          ),
-          const SizedBox(width: 12),
-          FloatingActionButton.extended(
-            heroTag: 'assign',
-            onPressed: () => showDialog(context: context, builder: (_) => const AssignmentDialog()),
-            icon: const Icon(Icons.add),
-            label: const Text('Affecter'),
-          ),
-        ],
-      ),
-      body: AsyncView(
-        value: data,
-        onRetry: () => ref.invalidate(assignmentsProvider),
-        builder: (list) {
-          final byEntity = <String, List<Assignment>>{};
-          for (final a in list) {
-            byEntity.putIfAbsent(a.entityName ?? 'Portée cabinet', () => []).add(a);
-          }
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              for (final e in byEntity.entries)
-                Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 4), child: Text(e.key, style: const TextStyle(fontWeight: FontWeight.w600))),
-                      for (final a in e.value)
-                        ListTile(
-                          dense: true,
-                          title: Text(a.userName),
-                          subtitle: Text(a.roleName),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            onPressed: () async {
-                              await ref.read(adminRepositoryProvider).removeAssignment(a.id);
-                              ref.invalidate(assignmentsProvider);
-                            },
-                          ),
+    final t = context.ak;
+    return AsyncView(
+      value: data,
+      onRetry: () => ref.invalidate(assignmentsProvider),
+      builder: (list) {
+        final byEntity = <String, List<Assignment>>{};
+        for (final a in list) {
+          byEntity.putIfAbsent(a.entityName ?? 'Portée cabinet', () => []).add(a);
+        }
+        return AkPage(
+          children: [
+            Wrap(
+              spacing: AkSpace.s2,
+              runSpacing: AkSpace.s2,
+              alignment: WrapAlignment.end,
+              children: [
+                AkButton.secondary(
+                  'Réaffecter en masse',
+                  icon: Icons.swap_horiz,
+                  dense: true,
+                  onPressed: () => showDialog(context: context, builder: (_) => const ReassignDialog()),
+                ),
+                AkButton.primary(
+                  'Affecter',
+                  icon: Icons.add,
+                  dense: true,
+                  onPressed: () => showDialog(context: context, builder: (_) => const AssignmentDialog()),
+                ),
+              ],
+            ),
+            const SizedBox(height: AkSpace.s3),
+            for (final e in byEntity.entries)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AkSpace.s3),
+                child: AkCard(
+                  padding: EdgeInsets.zero,
+                  clip: true,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(AkSpace.s4, AkSpace.s3, AkSpace.s4, AkSpace.s1),
+                          child: Text(e.key, style: AkText.heading.copyWith(color: t.text)),
                         ),
-                    ],
+                        for (final a in e.value)
+                          ListTile(
+                            dense: true,
+                            title: Text(a.userName, style: AkText.body.copyWith(color: t.text)),
+                            subtitle: Text(a.roleName, style: AkText.caption.copyWith(color: t.textMuted)),
+                            trailing: AkIconButton(
+                              tooltip: 'Retirer l\'affectation',
+                              icon: Icons.delete_outline,
+                              dense: true,
+                              onPressed: () async {
+                                await ref.read(adminRepositoryProvider).removeAssignment(a.id);
+                                ref.invalidate(assignmentsProvider);
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              if (list.isEmpty) const Text('Aucune affectation.'),
-            ],
-          );
-        },
-      ),
+              ),
+            if (list.isEmpty) const AkEmptyState('Aucune affectation.'),
+          ],
+        );
+      },
     );
   }
 }
@@ -237,55 +280,55 @@ class _AssignmentDialogState extends ConsumerState<AssignmentDialog> {
     final cabinet = ref.watch(currentCabinetProvider).value;
     final roleDef = roles.where((r) => r.id == _role).firstOrNull;
     final cabinetScope = roleDef != null && (roleDef.code == 'partner' || roleDef.code == 'tech_admin');
-    return AlertDialog(
-      title: const Text('Affecter un collaborateur'),
-      content: SizedBox(
-        width: 380,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: _user,
-              decoration: const InputDecoration(labelText: 'Collaborateur'),
-              items: [for (final p in profiles.where((p) => p.isActive)) DropdownMenuItem(value: p.id, child: Text(p.fullName.isEmpty ? p.email : p.fullName))],
-              onChanged: (v) => setState(() => _user = v),
+    return AkDialog(
+      title: 'Affecter un collaborateur',
+      width: 380,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AkDropdown<String>(
+            value: _user,
+            label: 'Collaborateur',
+            items: [for (final p in profiles.where((p) => p.isActive)) AkOption(p.id, p.fullName.isEmpty ? p.email : p.fullName)],
+            onChanged: (v) => setState(() => _user = v),
+          ),
+          const SizedBox(height: AkSpace.s3),
+          AkDropdown<String>(value: _role, label: 'Rôle', items: [for (final r in roles) AkOption(r.id, r.name)], onChanged: (v) => setState(() => _role = v)),
+          const SizedBox(height: AkSpace.s3),
+          if (!cabinetScope)
+            AkDropdown<String>(
+              value: _entity,
+              label: 'Dossier',
+              items: [for (final e in entities) AkOption(e.id, e.name)],
+              onChanged: (v) => setState(() => _entity = v),
             ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              initialValue: _role,
-              decoration: const InputDecoration(labelText: 'Rôle'),
-              items: [for (final r in roles) DropdownMenuItem(value: r.id, child: Text(r.name))],
-              onChanged: (v) => setState(() => _role = v),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AkSpace.s3),
+              child: AkBanner(kind: AkBannerKind.danger, child: Text(_error!)),
             ),
-            const SizedBox(height: 10),
-            if (!cabinetScope)
-              DropdownButtonFormField<String>(
-                initialValue: _entity,
-                decoration: const InputDecoration(labelText: 'Dossier'),
-                items: [for (final e in entities) DropdownMenuItem(value: e.id, child: Text(e.name))],
-                onChanged: (v) => setState(() => _entity = v),
-              ),
-            if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
-          ],
-        ),
+        ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-        FilledButton(
+        AkButton.secondary('Annuler', onPressed: () => Navigator.pop(context)),
+        AkButton.primary(
+          'Affecter',
           onPressed: () async {
             if (_user == null || _role == null || (!cabinetScope && _entity == null) || cabinet == null) {
               setState(() => _error = 'Renseignez le collaborateur, le rôle et le dossier.');
               return;
             }
             try {
-              await ref.read(adminRepositoryProvider).addAssignment(cabinetId: cabinet.id, userId: _user!, roleId: _role!, entityId: cabinetScope ? null : _entity);
+              await ref
+                  .read(adminRepositoryProvider)
+                  .addAssignment(cabinetId: cabinet.id, userId: _user!, roleId: _role!, entityId: cabinetScope ? null : _entity);
               ref.invalidate(assignmentsProvider);
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
               setState(() => _error = '$e');
             }
           },
-          child: const Text('Affecter'),
         ),
       ],
     );
@@ -307,32 +350,32 @@ class _ReassignDialogState extends ConsumerState<ReassignDialog> {
   Widget build(BuildContext context) {
     final profiles = ref.watch(profilesProvider).value ?? const <Profile>[];
     final cabinet = ref.watch(currentCabinetProvider).value;
-    return AlertDialog(
-      title: const Text('Réaffecter tous les dossiers'),
-      content: SizedBox(
-        width: 380,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: _from,
-              decoration: const InputDecoration(labelText: 'De'),
-              items: [for (final p in profiles) DropdownMenuItem(value: p.id, child: Text(p.fullName.isEmpty ? p.email : p.fullName))],
-              onChanged: (v) => setState(() => _from = v),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              initialValue: _to,
-              decoration: const InputDecoration(labelText: 'Vers'),
-              items: [for (final p in profiles.where((p) => p.isActive)) DropdownMenuItem(value: p.id, child: Text(p.fullName.isEmpty ? p.email : p.fullName))],
-              onChanged: (v) => setState(() => _to = v),
-            ),
-          ],
-        ),
+    return AkDialog(
+      title: 'Réaffecter tous les dossiers',
+      width: 380,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AkDropdown<String>(
+            value: _from,
+            label: 'De',
+            items: [for (final p in profiles) AkOption(p.id, p.fullName.isEmpty ? p.email : p.fullName)],
+            onChanged: (v) => setState(() => _from = v),
+          ),
+          const SizedBox(height: AkSpace.s3),
+          AkDropdown<String>(
+            value: _to,
+            label: 'Vers',
+            items: [for (final p in profiles.where((p) => p.isActive)) AkOption(p.id, p.fullName.isEmpty ? p.email : p.fullName)],
+            onChanged: (v) => setState(() => _to = v),
+          ),
+        ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-        FilledButton(
+        AkButton.secondary('Annuler', onPressed: () => Navigator.pop(context)),
+        AkButton.primary(
+          'Transférer',
           onPressed: _from == null || _to == null || _from == _to || cabinet == null
               ? null
               : () async {
@@ -343,7 +386,6 @@ class _ReassignDialogState extends ConsumerState<ReassignDialog> {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$n affectation(s) transférée(s).')));
                   }
                 },
-          child: const Text('Transférer'),
         ),
       ],
     );
@@ -367,26 +409,29 @@ class _AuditTabState extends ConsumerState<AuditTab> {
   @override
   Widget build(BuildContext context) {
     final cabinet = ref.watch(currentCabinetProvider).value;
+    final t = context.ak;
+    final pad = akPageMargin(context);
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: EdgeInsets.fromLTRB(pad, AkSpace.s3, pad, 0),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               SizedBox(
                 width: 220,
-                child: DropdownButtonFormField<String>(
-                  initialValue: _action,
-                  decoration: const InputDecoration(labelText: 'Action'),
+                child: AkDropdown<String>(
+                  value: _action,
+                  label: 'Action',
                   items: const [
-                    DropdownMenuItem(value: '', child: Text('Toutes')),
-                    DropdownMenuItem(value: 'login', child: Text('Connexions')),
-                    DropdownMenuItem(value: 'validate', child: Text('Validations')),
-                    DropdownMenuItem(value: 'review', child: Text('Revues')),
-                    DropdownMenuItem(value: 'export', child: Text('Exports')),
-                    DropdownMenuItem(value: 'update', child: Text('Modifications')),
-                    DropdownMenuItem(value: 'delete', child: Text('Suppressions')),
-                    DropdownMenuItem(value: 'import_apply', child: Text('Imports')),
+                    AkOption('', 'Toutes'),
+                    AkOption('login', 'Connexions'),
+                    AkOption('validate', 'Validations'),
+                    AkOption('review', 'Revues'),
+                    AkOption('export', 'Exports'),
+                    AkOption('update', 'Modifications'),
+                    AkOption('delete', 'Suppressions'),
+                    AkOption('import_apply', 'Imports'),
                   ],
                   onChanged: (v) => setState(() {
                     _action = v ?? '';
@@ -395,18 +440,20 @@ class _AuditTabState extends ConsumerState<AuditTab> {
                 ),
               ),
               const Spacer(),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.verified_outlined),
-                label: const Text('Vérifier la chaîne'),
+              AkButton.secondary(
+                'Vérifier la chaîne',
+                icon: Icons.verified_outlined,
                 onPressed: cabinet == null
                     ? null
                     : () async {
                         final broken = await ref.read(adminRepositoryProvider).verifyChain(cabinet.id);
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(broken == null ? 'Chaîne SHA-256 intègre.' : 'Rupture détectée à l\'événement n° $broken !'),
-                          backgroundColor: broken == null ? AkColors.validated : AkColors.toCorrect,
-                        ));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(broken == null ? 'Chaîne SHA-256 intègre.' : 'Rupture détectée à l\'événement n° $broken !'),
+                            backgroundColor: broken == null ? t.success : t.danger,
+                          ),
+                        );
                       },
               ),
             ],
@@ -416,26 +463,47 @@ class _AuditTabState extends ConsumerState<AuditTab> {
           child: FutureBuilder<List<AuditEvent>>(
             future: _future,
             builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-              if (snap.hasError) return Center(child: Text('Erreur : ${snap.error}'));
+              if (snap.connectionState != ConnectionState.done) return const AkLoading();
+              if (snap.hasError) return AkErrorMessage('Erreur : ${snap.error}', onRetry: () => setState(() => _future = _load()));
               final events = snap.data ?? const [];
-              return ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: events.length,
-                separatorBuilder: (_, _) => const Divider(),
-                itemBuilder: (_, i) {
-                  final e = events[i];
-                  return ListTile(
-                    dense: true,
-                    leading: Text('${e.id}', style: const TextStyle(fontFamily: 'monospace')),
-                    title: Text('${e.action}${e.tableName != null ? ' · ${e.tableName}' : ''}'),
-                    subtitle: Text('${Fmt.date(e.occurredAt)} ${e.occurredAt.hour.toString().padLeft(2, '0')}:${e.occurredAt.minute.toString().padLeft(2, '0')} · ${e.actorName ?? 'système'} · ${e.hash.substring(0, 12)}…'),
-                    onTap: () => showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(title: Text('Événement ${e.id}'), content: SingleChildScrollView(child: SelectableText(e.payload.toString()))),
+              return AkPage(
+                children: [
+                  AkCard(
+                    padding: EdgeInsets.zero,
+                    clip: true,
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Column(
+                        children: [
+                          for (var i = 0; i < events.length; i++) ...[
+                            if (i > 0) Divider(height: 1, color: t.border),
+                            ListTile(
+                              dense: true,
+                              leading: Text('${events[i].id}', style: AkText.code.copyWith(color: t.textMuted)),
+                              title: Text(
+                                '${events[i].action}${events[i].tableName != null ? ' · ${events[i].tableName}' : ''}',
+                                style: AkText.bodyStrong.copyWith(color: t.text),
+                              ),
+                              subtitle: Text(
+                                '${Fmt.date(events[i].occurredAt)} ${events[i].occurredAt.hour.toString().padLeft(2, '0')}:${events[i].occurredAt.minute.toString().padLeft(2, '0')} · ${events[i].actorName ?? 'système'} · ${events[i].hash.substring(0, 12)}…',
+                                style: AkText.caption.copyWith(color: t.textMuted),
+                              ),
+                              onTap: () => showDialog(
+                                context: context,
+                                builder: (ctx) => AkDialog(
+                                  title: 'Événement ${events[i].id}',
+                                  content: SelectableText(events[i].payload.toString(), style: AkText.code),
+                                  actions: [AkButton.primary('Fermer', onPressed: () => Navigator.pop(ctx))],
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (events.isEmpty) const AkEmptyState('Aucun événement.'),
+                        ],
+                      ),
                     ),
-                  );
-                },
+                  ),
+                ],
               );
             },
           ),

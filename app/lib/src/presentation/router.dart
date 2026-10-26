@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:akonta/design/catalog/catalog_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -45,6 +46,9 @@ class _AuthListenable extends ChangeNotifier {
   }
 }
 
+/// Le catalogue du système de design n'existe qu'en mode développement.
+final bool _devCatalog = kDebugMode || const bool.fromEnvironment('AK_DEV');
+
 /// Routes : connexion → (défi ou enrôlement TOTP) → gabarit avec modules.
 final routerProvider = Provider<GoRouter>((ref) {
   final client = ref.watch(supabaseClientProvider);
@@ -57,6 +61,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       final signedIn = client.auth.currentSession != null;
       final onLogin = state.matchedLocation == '/connexion';
+      if (_devCatalog && state.matchedLocation == '/catalogue') return null;
       if (!signedIn) return onLogin ? null : '/connexion';
       if (onLogin) return '/';
       // MFA : défi si un facteur est enrôlé ; enrôlement forcé pour les rôles qui l'exigent.
@@ -73,6 +78,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // Catalogue du système de design : mode développement seulement.
+      if (_devCatalog) GoRoute(path: '/catalogue', builder: (_, _) => const CatalogScreen()),
       GoRoute(path: '/connexion', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/mfa/verification', builder: (context, _) => MfaChallengeScreen(onVerified: () => context.go('/'))),
       GoRoute(path: '/mfa/activation', builder: (context, _) => MfaEnrollScreen(mandatory: true, onDone: () => context.go('/'))),

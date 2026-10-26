@@ -1,3 +1,4 @@
+import 'package:akonta/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,16 +13,8 @@ class AsyncView<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return value.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Erreur : $e', textAlign: TextAlign.center),
-            if (onRetry != null) TextButton(onPressed: onRetry, child: const Text('Réessayer')),
-          ],
-        ),
-      ),
+      loading: () => const AkLoading(),
+      error: (e, _) => AkErrorMessage('Erreur : $e', onRetry: onRetry),
       data: builder,
     );
   }

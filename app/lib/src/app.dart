@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/design/design.dart';
 
 import 'core/config.dart';
-import 'core/theme.dart';
 import 'data/auth_repository.dart';
 import 'data/supabase_providers.dart';
 import 'presentation/auth/inactivity_watcher.dart';
@@ -21,6 +21,8 @@ class AkontaApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Akonta',
       theme: buildAkontaTheme(),
+      darkTheme: buildAkontaDarkTheme(),
+      themeMode: ThemeMode.system,
       locale: const Locale('fr', 'FR'),
       supportedLocales: const [Locale('fr', 'FR')],
       localizationsDelegates: const [
@@ -29,12 +31,20 @@ class AkontaApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: router,
-      builder: (context, child) => InactivityWatcher(
-        enabled: signedIn,
-        timeout: Duration(minutes: minutes),
-        onTimeout: () => ref.read(authRepositoryProvider).signOut(),
-        child: child ?? const SizedBox.shrink(),
-      ),
+      builder: (context, child) {
+        // Écrans étroits : contrôles tactiles de 44 px (système de design).
+        final touch = MediaQuery.sizeOf(context).width < 600;
+        final dark = Theme.of(context).brightness == Brightness.dark;
+        return Theme(
+          data: dark ? buildAkontaDarkTheme(touch: touch) : buildAkontaTheme(touch: touch),
+          child: InactivityWatcher(
+            enabled: signedIn,
+            timeout: Duration(minutes: minutes),
+            onTimeout: () => ref.read(authRepositoryProvider).signOut(),
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+      },
     );
   }
 }

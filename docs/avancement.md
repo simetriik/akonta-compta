@@ -63,3 +63,16 @@ Parcours dans le navigateur intégré (`flutter run -d web-server`, fenêtre 144
 - **Écran de clôture** : l'onglet Arrêté définitif d'un exercice arrêté affiche la date au lieu du formulaire grisé.
 - Suites : pgTAP 333, Flutter 35, pytest 11, Deno 8.
 - **Reste observé, non corrigé** : le premier clic sur une liste déroulante juste après l'affichage d'un écran est parfois ignoré sur le web (rendu logiciel lent, non reproduit sur desktop) ; la liste des comptes lettrables présente tout le plan (filtrer sur les comptes mouvementés serait plus confortable) ; le dossier courant n'est pas mémorisé entre deux rechargements de page web.
+
+## Vidéo de recette (26 oct. 2026)
+- `outputs/recette-video/` : générateur `make_video.py` (piper pour la voix française hors ligne, ffmpeg pour l'assemblage), `manifest.json` (segments, narration, captures), `script-narration.md`. La vidéo `akonta-recette.mp4` (1080p, 6 min 20 s, 36 séquences) et les captures `frames/` sont régénérables et non versionnées. Captures prises dans le navigateur intégré sur la branche `feat/design-refresh` (nouvel habillage, thème clair, build release, fenêtre émulée 1280 px).
+- **Corrigé en chemin** : poste CJ des états financiers (D-014, migration 0019) ; bouton « Enregistrer » de la revue inactif pendant la saisie du commentaire.
+- **Corrigé ensuite** (même jour) : la liste Saisie est limitée à l'exercice du dossier courant (`fiscal_year_id`) ; l'écran Clôture repart de l'exercice ouvert au changement de dossier ; le message de génération est borné à 6 s et fermable (avec la navigation accessible, un message à action restait affiché) ; l'onglet Stocks lit le stock initial dans la balance à la date d'ouverture (`trial_balance`, classe 3) sans attendre la génération.
+- **Observé, à traiter** : sur une fenêtre de moins de 1 280 px, les tableaux de consultation débordent à droite.
+
+## Refonte de l'interface (27 oct. 2026, branche `refonte-ui`)
+- **Système de design** `app/lib/design/` : jetons (palette terracotta, neutres chauds, états, espacements base 4, rayons, ombre, échelle typographique ≥ 14 px, Plex Sans / Plex Mono tabulaire / Poppins), thèmes clair et sombre, logo du kit, bibliothèque de composants unique et catalogue `/catalogue`. Documentation : `docs/design/systeme-de-design.md`.
+- **Migration** de tous les écrans vers les composants ; garde-fou `design_guard_test` (widgets bruts, tailles < 14 px, couleurs en dur). Contraste WCAG AA testé (`design_tokens_test`).
+- **Saisie** : parcours entièrement au clavier, contrepartie proposée sur la nouvelle ligne, barre d'équilibre fixe, aide F1 ; navigation mobile réduite centrée sur les pièces.
+- **Changements de comportement mineurs** (revue UI) : contrepartie de cession d'immobilisation et compte de trésorerie d'un journal en saisie avec autocomplétion ; compte de régularisation reconnu parmi les comptes filtrés ; total du tableau des postes de clôture sous la colonne Net ; case « tout sélectionner » à deux états.
+- Captures avant / après : `docs/design/avant/`, `docs/design/apres/`.

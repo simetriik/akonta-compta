@@ -1,0 +1,4 @@
+# Fichiers générés : vidéo et captures (régénérables avec make_video.py)
+*.mp4
+frames/
+build/

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/entries_repository.dart';
 import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entry_models.dart';
 import '../../domain/models.dart';
+import '../../domain/reference_models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
-import '../widgets/status_chip.dart';
 
 /// Liste des écritures du dossier courant : filtres journal / mois / statut, recherche, validation par lot,
 /// file « à revoir » pour le chef de mission, contre-passation (§10.4).
@@ -46,88 +46,214 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
     final canReverse = perms.has('entries.reverse', entityId: widget.entity.id);
     final month = filter.month ?? DateTime(DateTime.now().year, DateTime.now().month, 1);
 
+    final t = context.ak;
+    final mobile = MediaQuery.sizeOf(context).width < 600;
+    final gutter = akPageMargin(context);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('new-entry'),
-        onPressed: () => context.go('/saisie/nouvelle'),
-        icon: const Icon(Icons.add),
-        label: const Text('Nouvelle écriture'),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(gutter, AkSpace.s4, gutter, AkSpace.s3),
+            child: AkPageHead(
+              title: 'Saisie',
+              subtitle: 'Écritures du dossier courant',
+              actions: [AkButton.primary('Nouvelle écriture', key: const Key('new-entry'), icon: Icons.add, onPressed: () => context.go('/saisie/nouvelle'))],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(gutter, 0, gutter, AkSpace.s4),
+              child: AkCard(
+                padding: EdgeInsets.zero,
+                clip: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _filters(context, filter, journals, month),
+                    Divider(height: 1, color: t.border),
+                    Expanded(
+                      child: AsyncView(
+                        value: entries,
+                        onRetry: () => ref.invalidate(entriesListProvider(widget.entity.id)),
+                        builder: (list) => list.isEmpty
+                            ? const AkEmptyState('Aucune écriture pour ces critères.')
+                            : _list(context, list, canValidate: canValidate, canReview: canReview, canReverse: canReverse, mobile: mobile),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-      body: Column(children: [
-        Material(
-          color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                DropdownButton<String?>(
-                  value: filter.journalId,
-                  hint: const Text('Tous les journaux'),
-                  items: [const DropdownMenuItem(value: null, child: Text('Tous les journaux')), for (final j in journals) DropdownMenuItem(value: j.id, child: Text('${j.code} · ${j.label}'))],
-                  onChanged: (v) => ref.read(entryFilterProvider.notifier).set(v == null ? filter.copyWith(clearJournal: true) : filter.copyWith(journalId: v)),
-                ),
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => ref.read(entryFilterProvider.notifier).set(filter.copyWith(month: DateTime(month.year, month.month - 1, 1)))),
-                  Text(Fmt.month(month), style: const TextStyle(fontWeight: FontWeight.w600)),
-                  IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => ref.read(entryFilterProvider.notifier).set(filter.copyWith(month: DateTime(month.year, month.month + 1, 1)))),
-                  TextButton(onPressed: () => ref.read(entryFilterProvider.notifier).set(filter.copyWith(clearMonth: true)), child: const Text('Tout l\'exercice')),
-                ]),
-                SegmentedButton<String>(
-                  segments: const [ButtonSegment(value: 'all', label: Text('Toutes')), ButtonSegment(value: 'draft', label: Text('Brouillards')), ButtonSegment(value: 'validated', label: Text('Validées')), ButtonSegment(value: 'review', label: Text('À revoir'))],
-                  selected: {filter.toReviewOnly ? 'review' : (filter.status ?? 'all')},
-                  onSelectionChanged: (s) {
-                    final v = s.first;
-                    ref.read(entryFilterProvider.notifier).set(EntryFilter(journalId: filter.journalId, month: filter.month, search: filter.search, status: v == 'all' || v == 'review' ? null : v, toReviewOnly: v == 'review'));
-                  },
-                ),
-                SizedBox(
-                  width: 260,
-                  child: TextField(
-                    controller: _search,
-                    decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'Montant, libellé, compte, tiers, n°', suffixIcon: IconButton(icon: const Icon(Icons.clear), onPressed: () {
-                      _search.clear();
-                      ref.read(entryFilterProvider.notifier).set(filter.copyWith(search: ''));
-                    })),
-                    onSubmitted: (v) => ref.read(entryFilterProvider.notifier).set(filter.copyWith(search: v)),
+    );
+  }
+
+  /// Barre de filtres : journal, mois, statut, recherche.
+  Widget _filters(BuildContext context, EntryFilter filter, List<Journal> journals, DateTime month) {
+    final notifier = ref.read(entryFilterProvider.notifier);
+    return Padding(
+      padding: const EdgeInsets.all(AkSpace.s3),
+      child: Wrap(
+        spacing: AkSpace.s3,
+        runSpacing: AkSpace.s2,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          SizedBox(
+            width: 240,
+            child: AkDropdown<String?>(
+              value: filter.journalId,
+              hint: 'Tous les journaux',
+              items: [const AkOption<String?>(null, 'Tous les journaux'), for (final j in journals) AkOption<String?>(j.id, '${j.code} · ${j.label}')],
+              onChanged: (v) => notifier.set(v == null ? filter.copyWith(clearJournal: true) : filter.copyWith(journalId: v)),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AkIconButton(
+                icon: Icons.chevron_left,
+                tooltip: 'Mois précédent',
+                onPressed: () => notifier.set(filter.copyWith(month: DateTime(month.year, month.month - 1, 1))),
+              ),
+              Text(Fmt.month(month), style: AkText.bodyStrong.copyWith(color: context.ak.text)),
+              AkIconButton(
+                icon: Icons.chevron_right,
+                tooltip: 'Mois suivant',
+                onPressed: () => notifier.set(filter.copyWith(month: DateTime(month.year, month.month + 1, 1))),
+              ),
+              AkButton.ghost('Tout l\'exercice', onPressed: () => notifier.set(filter.copyWith(clearMonth: true))),
+            ],
+          ),
+          AkSegmented<String>(
+            options: const [AkOption('all', 'Toutes'), AkOption('draft', 'Brouillards'), AkOption('validated', 'Validées'), AkOption('review', 'À revoir')],
+            selected: filter.toReviewOnly ? 'review' : (filter.status ?? 'all'),
+            onChanged: (v) => notifier.set(
+              EntryFilter(
+                journalId: filter.journalId,
+                month: filter.month,
+                search: filter.search,
+                status: v == 'all' || v == 'review' ? null : v,
+                toReviewOnly: v == 'review',
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 280,
+            child: AkTextField(
+              controller: _search,
+              hint: 'Montant, libellé, compte, tiers, n°',
+              prefixIcon: const Icon(Icons.search, size: 18),
+              suffix: AkIconButton(
+                icon: Icons.clear,
+                tooltip: 'Effacer',
+                size: 18,
+                onPressed: () {
+                  _search.clear();
+                  notifier.set(filter.copyWith(search: ''));
+                },
+              ),
+              onSubmitted: (v) => notifier.set(filter.copyWith(search: v)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Tableau des écritures, en-tête de colonnes, lignes de 32 px et barre de lot en pied.
+  Widget _list(
+    BuildContext context,
+    List<EntryModel> list, {
+    required bool canValidate,
+    required bool canReview,
+    required bool canReverse,
+    required bool mobile,
+  }) {
+    final t = context.ak;
+    final selectable = canValidate ? list.where((e) => e.isDraft).toList() : <EntryModel>[];
+    final allSelected = selectable.isNotEmpty && selectable.every((e) => _selected.contains(e.id));
+    final selectedTotal = list.where((e) => _selected.contains(e.id)).fold<int>(0, (sum, e) => sum + e.totalDebit);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!mobile)
+          Container(
+            height: AkSpace.rowCompact,
+            color: t.surfaceSunken,
+            padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
+            child: DefaultTextStyle(
+              style: AkText.label.copyWith(color: t.textMuted, letterSpacing: 0),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 40,
+                    child: selectable.isEmpty
+                        ? null
+                        : AkCheckbox(
+                            dense: true,
+                            value: allSelected,
+                            onChanged: (_) => setState(() => allSelected ? _selected.clear() : _selected.addAll(selectable.map((e) => e.id))),
+                          ),
                   ),
-                ),
-                if (_selected.isNotEmpty && canValidate)
-                  FilledButton.icon(
-                    key: const Key('validate-selected'),
-                    onPressed: () => _validateSelected(context),
-                    icon: const Icon(Icons.check),
-                    label: Text('Valider ${_selected.length} brouillard(s)'),
-                  ),
-              ],
+                  const SizedBox(width: 90, child: Text('Date')),
+                  const SizedBox(width: 120, child: Text('N°')),
+                  const Expanded(child: Text('Libellé')),
+                  const SizedBox(width: 130, child: Text('Montant (FCFA)', textAlign: TextAlign.right)),
+                  const SizedBox(width: AkSpace.s3),
+                  const SizedBox(width: 110, child: Text('Statut')),
+                  const SizedBox(width: 96),
+                ],
+              ),
+            ),
+          ),
+        if (!mobile) Divider(height: 1, color: t.border),
+        Expanded(
+          child: ListView.separated(
+            padding: EdgeInsets.zero,
+            itemCount: list.length,
+            separatorBuilder: (_, _) => Divider(height: 1, color: t.border),
+            itemBuilder: (_, i) => _EntryTile(
+              entry: list[i],
+              selected: _selected.contains(list[i].id),
+              mobile: mobile,
+              onSelect: list[i].isDraft && canValidate ? (v) => setState(() => v ? _selected.add(list[i].id) : _selected.remove(list[i].id)) : null,
+              onOpen: () => context.go('/saisie/${list[i].id}'),
+              onReview: canReview && !list[i].isDraft ? () => _review(context, list[i]) : null,
+              onReverse: canReverse && !list[i].isDraft && list[i].reversedBy == null ? () => _reverse(context, list[i]) : null,
             ),
           ),
         ),
-        Expanded(
-          child: AsyncView(
-            value: entries,
-            onRetry: () => ref.invalidate(entriesListProvider(widget.entity.id)),
-            builder: (list) => list.isEmpty
-                ? const Center(child: Text('Aucune écriture pour ces critères.'))
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                    itemCount: list.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (_, i) => _EntryTile(
-                      entry: list[i],
-                      selected: _selected.contains(list[i].id),
-                      onSelect: list[i].isDraft && canValidate ? (v) => setState(() => v ? _selected.add(list[i].id) : _selected.remove(list[i].id)) : null,
-                      onOpen: () => context.go('/saisie/${list[i].id}'),
-                      onReview: canReview && !list[i].isDraft ? () => _review(context, list[i]) : null,
-                      onReverse: canReverse && !list[i].isDraft && list[i].reversedBy == null ? () => _reverse(context, list[i]) : null,
-                    ),
-                  ),
+        Divider(height: 1, color: t.border),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: AkSpace.s2),
+          child: Wrap(
+            spacing: AkSpace.s3,
+            runSpacing: AkSpace.s2,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (_selected.isNotEmpty && canValidate) ...[
+                Text('${_selected.length} brouillard(s) sélectionné(s)', style: AkText.bodyStrong.copyWith(color: t.text)),
+                Text('Total ${Fmt.fcfa(selectedTotal, showZero: true)} FCFA', style: AkText.table.copyWith(color: t.textMuted)),
+                AkButton.primary(
+                  'Valider ${_selected.length} brouillard(s)',
+                  key: const Key('validate-selected'),
+                  icon: Icons.check,
+                  onPressed: () => _validateSelected(context),
+                ),
+              ],
+              Icon(Icons.auto_awesome, size: 14, color: t.textMuted),
+              Text('Générée', style: AkText.caption.copyWith(color: t.textMuted)),
+              Icon(Icons.undo, size: 14, color: t.textMuted),
+              Text('Contre-passée', style: AkText.caption.copyWith(color: t.textMuted)),
+            ],
           ),
         ),
-      ]),
+      ],
     );
   }
 
@@ -137,14 +263,17 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${_selected.length} écriture(s) validée(s).')));
       setState(_selected.clear);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchEntryError(e)), backgroundColor: AkColors.toCorrect));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchEntryError(e)), backgroundColor: context.ak.danger));
     }
     ref.invalidate(entriesListProvider(widget.entity.id));
     ref.invalidate(entityDashboardProvider);
   }
 
   Future<void> _review(BuildContext context, EntryModel e) async {
-    final result = await showDialog<(String, String?)>(context: context, builder: (_) => ReviewDialog(entry: e));
+    final result = await showDialog<(String, String?)>(
+      context: context,
+      builder: (_) => ReviewDialog(entry: e),
+    );
     if (result == null) return;
     try {
       await ref.read(entriesRepositoryProvider).review(e.id, status: result.$1, comment: result.$2);
@@ -156,13 +285,16 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
   }
 
   Future<void> _reverse(BuildContext context, EntryModel e) async {
-    final result = await showDialog<(String, DateTime)>(context: context, builder: (_) => ReversalDialog(entry: e));
+    final result = await showDialog<(String, DateTime)>(
+      context: context,
+      builder: (_) => ReversalDialog(entry: e),
+    );
     if (result == null) return;
     try {
       await ref.read(entriesRepositoryProvider).reverse(e.id, reason: result.$1, date: result.$2);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Écriture contre-passée (écriture inverse validée).')));
     } catch (err) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchEntryError(err)), backgroundColor: AkColors.toCorrect));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchEntryError(err)), backgroundColor: context.ak.danger));
     }
     ref.invalidate(entriesListProvider(widget.entity.id));
   }
@@ -175,10 +307,11 @@ String frenchEntryError(Object e) {
 }
 
 class _EntryTile extends StatelessWidget {
-  const _EntryTile({required this.entry, required this.selected, this.onSelect, required this.onOpen, this.onReview, this.onReverse});
+  const _EntryTile({required this.entry, required this.selected, required this.mobile, this.onSelect, required this.onOpen, this.onReview, this.onReverse});
 
   final EntryModel entry;
   final bool selected;
+  final bool mobile;
   final ValueChanged<bool>? onSelect;
   final VoidCallback onOpen;
   final VoidCallback? onReview;
@@ -186,30 +319,141 @@ class _EntryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
-      leading: onSelect == null ? const SizedBox(width: 40) : Checkbox(value: selected, onChanged: (v) => onSelect!(v ?? false)),
-      title: Row(children: [
-        SizedBox(width: 90, child: Text(Fmt.date(entry.entryDate))),
-        SizedBox(width: 110, child: Text(entry.numberLabel, style: const TextStyle(fontFamily: 'monospace'))),
-        Expanded(child: Text(entry.label, overflow: TextOverflow.ellipsis)),
-        SizedBox(width: 120, child: Text(Fmt.fcfa(entry.totalDebit, showZero: true), textAlign: TextAlign.right)),
-        const SizedBox(width: 12),
-        StatusChip(StatusChip.of(status: entry.status, reviewStatus: entry.reviewStatus)),
-        if (entry.isGenerated) const Padding(padding: EdgeInsets.only(left: 6), child: Tooltip(message: 'Écriture générée', child: Icon(Icons.auto_awesome, size: 16))),
-        if (entry.reversedBy != null) const Padding(padding: EdgeInsets.only(left: 6), child: Tooltip(message: 'Contre-passée', child: Icon(Icons.undo, size: 16))),
-      ]),
-      subtitle: entry.reviewComment != null ? Text('Revue : ${entry.reviewComment}', style: const TextStyle(color: AkColors.toCorrect)) : null,
-      onTap: onOpen,
-      trailing: (onReview == null && onReverse == null)
-          ? null
-          : PopupMenuButton<String>(
-              onSelected: (v) => v == 'review' ? onReview?.call() : onReverse?.call(),
-              itemBuilder: (_) => [
-                if (onReview != null) const PopupMenuItem(value: 'review', child: Text('Revue…')),
-                if (onReverse != null) const PopupMenuItem(value: 'reverse', child: Text('Contre-passer…')),
-              ],
+    final t = context.ak;
+    final status = AkStatusBadge(AkStatusBadge.of(status: entry.status, reviewStatus: entry.reviewStatus));
+    final flags = [
+      if (entry.isGenerated)
+        Tooltip(
+          message: 'Écriture générée',
+          child: Icon(Icons.auto_awesome, size: 16, color: t.textMuted),
+        ),
+      if (entry.reversedBy != null)
+        Tooltip(
+          message: 'Contre-passée',
+          child: Icon(Icons.undo, size: 16, color: t.textMuted),
+        ),
+    ];
+    final menu = (onReview == null && onReverse == null)
+        ? null
+        : PopupMenuButton<String>(
+            tooltip: 'Actions sur l\'écriture',
+            iconSize: 18,
+            onSelected: (v) => v == 'review' ? onReview?.call() : onReverse?.call(),
+            itemBuilder: (_) => [
+              if (onReview != null) const PopupMenuItem(value: 'review', child: Text('Revue…')),
+              if (onReverse != null) const PopupMenuItem(value: 'reverse', child: Text('Contre-passer…')),
+            ],
+          );
+    final comment = entry.reviewComment != null
+        ? Padding(
+            padding: const EdgeInsets.only(bottom: AkSpace.s2),
+            child: Text('Revue : ${entry.reviewComment}', style: AkText.caption.copyWith(color: t.danger)),
+          )
+        : null;
+    final check = onSelect == null ? const SizedBox(width: 40) : AkCheckbox(dense: true, value: selected, onChanged: onSelect);
+
+    final Widget body;
+    if (mobile) {
+      body = ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: AkSpace.rowTouch),
+        child: Row(
+          children: [
+            check,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AkSpace.s2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(Fmt.date(entry.entryDate), style: AkText.table.copyWith(color: t.textMuted)),
+                        const SizedBox(width: AkSpace.s2),
+                        Text(entry.numberLabel, style: AkText.code.copyWith(color: t.text)),
+                        const Spacer(),
+                        AkAmountText(Fmt.fcfa(entry.totalDebit, showZero: true)),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      entry.label,
+                      style: AkText.table.copyWith(color: t.text),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AkSpace.s1),
+                    Row(
+                      children: [
+                        status,
+                        const SizedBox(width: AkSpace.s2),
+                        ...flags,
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
+            ?menu,
+          ],
+        ),
+      );
+    } else {
+      body = SizedBox(
+        height: AkSpace.rowCompact,
+        child: Row(
+          children: [
+            check,
+            SizedBox(
+              width: 90,
+              child: Text(Fmt.date(entry.entryDate), style: AkText.table.copyWith(color: t.text)),
+            ),
+            SizedBox(
+              width: 120,
+              child: Text(entry.numberLabel, style: AkText.code.copyWith(color: t.text)),
+            ),
+            Expanded(
+              child: Text(
+                entry.label,
+                style: AkText.table.copyWith(color: t.text),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            SizedBox(width: 130, child: AkAmountText(Fmt.fcfa(entry.totalDebit, showZero: true))),
+            const SizedBox(width: AkSpace.s3),
+            SizedBox(
+              width: 110,
+              child: Align(alignment: Alignment.centerLeft, child: status),
+            ),
+            SizedBox(
+              width: 56,
+              child: Row(mainAxisAlignment: MainAxisAlignment.end, children: flags),
+            ),
+          ],
+        ),
+      );
+    }
+    return Material(
+      color: selected ? t.brandTint : Colors.transparent,
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.only(left: AkSpace.s2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (mobile)
+                body
+              else
+                Row(
+                  children: [
+                    Expanded(child: body),
+                    SizedBox(width: 40, child: menu),
+                  ],
+                ),
+              ?(!mobile && comment != null ? Padding(padding: const EdgeInsets.only(left: 40), child: comment) : (mobile ? comment : null)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -229,25 +473,38 @@ class _ReviewDialogState extends State<ReviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Revue de ${widget.entry.numberLabel}'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        RadioGroup<String>(
-          groupValue: _status,
-          onChanged: (v) => setState(() => _status = v ?? 'reviewed'),
-          child: const Column(children: [
-            RadioListTile(value: 'reviewed', title: Text('Revue, conforme')),
-            RadioListTile(value: 'to_correct', title: Text('À corriger (commentaire obligatoire)')),
-            RadioListTile(value: 'not_reviewed', title: Text('Remettre en « non revue »')),
-          ]),
-        ),
-        TextField(controller: _comment, key: const Key('review-comment'), decoration: const InputDecoration(labelText: 'Commentaire'), maxLines: 2),
-      ]),
+    return AkDialog(
+      title: 'Revue de ${widget.entry.numberLabel}',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RadioGroup<String>(
+            groupValue: _status,
+            onChanged: (v) => setState(() => _status = v ?? 'reviewed'),
+            child: const Column(
+              children: [
+                RadioListTile(value: 'reviewed', title: Text('Revue, conforme')),
+                RadioListTile(value: 'to_correct', title: Text('À corriger (commentaire obligatoire)')),
+                RadioListTile(value: 'not_reviewed', title: Text('Remettre en « non revue »')),
+              ],
+            ),
+          ),
+          AkTextField(
+            controller: _comment,
+            key: const Key('review-comment'),
+            label: 'Commentaire',
+            maxLines: 2,
+            onChanged: (_) => setState(() {}),
+          ), // active « Enregistrer » dès qu'un commentaire est saisi
+        ],
+      ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-        FilledButton(
-          onPressed: _status == 'to_correct' && _comment.text.trim().isEmpty ? null : () => Navigator.pop(context, (_status, _comment.text.trim().isEmpty ? null : _comment.text.trim())),
-          child: const Text('Enregistrer'),
+        AkButton.secondary('Annuler', onPressed: () => Navigator.pop(context)),
+        AkButton.primary(
+          'Enregistrer',
+          onPressed: _status == 'to_correct' && _comment.text.trim().isEmpty
+              ? null
+              : () => Navigator.pop(context, (_status, _comment.text.trim().isEmpty ? null : _comment.text.trim())),
         ),
       ],
     );
@@ -270,23 +527,24 @@ class _ReversalDialogState extends State<ReversalDialog> {
   @override
   Widget build(BuildContext context) {
     final date = Fmt.parseDate(_date.text);
-    return AlertDialog(
-      title: Text('Contre-passer ${widget.entry.numberLabel}'),
-      content: SizedBox(
-        width: 380,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Une écriture inverse, liée à l\'originale, est créée et validée dans une période ouverte.'),
-          const SizedBox(height: 8),
-          TextField(controller: _reason, key: const Key('reversal-reason'), decoration: const InputDecoration(labelText: 'Motif (obligatoire)'), onChanged: (_) => setState(() {}), autofocus: true),
-          const SizedBox(height: 8),
-          TextField(controller: _date, decoration: const InputDecoration(labelText: 'Date (jj/mm/aaaa)'), onChanged: (_) => setState(() {})),
-        ]),
+    return AkDialog(
+      title: 'Contre-passer ${widget.entry.numberLabel}',
+      width: 380,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AkBanner(kind: AkBannerKind.info, child: Text('Une écriture inverse, liée à l\'originale, est créée et validée dans une période ouverte.')),
+          const SizedBox(height: AkSpace.s3),
+          AkTextField(controller: _reason, key: const Key('reversal-reason'), label: 'Motif (obligatoire)', onChanged: (_) => setState(() {}), autofocus: true),
+          const SizedBox(height: AkSpace.s3),
+          AkDateField(controller: _date, label: 'Date (jj/mm/aaaa)', onChanged: (_) => setState(() {})),
+        ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-        FilledButton(
+        AkButton.secondary('Annuler', onPressed: () => Navigator.pop(context)),
+        AkButton.primary(
+          'Contre-passer',
           onPressed: _reason.text.trim().isEmpty || date == null ? null : () => Navigator.pop(context, (_reason.text.trim(), date)),
-          child: const Text('Contre-passer'),
         ),
       ],
     );

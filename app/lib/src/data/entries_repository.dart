@@ -34,8 +34,9 @@ class EntriesRepository {
   static const _select = 'id, entity_id, journal_id, entry_date, number, reference, label, status, review_status, review_comment, is_generated, reversal_of, reversed_by, created_by, '
       'journals(code), entry_lines(id, line_no, account_id, third_party_id, label, debit, credit, currency_code, amount_currency, exchange_rate, letter_code, accounts(code, label), third_parties(code))';
 
-  Future<List<EntryModel>> list(String entityId, EntryFilter f, {int limit = 300}) async {
+  Future<List<EntryModel>> list(String entityId, EntryFilter f, {String? fiscalYearId, int limit = 300}) async {
     var q = _client.from('entries').select(_select).eq('entity_id', entityId);
+    if (fiscalYearId != null) q = q.eq('fiscal_year_id', fiscalYearId);   // un dossier = une entité et un exercice
     if (f.journalId != null) q = q.eq('journal_id', f.journalId!);
     if (f.month != null) {
       final start = DateTime(f.month!.year, f.month!.month, 1);
@@ -131,7 +132,9 @@ final entryFilterProvider = NotifierProvider<EntryFilterNotifier, EntryFilter>(E
 
 final entriesListProvider = FutureProvider.family<List<EntryModel>, String>((ref, entityId) {
   final filter = ref.watch(entryFilterProvider);
-  return ref.watch(entriesRepositoryProvider).list(entityId, filter);
+  final current = ref.watch(currentEntityProvider);
+  final fiscalYearId = current?.id == entityId ? current?.fiscalYearId : null;
+  return ref.watch(entriesRepositoryProvider).list(entityId, filter, fiscalYearId: fiscalYearId);
 });
 
 final notificationsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) {
