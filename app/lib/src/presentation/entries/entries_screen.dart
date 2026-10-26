@@ -402,7 +402,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
             RadioListTile(value: 'not_reviewed', title: Text('Remettre en « non revue »')),
           ]),
         ),
-        TextField(controller: _comment, key: const Key('review-comment'), decoration: const InputDecoration(labelText: 'Commentaire'), maxLines: 2),
+        TextField(controller: _comment, key: const Key('review-comment'), decoration: const InputDecoration(labelText: 'Commentaire'), maxLines: 2, onChanged: (_) => setState(() {})),   // active « Enregistrer » dès qu'un commentaire est saisi
       ]),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
