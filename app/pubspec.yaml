@@ -34,6 +34,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/fonts/OFL-fonts.txt
+    - assets/logo/
   fonts:
     - family: IBMPlexSans
       fonts:

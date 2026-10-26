@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/design/design.dart';
 
-import '../../core/theme.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
-import 'ak_widgets.dart';
 
 /// Les modules de tenue exigent un dossier courant : invite à le choisir sinon.
 class RequireEntity extends ConsumerWidget {

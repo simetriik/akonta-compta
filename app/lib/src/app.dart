@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/design/design.dart';
 
 import 'core/config.dart';
-import 'core/theme.dart';
 import 'data/auth_repository.dart';
 import 'data/supabase_providers.dart';
 import 'presentation/auth/inactivity_watcher.dart';

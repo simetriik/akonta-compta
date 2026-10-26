@@ -2,18 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/entries_repository.dart';
 import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entry_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
-import '../widgets/ak_widgets.dart';
 import '../widgets/require_entity.dart';
-import '../widgets/status_chip.dart';
 import 'entries_screen.dart';
 
 /// Saisie d'une écriture (grille au clavier) : journal, date, référence, libellé ; lignes compte / tiers / libellé / débit / crédit ;
@@ -204,7 +202,7 @@ class _EditorState extends ConsumerState<_Editor> {
                       child: TextField(controller: _label, key: const Key('entry-label'), enabled: !_readOnly, decoration: const InputDecoration(labelText: 'Libellé')),
                     ),
                   ),
-                  if (_loaded != null) StatusChip(StatusChip.of(status: _loaded!.status, reviewStatus: _loaded!.reviewStatus)) else const StatusChip(EntryStatusKind.draft),
+                  if (_loaded != null) AkStatusBadge(AkStatusBadge.of(status: _loaded!.status, reviewStatus: _loaded!.reviewStatus)) else const AkStatusBadge(AkEntryStatus.draft),
                 ],
               ),
             ),

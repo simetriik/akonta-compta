@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
-import '../widgets/ak_widgets.dart';
 
 /// Tableau de bord des dossiers : chef de mission, dernier mois saisi, brouillards, écritures non revues (§10.2).
 class DashboardScreen extends ConsumerWidget {

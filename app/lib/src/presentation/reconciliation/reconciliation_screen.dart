@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/consultation_repository.dart';
 import '../../data/import_repository.dart';
 import '../../data/reconciliation_repository.dart';
@@ -15,7 +15,6 @@ import '../../domain/bank_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
 import '../inventory/inventory_screen.dart' show akPagePadding, showErrorSnack;
-import '../widgets/ak_widgets.dart';
 import '../widgets/require_entity.dart';
 
 /// Rapprochement bancaire (§10.7) : import du relevé selon un gabarit mémorisé, deux volets relevé / comptabilité,

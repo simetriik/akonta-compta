@@ -2,14 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
-import '../widgets/ak_widgets.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 

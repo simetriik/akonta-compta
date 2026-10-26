@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/config.dart';
-import '../../core/theme.dart';
 import '../../data/auth_repository.dart';
-import '../widgets/ak_widgets.dart';
-import '../widgets/akonta_logo.dart';
 
 /// Connexion e-mail + mot de passe (12 caractères minimum) et lien de réinitialisation.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -110,7 +108,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(child: AkontaLogo(height: 72)),
+                const Center(child: AkLogo(height: 72)),
                 const SizedBox(height: 28),
                 AkCard(
                   padding: const EdgeInsets.all(AkSpace.s8),

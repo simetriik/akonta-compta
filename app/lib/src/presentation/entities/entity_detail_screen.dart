@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/entities_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import '../widgets/async_view.dart';
-import '../widgets/ak_widgets.dart';
 import 'entity_form.dart';
 
 /// Dossier : fiche, dirigeants, exercices et périodes (verrouillage), historique.

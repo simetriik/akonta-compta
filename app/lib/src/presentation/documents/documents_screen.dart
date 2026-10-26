@@ -4,14 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/documents_repository.dart';
 import '../../data/entries_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
-import '../widgets/ak_widgets.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 import 'launch_url.dart';

@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../data/entries_repository.dart';
 import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entry_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
-import '../widgets/ak_widgets.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
-import '../widgets/status_chip.dart';
 
 /// Liste des écritures du dossier courant : filtres journal / mois / statut, recherche, validation par lot,
 /// file « à revoir » pour le chef de mission, contre-passation (§10.4).
@@ -287,7 +285,7 @@ class _EntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
-    final status = StatusChip(StatusChip.of(status: entry.status, reviewStatus: entry.reviewStatus));
+    final status = AkStatusBadge(AkStatusBadge.of(status: entry.status, reviewStatus: entry.reviewStatus));
     final flags = [
       if (entry.isGenerated) Tooltip(message: 'Écriture générée', child: Icon(Icons.auto_awesome, size: 16, color: t.textMuted)),
       if (entry.reversedBy != null) Tooltip(message: 'Contre-passée', child: Icon(Icons.undo, size: 16, color: t.textMuted)),

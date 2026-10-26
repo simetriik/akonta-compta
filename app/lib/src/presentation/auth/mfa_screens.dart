@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:akonta/design/design.dart';
 
-import '../../core/theme.dart';
 import '../../data/auth_repository.dart';
-import '../widgets/ak_widgets.dart';
-import '../widgets/akonta_logo.dart';
 
 /// Saisie du code TOTP à la connexion (facteur déjà enrôlé).
 class MfaChallengeScreen extends ConsumerStatefulWidget {
@@ -179,7 +177,7 @@ class MfaScaffold extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(child: AkontaLogo(height: 56)),
+                const Center(child: AkLogo(height: 56)),
                 const SizedBox(height: AkSpace.s6),
                 AkCard(
                   padding: const EdgeInsets.all(AkSpace.s8),

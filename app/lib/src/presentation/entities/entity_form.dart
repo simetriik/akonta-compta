@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../core/theme.dart';
 import '../../domain/entity_models.dart';
-import '../widgets/ak_widgets.dart';
 
 /// Fiche entité en 4 blocs (R1 identification, R2 activité, R3 dirigeants [écran dédié], paramètres comptables).
 class EntityForm extends StatefulWidget {

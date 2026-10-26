@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:akonta/design/design.dart';
 
-import '../../core/theme.dart';
 import '../../data/entities_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
-import '../widgets/ak_widgets.dart';
 import 'entity_detail_screen.dart';
 import 'entity_form.dart';
 

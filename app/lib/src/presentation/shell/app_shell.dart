@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:akonta/design/design.dart';
 
-import '../../core/theme.dart';
 import '../../data/auth_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
-import '../widgets/ak_widgets.dart';
-import '../widgets/akonta_logo.dart';
 
 /// Gabarit commun : barre supérieure + rail de navigation (desktop) ou tiroir (mobile), dossier courant toujours visible (§12.3).
 class AppShell extends ConsumerWidget {
@@ -78,7 +76,7 @@ class AppShell extends ConsumerWidget {
         titleSpacing: AkSpace.s2,
         title: Row(
           children: [
-            const AkontaLogo(height: 28, withWordmark: false),
+            const AkLogo(height: 28, symbolOnly: true),
             const SizedBox(width: AkSpace.s2),
             Expanded(child: _CurrentEntitySelector(entity: entity, mobile: true)),
           ],
@@ -94,7 +92,7 @@ class AppShell extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Padding(padding: EdgeInsets.all(AkSpace.s4), child: Align(alignment: Alignment.centerLeft, child: AkontaLogo(height: 36))),
+              const Padding(padding: EdgeInsets.all(AkSpace.s4), child: Align(alignment: Alignment.centerLeft, child: AkLogo(height: 36))),
               Divider(color: t.border),
               Expanded(
                 child: _Rail(
@@ -221,7 +219,7 @@ class _TopBar extends ConsumerWidget {
       decoration: BoxDecoration(color: t.surface, border: Border(bottom: BorderSide(color: t.border))),
       child: Row(
         children: [
-          const AkontaLogo(height: 32),
+          const AkLogo(height: 32),
           const SizedBox(width: AkSpace.s6),
           Flexible(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: _CurrentEntitySelector(entity: entity))),
           const Spacer(),
