@@ -1,0 +1,28 @@
+JOURNAL <AN> À-nouveaux
+Pièces du 01/01/2027  au 01/01/2027		
+						
+Date	N° pièce	Compte	Intitulé	Débit	Crédit	Libellé
+01/01/2027	000001	2441000	Matériel de bureau	2400000	0	À-nouveaux au 01/01/2027
+01/01/2027	000001	2444000	Mobilier de bureau	1800000	0	À-nouveaux au 01/01/2027
+01/01/2027	000001	2451000	Matériel automobile	8500000	0	À-nouveaux au 01/01/2027
+01/01/2027	000001	2844000	Amortissements du matériel et mobilier	0	2040000	À-nouveaux au 01/01/2027
+01/01/2027	000001	2845000	Amortissements du matériel de transport	0	3400000	À-nouveaux au 01/01/2027
+01/01/2027	000001	3111000	Marchandises A1	4800000	0	À-nouveaux au 01/01/2027
+01/01/2027	000001	4111CBM	Quincaillerie Bénin Matériaux	1770000	0	Facture FA-2026-131 non réglée
+01/01/2027	000001	4111CAK	Akpakpa Bâtiment SA	2360000	0	Facture FA-2026-140 non réglée
+01/01/2027	000001	4111CMA	Mairie d'Abomey-Calavi	5900000	0	Facture FA-2026-152 non réglée
+01/01/2027	000001	4111CDX	Entreprise DOSSOU BTP	3540000	0	Facture FA-2025-077 non réglée
+01/01/2027	000001	4111CBS	Établissements BOSSOU	1416000	0	Facture FA-2025-102 non réglée
+01/01/2027	000001	4011FCG	Cimenterie du Golfe	0	3068000	Facture FA-FCG-0198 non réglée
+01/01/2027	000001	4011FPL	Peintures du Littoral	0	1180000	Facture FA-FPL-0511 non réglée
+01/01/2027	000001	4311000	Sécurité sociale (CNSS)	0	218500	CNSS de décembre 2026 à payer
+01/01/2027	000001	4441000	État, TVA due	0	410000	TVA due de décembre 2026
+01/01/2027	000001	4472000	Impôts sur salaires (IRPP)	0	52000	IRPP retenu sur salaires de décembre 2026
+01/01/2027	000001	1010000	Capital social	0	20000000	À-nouveaux au 01/01/2027
+01/01/2027	000001	1181000	Réserves facultatives	0	4000000	À-nouveaux au 01/01/2027
+01/01/2027	000001	1210000	Report à nouveau créditeur	0	3250000	À-nouveaux au 01/01/2027
+01/01/2027	000001	1301000	Résultat en instance d'affectation : bénéfice	0	6750000	À-nouveaux au 01/01/2027
+01/01/2027	000001	1620000	Emprunts auprès des établissements de crédit	0	6000000	À-nouveaux au 01/01/2027
+01/01/2027	000001	5210ECO	Ecobank Bénin	17882500	0	Solde bancaire au 31/12/2026
+Sous-total	000001			50368500	50368500	
+Total	Journal			50368500	50368500	
