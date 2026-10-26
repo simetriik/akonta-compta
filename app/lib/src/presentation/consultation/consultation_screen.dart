@@ -550,7 +550,7 @@ class _LedgerGrid extends StatelessWidget {
     return _DataGrid(
       columns: const [
         _Col('Date', 116),
-        _Col('Pièce', 96),
+        _Col('Pièce', 124),
         _Col('Référence', 110),
         _Col('Libellé', 240, grow: true),
         _Col('Tiers', 90),

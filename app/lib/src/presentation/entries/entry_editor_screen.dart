@@ -407,6 +407,7 @@ class _BalanceBar extends StatelessWidget {
       ],
     );
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: akPageMargin(context), vertical: AkSpace.s3),
       decoration: BoxDecoration(
         color: t.surface,

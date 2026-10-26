@@ -364,7 +364,7 @@ class _ChecksStepState extends ConsumerState<ChecksStep> {
                       ? 'conforme'
                       : waived
                       ? 'levée'
-                      : 'en échec'}${c.details.isEmpty ? '' : ' · ${c.details}'}',
+                      : 'en échec'}${c.details.isEmpty ? '' : ' · ${c.details.entries.map((e) => '${e.key} : ${e.value}').join(', ')}'}',
                   style: AkText.caption.copyWith(color: t.textMuted),
                 ),
               ],

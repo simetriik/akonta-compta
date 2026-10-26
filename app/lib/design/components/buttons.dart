@@ -57,6 +57,7 @@ class AkButton extends StatelessWidget {
       textStyle: const WidgetStatePropertyAll(AkText.bodyStrong),
       elevation: const WidgetStatePropertyAll(0),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.standard,
     );
     final (Color fg, Color? bg, Color? border) = switch (variant) {
       AkButtonVariant.primary => (t.onBrand, t.brand, null),
@@ -117,7 +118,7 @@ class AkIconButton extends StatelessWidget {
       onPressed: onPressed,
       icon: Icon(icon, size: size),
       color: color,
-      style: IconButton.styleFrom(minimumSize: Size(h, h), maximumSize: Size(h, h), padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+      style: IconButton.styleFrom(minimumSize: Size(h, h), maximumSize: Size(h, h), padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: VisualDensity.standard),
     );
   }
 }

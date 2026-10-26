@@ -326,7 +326,18 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
                 width: 70,
                 cell: (context, l) => Text(l.thirdPartyCode ?? '', style: AkText.code.copyWith(color: context.ak.text)),
               ),
-            AkColumn<UnletteredLine>.text(label: 'Libellé', text: (l) => l.label),
+            AkColumn<UnletteredLine>(
+              label: 'Libellé',
+              cell: (context, l) => Tooltip(
+                message: l.label,
+                child: Text(
+                  l.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AkText.table.copyWith(color: context.ak.text),
+                ),
+              ),
+            ),
             AkColumn<UnletteredLine>(label: 'Montant', width: 100, numeric: true, cell: (context, l) => AkAmountText(Fmt.fcfa(isDebit ? l.debit : l.credit))),
           ],
         ),

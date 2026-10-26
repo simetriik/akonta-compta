@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../src/core/formatting.dart';
 import '../../src/domain/reference_models.dart';
 import '../tokens.dart';
+import 'buttons.dart';
 import 'layout.dart';
 
 /// Cadre commun de tous les champs : libellé au-dessus, contrôle, puis aide ou erreur (même style partout).
@@ -86,7 +87,7 @@ InputDecoration akInputDecoration(
     suffixStyle: AkText.caption.copyWith(color: context.ak.textMuted),
     errorText: null,
     constraints: BoxConstraints(minHeight: h),
-    contentPadding: EdgeInsets.symmetric(horizontal: dense ? AkSpace.s2 : AkSpace.s3, vertical: (h - 20) / 2 - 1),
+    contentPadding: EdgeInsets.symmetric(horizontal: dense ? AkSpace.s2 : AkSpace.s3, vertical: (h - 12) / 2),
     enabledBorder: hasError
         ? OutlineInputBorder(
             borderRadius: AkRadius.mdAll,
@@ -393,9 +394,11 @@ class _AkDateFieldState extends State<AkDateField> {
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')), LengthLimitingTextInputFormatter(10)],
       suffix: widget.dense
           ? null
-          : IconButton(
+          : AkIconButton(
               tooltip: 'Choisir dans le calendrier',
-              icon: const Icon(Icons.calendar_today_outlined, size: 18),
+              icon: Icons.calendar_today_outlined,
+              size: 18,
+              dense: true,
               onPressed: widget.enabled ? _pick : null,
             ),
       onChanged: (v) {
@@ -457,7 +460,13 @@ class AkDropdown<T> extends StatelessWidget {
       borderRadius: AkRadius.mdAll,
       style: AkText.body.copyWith(color: t.text),
       hint: hint == null ? null : Text(hint!, style: AkText.body.copyWith(color: t.textDisabled)),
-      decoration: akInputDecoration(context, dense: dense, hasError: errorText != null),
+      // Le contenu d'une liste déroulante est plus haut que celui d'un champ texte : marge verticale réduite pour garder 40 / 48 / 32 px.
+      decoration: akInputDecoration(context, dense: dense, hasError: errorText != null).copyWith(
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: dense ? AkSpace.s2 : AkSpace.s3,
+          vertical: ((dense && !akIsCompact(context) ? AkSpace.controlDense : akControlHeight(context)) - 16) / 2,
+        ),
+      ),
       items: [
         for (final o in items)
           DropdownMenuItem<T>(

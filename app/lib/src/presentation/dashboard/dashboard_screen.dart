@@ -83,6 +83,7 @@ class _Totals extends StatelessWidget {
                             child: Text(
                               label,
                               style: AkText.caption.copyWith(color: t.textMuted),
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -197,10 +198,20 @@ class DossierCard extends ConsumerWidget {
             spacing: AkSpace.s2,
             runSpacing: AkSpace.s2,
             children: [
-              _Counter(label: 'brouillards', value: entity.draftCount, color: t.statusDraft, tint: t.statusDraftTint),
-              _Counter(label: 'non revues', value: entity.unreviewedCount, color: t.statusReview, tint: t.statusReviewTint),
+              _Counter(label: entity.draftCount > 1 ? 'brouillards' : 'brouillard', value: entity.draftCount, color: t.statusDraft, tint: t.statusDraftTint),
+              _Counter(
+                label: entity.unreviewedCount > 1 ? 'non revues' : 'non revue',
+                value: entity.unreviewedCount,
+                color: t.statusReview,
+                tint: t.statusReviewTint,
+              ),
               _Counter(label: 'à corriger', value: entity.toCorrectCount, color: t.statusFix, tint: t.statusFixTint),
-              _Counter(label: 'pièces en attente', value: entity.inboxCount, color: t.textMuted, tint: t.surfaceSunken),
+              _Counter(
+                label: entity.inboxCount > 1 ? 'pièces en attente' : 'pièce en attente',
+                value: entity.inboxCount,
+                color: t.textMuted,
+                tint: t.surfaceSunken,
+              ),
             ],
           ),
         ],
