@@ -66,3 +66,8 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Contexte** : une ligne de relevé peut concerner une période déjà verrouillée (agios découverts au rapprochement suivant). La fonction `entry_from_statement_line` datait l'écriture à la date d'opération et la base la refusait, sans issue pour l'utilisateur.
 - **Choix** : paramètre `p_entry_date` (défaut : date d'opération). L'application propose la date d'opération et laisse la reporter dans une période ouverte ; la ligne de relevé reste pointée avec l'écriture quelle que soit sa date. Aucune réouverture de période.
 - **Raison** : respecte l'immutabilité des périodes verrouillées (§11.2) tout en permettant de solder le rapprochement.
+
+## D-014 — 2026-10-26 — Poste CJ toujours implicite, comptes 13x des à-nouveaux en report à nouveau
+- **Contexte** : la cartographie associait les comptes 13 au poste CJ « Résultat net de l'exercice » et le résultat implicite (classes 6/7/8) n'était ajouté que si CJ valait zéro. Dès qu'un exercice reprenait en à-nouveaux le résultat de l'an passé en instance d'affectation (1300000), CJ affichait ce résultat passé et le résultat courant disparaissait : bilan déséquilibré en cours d'exercice et sur N+1 tant que l'affectation n'était pas faite (vu sur SARL Démo pendant la préparation de la vidéo de recette).
+- **Choix** : migration 0019. CJ est toujours le résultat implicite de l'exercice (hors écriture de détermination du résultat, D-013 bis) ; les comptes 12 et 13 vont au poste CH « Report à nouveau et résultat en instance », conformément au bilan SYSCOHADA (« Report à nouveau (+ ou −) »).
+- **Raison** : un seul calcul du résultat, cohérent avec `accounting_result` ; l'équilibre actif = passif tient à tout moment de l'exercice.
