@@ -57,6 +57,23 @@ flutter run -d <appareil> --dart-define=SUPABASE_URL=http://<IP-du-poste>:55321 
 - Les exports PDF / Excel et la liasse DGI exigent le service de documents : dans un autre terminal, `recette/lancer-service-documents.sh` (port 8101, déjà déclaré aux fonctions Edge par `reset-recette.sh`).
 - Les invitations envoyées par l'application arrivent dans la boîte mail de test (`http://127.0.0.1:55324`), pas dans de vraies boîtes.
 
+### 4 bis. Recette en équipe sur le réseau local (navigateur)
+
+Un seul poste héberge l'instance ; les collègues ouvrent Akonta dans leur navigateur, sans rien installer.
+
+```bash
+scripts/reset-recette.sh                  # sur le poste hôte : instance vierge
+recette/lancer-service-documents.sh       # terminal 2 : exports PDF / Excel / DGI
+recette/lancer-reseau.sh                  # terminal 3 : compile le build web (1re fois) et sert page + API sur le port 8080
+```
+
+Le script affiche l'adresse à donner aux collègues (ex. `http://192.168.1.232:8080`). Le build est compilé avec `SUPABASE_URL=auto` : la page et l'API partagent la même origine (relais de `recette/serveur-reseau.py`), donc ni CORS ni adresse à recompiler. `--rebuild` recompile après une modification du code ; `--port` change le port.
+
+- **Pare-feu** : ouvrir le port 8080 du poste hôte aux machines du réseau si une page ne s'ouvre pas. Les ports 55322 (PostgreSQL, mot de passe `postgres`) et 55323 (Studio) sont publiés par la pile Supabase sur toutes les interfaces : ne pas les ouvrir au réseau (réseau de confiance, données fictives uniquement).
+- **Invitations** : les e-mails arrivent dans la boîte de test du poste hôte (`http://127.0.0.1:55324`), pas chez les collègues ; l'hôte fixe leur mot de passe avec `recette/definir-mot-de-passe.sh` (écart n° 1).
+- **Limites du navigateur** : sur `http://` (pas HTTPS), le navigateur refuse la caméra : pour l'étape 5.5, déposer une photo existante au lieu de photographier ; la capture directe se teste sur un build Android de débogage (§ 4).
+- **Une session par navigateur et par personne** : un profil de navigateur distinct (ou une fenêtre privée) par rôle quand une même personne joue plusieurs rôles.
+
 ## 5. Ordre des étapes (rappel de `docs/recette-interne.md`)
 
 1. **Socle** (administrateur) : connexion, TOTP, invitations, verrouillage et déconnexion, isolation des données.

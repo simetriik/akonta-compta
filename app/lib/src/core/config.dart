@@ -5,10 +5,14 @@
 class AppConfig {
   const AppConfig._();
 
-  static const supabaseUrl = String.fromEnvironment(
+  static const _configuredUrl = String.fromEnvironment(
     'SUPABASE_URL',
     defaultValue: 'http://127.0.0.1:54321',
   );
+
+  /// Adresse de l'API. Valeur `auto` (build web servi par `recette/lancer-reseau.sh`) : l'API est joignable
+  /// sur la même origine que la page, derrière le relais du serveur de recette ; un seul build sert toutes les machines du réseau.
+  static String get supabaseUrl => _configuredUrl == 'auto' ? Uri.base.origin : _configuredUrl;
 
   /// Clé publiable (anciennement anon) : publique par construction, les droits viennent de la RLS.
   static const supabasePublishableKey = String.fromEnvironment(
