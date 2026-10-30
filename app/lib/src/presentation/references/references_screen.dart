@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,7 +72,6 @@ class ReferencesScreen extends StatelessWidget {
 }
 
 /// Largeur d'une boîte de dialogue, réduite sur les écrans étroits.
-double _dialogWidth(BuildContext context, double wanted) => math.min(wanted, MediaQuery.sizeOf(context).width - 80);
 
 /// Barre d'outils d'un onglet : filtres à gauche, action principale à droite (sous les filtres sur mobile).
 class _Toolbar extends StatelessWidget {
@@ -148,7 +146,7 @@ class _ListRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final row = Container(
-      constraints: BoxConstraints(minHeight: akIsCompact(context) ? AkSpace.rowTouch : AkSpace.rowCompact + 8),
+      constraints: BoxConstraints(minHeight: akIsTouch(context) ? AkSpace.rowTouch : AkSpace.rowCompact + 8),
       padding: EdgeInsets.fromLTRB(AkSpace.s4 + indent, 4, AkSpace.s2, 4),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: context.ak.border)),
@@ -319,7 +317,7 @@ class _AccountsTabState extends ConsumerState<AccountsTab> {
           await repo.deleteAccount(a.id);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_frenchError(e))));
+      if (mounted) showAkToast(context, _frenchError(e), kind: AkToastKind.danger);
     }
     ref.invalidate(accountsProvider(widget.entity.id));
   }
@@ -379,7 +377,7 @@ class _AccountDialogState extends ConsumerState<AccountDialog> {
     final padded = padAccountCode(_code.text, _length);
     return AkDialog(
       title: 'Nouveau compte (subdivision)',
-      width: _dialogWidth(context, 380),
+      size: AkDialogSize.s,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -571,7 +569,7 @@ class _ThirdPartyDialogState extends ConsumerState<ThirdPartyDialog> {
     }
     return AkDialog(
       title: widget.initial == null ? 'Nouveau tiers' : 'Tiers ${widget.initial!.code}',
-      width: _dialogWidth(context, 460),
+      size: AkDialogSize.m,
       content: Form(
         key: _form,
         child: Column(
@@ -811,7 +809,7 @@ class _JournalDialogState extends ConsumerState<JournalDialog> {
     final treasury = _type == 'bank' || _type == 'cash';
     return AkDialog(
       title: widget.initial == null ? 'Nouveau journal' : 'Journal ${widget.initial!.code}',
-      width: _dialogWidth(context, 420),
+      size: AkDialogSize.s,
       content: Form(
         key: _form,
         child: Column(
@@ -1051,7 +1049,7 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
     final rateCodes = rates.map((r) => r.code).toSet().toList()..sort();
     return AkDialog(
       title: 'Nouveau modèle d\'écriture',
-      width: _dialogWidth(context, 720),
+      size: AkDialogSize.l,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1289,7 +1287,7 @@ class _TaxRateDialogState extends ConsumerState<TaxRateDialog> {
   Widget build(BuildContext context) {
     return AkDialog(
       title: 'Nouveau taux (ou nouvelle valeur d\'un taux existant)',
-      width: _dialogWidth(context, 380),
+      size: AkDialogSize.s,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

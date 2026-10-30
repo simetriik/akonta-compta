@@ -307,7 +307,7 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
           minWidth: 520,
           emptyMessage: 'Aucune ligne.',
           onRowTap: canLetter ? toggle : null,
-          rowColor: (l) => _selected.contains(l.lineId) ? context.ak.brandTint : null,
+          rowColor: (l) => _selected.contains(l.lineId) ? context.ak.rowSelected : null,
           columns: [
             AkColumn<UnletteredLine>(
               label: '',
@@ -358,7 +358,7 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
     setState(() => _busy = true);
     try {
       await ref.read(letteringRepositoryProvider).letter(ids, allowPartial: allowPartial);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lignes lettrées.')));
+      if (mounted) showAkToast(context, 'Lignes lettrées.');
     } catch (e) {
       if (mounted) showErrorSnack(context, _french(e));
     }

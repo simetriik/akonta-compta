@@ -99,9 +99,9 @@ class _EditorState extends ConsumerState<_Editor> {
       _draft.id = id;
       if (validate) {
         final n = await repo.validate(id);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Écriture validée : n° $n')));
+        if (mounted) showAkToast(context, 'Écriture validée : n° $n');
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brouillard enregistré.')));
+        showAkToast(context, 'Brouillard enregistré.');
       }
       ref.invalidate(entriesListProvider(widget.entity.id));
       ref.invalidate(entityDashboardProvider);
@@ -257,9 +257,10 @@ class _EditorState extends ConsumerState<_Editor> {
                             // Sur petit écran la grille défile horizontalement plutôt que de se comprimer.
                             child: LayoutBuilder(
                               builder: (context, c) {
+                                final withThird = _draft.lines.any((l) => l.isCollective);
                                 final grid = Column(
                                   children: [
-                                    const _GridHeader(),
+                                    _GridHeader(withThirdParty: withThird),
                                     for (var i = 0; i < _draft.lines.length; i++)
                                       _LineRow(
                                         key: ValueKey(_draft.lines[i]),
@@ -267,6 +268,7 @@ class _EditorState extends ConsumerState<_Editor> {
                                         line: _draft.lines[i],
                                         entityId: widget.entity.id,
                                         readOnly: _readOnly,
+                                        withThirdParty: withThird,
                                         onChanged: () => setState(() {}),
                                         onRemove: _readOnly || _draft.lines.length <= 2 ? null : () => setState(() => _draft.lines.removeAt(i)),
                                         onEnterOnLast: i == _draft.lines.length - 1 ? _appendLine : null,
@@ -274,29 +276,43 @@ class _EditorState extends ConsumerState<_Editor> {
                                     // Pied de totaux : filet fort, montants alignés sur les colonnes Débit / Crédit.
                                     Container(
                                       decoration: BoxDecoration(
-                                        border: Border(top: BorderSide(color: t.borderStrong, width: 2)),
+                                        color: t.surfaceSunken,
+                                        border: Border(top: BorderSide(color: t.borderControl, width: 2)),
                                       ),
                                       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2, vertical: AkSpace.s2),
                                       child: Row(
                                         children: [
                                           const SizedBox(width: _kIndexW),
                                           Expanded(
-                                            child: Text('Totaux', style: AkText.bodyStrong.copyWith(color: t.text)),
+                                            child: Padding(padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2), child: Text('Totaux', style: AkText.tableHead.copyWith(color: t.textStrong))),
                                           ),
                                           const SizedBox(width: AkSpace.s2),
-                                          SizedBox(width: _kAmountW, child: AkAmountText(Fmt.fcfa(_draft.totalDebit, showZero: true), bold: true)),
+                                          SizedBox(
+                                            width: _kAmountW,
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
+                                              child: AkAmountText(Fmt.fcfa(_draft.totalDebit, showZero: true), bold: true),
+                                            ),
+                                          ),
                                           const SizedBox(width: AkSpace.s2),
-                                          SizedBox(width: _kAmountW, child: AkAmountText(Fmt.fcfa(_draft.totalCredit, showZero: true), bold: true)),
+                                          SizedBox(
+                                            width: _kAmountW + AkSpace.s2,
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
+                                              child: AkAmountText(Fmt.fcfa(_draft.totalCredit, showZero: true), bold: true),
+                                            ),
+                                          ),
                                           const SizedBox(width: _kRemoveW),
                                         ],
                                       ),
                                     ),
                                   ],
                                 );
-                                if (c.maxWidth >= _kGridMinWidth) return grid;
+                                final minWidth = AkEntryGridCols.minWidth(withThirdParty: withThird);
+                                if (c.maxWidth >= minWidth) return AkEntryGridTheme(child: grid);
                                 return SingleChildScrollView(
                                   scrollDirection: Axis.horizontal,
-                                  child: SizedBox(width: _kGridMinWidth, child: grid),
+                                  child: SizedBox(width: minWidth, child: AkEntryGridTheme(child: grid)),
                                 );
                               },
                             ),
@@ -403,14 +419,14 @@ class _BalanceBar extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text('$label ', style: AkText.caption.copyWith(color: t.textMuted)),
-        Text(Fmt.fcfa(v, showZero: true), style: AkText.amount.copyWith(color: t.text)),
+        Text(Fmt.fcfa(v, showZero: true), style: AkText.amountTotal.copyWith(color: t.textStrong)),
       ],
     );
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: akPageMargin(context), vertical: AkSpace.s3),
       decoration: BoxDecoration(
-        color: t.surface,
+        color: t.surfaceSunken,
         border: Border(top: BorderSide(color: t.border)),
       ),
       child: Wrap(
@@ -423,19 +439,23 @@ class _BalanceBar extends StatelessWidget {
           Container(
             key: const Key('balance-chip'),
             padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: AkSpace.s1),
-            decoration: BoxDecoration(color: balanced ? t.successTint : t.dangerTint, borderRadius: AkRadius.mdAll),
+            decoration: BoxDecoration(color: balanced ? t.successTint : t.dangerTint, borderRadius: AkRadius.smAll),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(balanced ? Icons.check_circle_outline : Icons.error_outline, size: 20, color: color),
+                Icon(balanced ? Icons.check_circle_outline : Icons.error_outline, size: AkSpace.iconMd, color: color),
                 const SizedBox(width: AkSpace.s2),
-                Text(balanced ? 'Équilibrée' : 'Écart ${Fmt.fcfa(balance, showZero: true)}', style: AkText.bodyStrong.copyWith(color: color)),
+                Text(
+                  balanced ? 'Équilibrée' : 'Écart ${Fmt.fcfa(balance.abs())} · ${balance > 0 ? 'débit' : 'crédit'} supérieur',
+                  style: AkText.bodyStrong.copyWith(color: color),
+                ),
               ],
             ),
           ),
           if (!readOnly) ...[
-            AkButton.secondary('Enregistrer (Ctrl+S)', key: const Key('save-draft'), onPressed: busy ? null : onSave),
-            if (canValidate) AkButton.primary('Valider', key: const Key('validate-entry'), onPressed: busy ? null : onValidate),
+            AkButton.secondary('Enregistrer le brouillard', key: const Key('save-draft'), onPressed: busy ? null : onSave),
+            if (canValidate)
+              AkButton.primary('Valider l\'écriture', key: const Key('validate-entry'), onPressed: busy || !balanced ? null : onValidate),
           ],
         ],
       ),
@@ -462,7 +482,7 @@ class _ShortcutsDialog extends StatelessWidget {
     final t = context.ak;
     return AkDialog(
       title: 'Raccourcis clavier',
-      width: 560,
+      size: AkDialogSize.m,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -491,39 +511,44 @@ class _ShortcutsDialog extends StatelessWidget {
 }
 
 // Largeurs des colonnes de la grille, partagées par l'en-tête, les lignes et le pied de totaux.
-const double _kIndexW = 32;
-const double _kAmountW = 150;
-const double _kRemoveW = 40;
-const double _kGridMinWidth = 960;
+const double _kIndexW = AkEntryGridCols.index;
+const double _kAmountW = AkEntryGridCols.amount;
+const double _kRemoveW = AkEntryGridCols.remove;
 
 class _GridHeader extends StatelessWidget {
-  const _GridHeader();
+  const _GridHeader({required this.withThirdParty});
+
+  final bool withThirdParty;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
-    final style = AkText.label.copyWith(color: t.textMuted);
+    final style = AkText.tableHead.copyWith(color: t.textMuted);
+    // Même marge interne que les cellules de saisie, pour aligner texte d'en-tête et contenu.
+    const cellPad = EdgeInsets.symmetric(horizontal: AkSpace.s2);
     return Container(
-      height: AkSpace.rowCompact,
-      color: t.surfaceSunken,
+      constraints: BoxConstraints(minHeight: akIsTouch(context) ? AkSpace.rowTouch : AkSpace.rowCompact),
+      color: t.tableHead,
       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
       child: Row(
         children: [
           const SizedBox(width: _kIndexW),
-          SizedBox(width: 260, child: Text('Compte', style: style)),
+          SizedBox(width: AkEntryGridCols.account, child: Padding(padding: cellPad, child: Text('Compte', style: style))),
           const SizedBox(width: AkSpace.s2),
-          SizedBox(width: 130, child: Text('Tiers', style: style)),
+          SizedBox(width: withThirdParty ? AkEntryGridCols.thirdParty : AkEntryGridCols.thirdPartyEmpty, child: Padding(padding: cellPad, child: Text('Tiers', style: style, overflow: TextOverflow.ellipsis))),
           const SizedBox(width: AkSpace.s2),
-          Expanded(child: Text('Libellé', style: style)),
+          Expanded(child: Padding(padding: cellPad, child: Text('Libellé', style: style))),
           const SizedBox(width: AkSpace.s2),
           SizedBox(
             width: _kAmountW,
-            child: Text('Débit (FCFA)', style: style, textAlign: TextAlign.right),
+            child: Padding(padding: cellPad, child: Text('D · Débit (FCFA)', style: style, textAlign: TextAlign.right)),
           ),
           const SizedBox(width: AkSpace.s2),
-          SizedBox(
-            width: _kAmountW,
-            child: Text('Crédit (FCFA)', style: style, textAlign: TextAlign.right),
+          Container(
+            width: _kAmountW + AkSpace.s2,
+            padding: const EdgeInsets.only(left: AkSpace.s2),
+            decoration: BoxDecoration(border: Border(left: BorderSide(color: t.border))),
+            child: Padding(padding: cellPad, child: Text('C · Crédit (FCFA)', style: style, textAlign: TextAlign.right)),
           ),
           const SizedBox(width: _kRemoveW),
         ],
@@ -540,6 +565,7 @@ class _LineRow extends ConsumerStatefulWidget {
     required this.line,
     required this.entityId,
     required this.readOnly,
+    required this.withThirdParty,
     required this.onChanged,
     this.onRemove,
     this.onEnterOnLast,
@@ -549,6 +575,7 @@ class _LineRow extends ConsumerStatefulWidget {
   final DraftLine line;
   final String entityId;
   final bool readOnly;
+  final bool withThirdParty;
   final VoidCallback onChanged;
   final VoidCallback? onRemove;
   final VoidCallback? onEnterOnLast;
@@ -561,6 +588,7 @@ class _LineRowState extends ConsumerState<_LineRow> {
   late final _label = TextEditingController(text: widget.line.label);
   late final _debit = TextEditingController(text: Fmt.fcfa(widget.line.debit));
   late final _credit = TextEditingController(text: Fmt.fcfa(widget.line.credit));
+  bool _active = false;
 
   @override
   void dispose() {
@@ -591,11 +619,17 @@ class _LineRowState extends ConsumerState<_LineRow> {
     final thirdParties = (ref.watch(thirdPartiesProvider(widget.entityId)).value ?? const <ThirdParty>[]).where((t) => t.isActive).toList();
     final l = widget.line;
     final t = context.ak;
-    final mobile = akIsCompact(context);
-    return Container(
-      constraints: BoxConstraints(minHeight: mobile ? AkSpace.rowTouch : AkSpace.control + 4),
-      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2, vertical: 2),
+    final mobile = akIsTouch(context);
+    // Ligne active : la ligne qui contient le focus prend `rowActive` ; la cellule active montre l'anneau de focus.
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (has) => setState(() => _active = has),
+      child: Container(
+      constraints: BoxConstraints(minHeight: mobile ? AkSpace.rowTouch : AkSpace.controlDense + AkSpace.s1),
+      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
       decoration: BoxDecoration(
+        color: _active ? t.rowActive : null,
         border: Border(bottom: BorderSide(color: t.border)),
       ),
       child: Row(
@@ -605,7 +639,7 @@ class _LineRowState extends ConsumerState<_LineRow> {
             child: Text('${widget.index + 1}', style: AkText.caption.copyWith(color: t.textMuted)),
           ),
           SizedBox(
-            width: 260,
+            width: AkEntryGridCols.account,
             child: AkAccountField(
               key: Key('line-account-${widget.index}'),
               accounts: accounts,
@@ -638,7 +672,7 @@ class _LineRowState extends ConsumerState<_LineRow> {
           ),
           const SizedBox(width: AkSpace.s2),
           SizedBox(
-            width: 130,
+            width: widget.withThirdParty ? AkEntryGridCols.thirdParty : AkEntryGridCols.thirdPartyEmpty,
             child: l.isCollective
                 ? AkThirdPartyField(
                     thirdParties: thirdParties,
@@ -653,7 +687,10 @@ class _LineRowState extends ConsumerState<_LineRow> {
                     },
                     onSubmittedPick: _next,
                   )
-                : const SizedBox.shrink(),
+                : Padding(
+                    padding: const EdgeInsets.only(left: AkSpace.s2),
+                    child: Text('—', style: AkText.table.copyWith(color: t.borderControl)),
+                  ),
           ),
           const SizedBox(width: AkSpace.s2),
           Expanded(
@@ -669,17 +706,24 @@ class _LineRowState extends ConsumerState<_LineRow> {
           const SizedBox(width: AkSpace.s2),
           SizedBox(width: _kAmountW, child: _amountField(_debit, (v) => l.debit = v, () => l.credit = 0, _credit)),
           const SizedBox(width: AkSpace.s2),
-          SizedBox(width: _kAmountW, child: _amountField(_credit, (v) => l.credit = v, () => l.debit = 0, _debit, last: true)),
+          const SizedBox(width: AkSpace.s2),
+          Container(
+            width: _kAmountW + AkSpace.s2,
+            padding: const EdgeInsets.only(left: AkSpace.s2),
+            decoration: BoxDecoration(border: Border(left: BorderSide(color: t.border))),
+            child: _amountField(_credit, (v) => l.credit = v, () => l.debit = 0, _debit, last: true),
+          ),
           SizedBox(
             width: _kRemoveW,
             // Hors du parcours au clavier : Tab va de ligne en ligne sans s'arrêter sur la suppression.
             child: widget.onRemove == null
                 ? null
                 : ExcludeFocus(
-                    child: AkIconButton(tooltip: 'Supprimer la ligne', icon: Icons.close, size: 18, dense: true, onPressed: widget.onRemove),
+                    child: AkIconButton(tooltip: 'Supprimer la ligne', icon: Icons.close, size: AkSpace.iconMd, dense: true, onPressed: widget.onRemove),
                   ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -688,7 +732,7 @@ class _LineRowState extends ConsumerState<_LineRow> {
     return AkAmountField(
       controller: c,
       enabled: !widget.readOnly,
-      dense: !akIsCompact(context),
+      dense: !akIsTouch(context),
       textInputAction: TextInputAction.next,
       onChanged: (n) {
         set(n);
@@ -721,7 +765,7 @@ class _TemplatePickerState extends State<_TemplatePicker> {
     final amount = Fmt.parseAmount(_amount.text);
     return AkDialog(
       title: 'Appliquer un modèle',
-      width: 420,
+      size: AkDialogSize.s,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

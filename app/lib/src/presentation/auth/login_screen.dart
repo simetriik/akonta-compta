@@ -75,7 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     await ref.read(authRepositoryProvider).resetPassword(email);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Si le compte existe, un e-mail de réinitialisation a été envoyé.')));
+    showAkToast(context, 'Si le compte existe, un e-mail de réinitialisation a été envoyé.');
   }
 
   @override

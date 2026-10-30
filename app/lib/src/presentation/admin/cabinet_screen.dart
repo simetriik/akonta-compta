@@ -108,7 +108,7 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
                         final len = int.tryParse(_length.text);
                         final min = int.tryParse(_inactivity.text);
                         if (len == null || len < 6 || len > 12 || min == null || min < 5 || min > 480) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Longueur 6-12, inactivité 5-480 minutes.')));
+                          showAkToast(context, 'Longueur 6-12, inactivité 5-480 minutes.', kind: AkToastKind.warning);
                           return;
                         }
                         await ref.read(adminRepositoryProvider).updateCabinet(c.id, {
@@ -117,7 +117,7 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
                           'inactivity_minutes': min,
                         });
                         ref.invalidate(currentCabinetProvider);
-                        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paramètres enregistrés.')));
+                        if (context.mounted) showAkToast(context, 'Paramètres enregistrés.');
                       },
                     ),
                   ),
@@ -232,10 +232,9 @@ class AssignmentsTab extends ConsumerWidget {
                           child: Text(e.key, style: AkText.heading.copyWith(color: t.text)),
                         ),
                         for (final a in e.value)
-                          ListTile(
-                            dense: true,
-                            title: Text(a.userName, style: AkText.body.copyWith(color: t.text)),
-                            subtitle: Text(a.roleName, style: AkText.caption.copyWith(color: t.textMuted)),
+                          AkListRow(
+                            title: Text(a.userName),
+                            subtitle: Text(a.roleName),
                             trailing: AkIconButton(
                               tooltip: 'Retirer l\'affectation',
                               icon: Icons.delete_outline,
@@ -282,7 +281,7 @@ class _AssignmentDialogState extends ConsumerState<AssignmentDialog> {
     final cabinetScope = roleDef != null && (roleDef.code == 'partner' || roleDef.code == 'tech_admin');
     return AkDialog(
       title: 'Affecter un collaborateur',
-      width: 380,
+      size: AkDialogSize.s,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -352,7 +351,7 @@ class _ReassignDialogState extends ConsumerState<ReassignDialog> {
     final cabinet = ref.watch(currentCabinetProvider).value;
     return AkDialog(
       title: 'Réaffecter tous les dossiers',
-      width: 380,
+      size: AkDialogSize.s,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -383,7 +382,7 @@ class _ReassignDialogState extends ConsumerState<ReassignDialog> {
                   ref.invalidate(assignmentsProvider);
                   if (context.mounted) {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$n affectation(s) transférée(s).')));
+                    showAkToast(context, '$n affectation(s) transférée(s).');
                   }
                 },
         ),
@@ -448,11 +447,10 @@ class _AuditTabState extends ConsumerState<AuditTab> {
                     : () async {
                         final broken = await ref.read(adminRepositoryProvider).verifyChain(cabinet.id);
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(broken == null ? 'Chaîne SHA-256 intègre.' : 'Rupture détectée à l\'événement n° $broken !'),
-                            backgroundColor: broken == null ? t.success : t.danger,
-                          ),
+                        showAkToast(
+                          context,
+                          broken == null ? 'Chaîne SHA-256 intègre.' : 'Rupture détectée à l\'événement n° $broken !',
+                          kind: broken == null ? AkToastKind.success : AkToastKind.danger,
                         );
                       },
               ),
@@ -477,8 +475,7 @@ class _AuditTabState extends ConsumerState<AuditTab> {
                         children: [
                           for (var i = 0; i < events.length; i++) ...[
                             if (i > 0) Divider(height: 1, color: t.border),
-                            ListTile(
-                              dense: true,
+                            AkListRow(
                               leading: Text('${events[i].id}', style: AkText.code.copyWith(color: t.textMuted)),
                               title: Text(
                                 '${events[i].action}${events[i].tableName != null ? ' · ${events[i].tableName}' : ''}',

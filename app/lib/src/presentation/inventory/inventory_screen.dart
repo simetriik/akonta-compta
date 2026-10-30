@@ -20,15 +20,9 @@ String frenchRpcError(Object e) => RegExp(r'message: ([^,}]+)').firstMatch(e.toS
 /// Marge latérale de page : 24 px sur desktop, 16 px sur mobile (< 600 px).
 EdgeInsets akPagePadding(BuildContext context) => EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? AkSpace.s4 : AkSpace.s6);
 
-/// Message d'erreur : le SnackBar du thème est sombre, on force un fond « danger » avec texte lisible.
+/// Message d'erreur sous forme de toast.
 void showErrorSnack(BuildContext context, String message) {
-  final t = context.ak;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message, style: AkText.body.copyWith(color: t.surface)),
-      backgroundColor: t.danger,
-    ),
-  );
+  showAkToast(context, message, kind: AkToastKind.danger);
 }
 
 /// Liste de lignes séparées par des filets, dans une carte sans marge interne.
@@ -132,13 +126,12 @@ Future<void> runGeneration(BuildContext context, WidgetRef ref, Future<String?> 
     if (!context.mounted) return;
     // Avec un bouton d'action, un message reste affiché tant que la navigation accessible est active :
     // on le borne dans le temps et on permet de le fermer.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(id == null ? 'Rien à générer.' : '$successLabel : brouillard créé.'),
-        duration: const Duration(seconds: 6),
-        showCloseIcon: true,
-        action: id == null ? null : SnackBarAction(label: 'Ouvrir', onPressed: () => context.go('/saisie/$id')),
-      ),
+    showAkToast(
+      context,
+      id == null ? 'Rien à générer.' : '$successLabel : brouillard créé.',
+      kind: id == null ? AkToastKind.info : AkToastKind.success,
+      actionLabel: id == null ? null : 'Ouvrir',
+      onAction: id == null ? null : () => context.go('/saisie/$id'),
     );
   } catch (e) {
     if (context.mounted) showErrorSnack(context, frenchRpcError(e));
@@ -282,7 +275,7 @@ class _AssetDialogState extends ConsumerState<AssetDialog> {
         .toList();
     return AkDialog(
       title: widget.initial == null ? 'Nouvelle immobilisation' : 'Immobilisation ${widget.initial!.code}',
-      width: 520,
+      size: AkDialogSize.m,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -421,7 +414,7 @@ class PlanDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return AkDialog(
       title: 'Tableau d\'amortissement — ${asset.code}',
-      width: 620,
+      size: AkDialogSize.m,
       content: FutureBuilder<List<PlanRow>>(
         future: ref.read(inventoryRepositoryProvider).plan(asset.id),
         builder: (_, snap) {
@@ -470,7 +463,7 @@ class _DisposalDialogState extends ConsumerState<DisposalDialog> {
         .toList();
     return AkDialog(
       title: '${widget.scrap ? 'Mise au rebut' : 'Cession'} de ${widget.asset.code}',
-      width: 420,
+      size: AkDialogSize.s,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -756,7 +749,7 @@ class _ProvisionsTabState extends ConsumerState<ProvisionsTab> {
                             rateOver180: (double.tryParse(_r180.text) ?? 0) / 100,
                           );
                       ref.invalidate(provisionsProvider(widget.fy.id));
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$n provision(s) proposée(s).')));
+                      if (context.mounted) showAkToast(context, '$n provision(s) proposée(s).');
                     } catch (e) {
                       if (context.mounted) showErrorSnack(context, frenchRpcError(e));
                     }
@@ -856,7 +849,7 @@ class AccrualsTab extends ConsumerWidget {
                   try {
                     final ids = await ref.read(inventoryRepositoryProvider).generateReversals(entity.id, fy.id);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${ids.length} extourne(s) générée(s) au 1er janvier N+1.')));
+                      showAkToast(context, '${ids.length} extourne(s) générée(s) au 1er janvier N+1.');
                     }
                   } catch (e) {
                     if (context.mounted) showErrorSnack(context, frenchRpcError(e));
@@ -946,7 +939,7 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
     };
     return AkDialog(
       title: 'Régularisation',
-      width: 520,
+      size: AkDialogSize.m,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1109,7 +1102,7 @@ class _FxTabState extends ConsumerState<FxTab> {
                       if (r == null || _currency.text.trim().length != 3) return;
                       final cabinet = await ref.read(currentCabinetProvider.future);
                       await ref.read(inventoryRepositoryProvider).setClosingRate(cabinet!.id, _currency.text.trim().toUpperCase(), widget.fy.endDate, r);
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cours enregistré.')));
+                      if (context.mounted) showAkToast(context, 'Cours enregistré.');
                     },
                   ),
                   AkButton.primary(

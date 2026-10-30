@@ -28,4 +28,10 @@ void main() {
       expect(Fmt.parseDate('2026-01-05'), null);
     });
   });
+
+  test('solde sans signe moins, suivi du sens', () {
+    expect(Fmt.balance(1250000), '1\u202f250\u202f000 D');
+    expect(Fmt.balance(-340000), '340\u202f000 C');
+    expect(Fmt.balance(0), '0');
+  });
 }

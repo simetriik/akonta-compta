@@ -141,7 +141,7 @@ class _ImportBodyState extends ConsumerState<_ImportBody> {
 
   Future<void> _pick() async {
     if (_kind == 'journal' && _journalId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Choisissez le journal cible.')));
+      showAkToast(context, 'Choisissez le journal cible.', kind: AkToastKind.warning);
       return;
     }
     final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['txt', 'csv', 'tsv']);
