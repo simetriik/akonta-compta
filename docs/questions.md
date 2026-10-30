@@ -51,6 +51,7 @@
 ## Q-013 — Modèles d'écritures : comptes absents du plan
 - **Constat** : le modèle SALAIRES vise 4221 (inexistant : le collectif est 422) ; les modèles de règlement et de frais bancaires visent 5211 « Banque X ».
 - **Hypothèse appliquée** : l'utilisateur choisit le compte à la main ; correction des modèles par défaut (`seed_default_referentials`) après la recette.
+- **Résolu le 30 oct. 2026** : `SALAIRES` → 422, banque → 521 (D-021).
 
 ## Q-014 — Manifestes mobiles
 - **Constat** : le manifeste Android principal ne déclare pas INTERNET (seuls les manifestes debug et profile l'ont) ; `Info.plist` iOS n'a ni `NSCameraUsageDescription` ni description d'accès aux photos ; aucun dossier `windows/` ni `macos/` dans `app/`.
