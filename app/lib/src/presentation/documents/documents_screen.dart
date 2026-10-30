@@ -163,7 +163,7 @@ class _DocumentsBodyState extends ConsumerState<_DocumentsBody> {
       ref.invalidate(documentsProvider(widget.entity.id));
       ref.invalidate(entityDashboardProvider);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dépôt refusé : $e'), backgroundColor: context.ak.danger));
+      if (mounted) showAkToast(context, 'Dépôt refusé : $e', kind: AkToastKind.danger);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -249,7 +249,7 @@ class DocumentTile extends ConsumerWidget {
                         await ref.read(documentsRepositoryProvider).delete(d);
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pièce liée à une écriture validée : non supprimable.')));
+                          showAkToast(context, 'Pièce liée à une écriture validée : non supprimable.', kind: AkToastKind.warning);
                         }
                       }
                   }
@@ -282,21 +282,21 @@ class _CaptureButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.ak;
     return Material(
-      color: busy ? t.disabledFill : t.brand,
+      color: busy ? t.disabledFill : t.accent,
       borderRadius: AkRadius.lgAll,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: const Key('capture-document'),
         onTap: busy ? null : onPressed,
-        hoverColor: t.brandHover,
+        hoverColor: t.accentHover,
         child: SizedBox(
           height: 72,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.photo_camera_outlined, size: 28, color: busy ? t.textDisabled : t.onBrand),
+              Icon(Icons.photo_camera_outlined, size: 28, color: busy ? t.textDisabled : t.onAccent),
               const SizedBox(width: AkSpace.s3),
-              Text('Photographier une pièce', style: AkText.title.copyWith(color: busy ? t.textDisabled : t.onBrand)),
+              Text('Photographier une pièce', style: AkText.title.copyWith(color: busy ? t.textDisabled : t.onAccent)),
             ],
           ),
         ),
@@ -317,10 +317,9 @@ class DocumentViewer extends ConsumerWidget {
     final repo = ref.watch(documentsRepositoryProvider);
     final size = MediaQuery.sizeOf(context);
     final d = document;
-    final double width = size.width < 840 ? size.width - 80 : 760;
     return AkDialog(
       title: d.fileName,
-      width: width,
+      size: AkDialogSize.l,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -367,10 +366,9 @@ class _EntryPicker extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.ak;
     final entries = ref.watch(entriesListProvider(entity.id));
-    final width = MediaQuery.sizeOf(context).width;
     return AkDialog(
       title: 'Rattacher à une écriture',
-      width: width < 620 ? width - 80 : 560,
+      size: AkDialogSize.m,
       content: SizedBox(
         height: 420,
         child: AsyncView(
@@ -383,7 +381,7 @@ class _EntryPicker extends ConsumerWidget {
                   InkWell(
                     onTap: () => Navigator.pop(context, e.id),
                     child: Container(
-                      constraints: BoxConstraints(minHeight: akIsCompact(context) ? AkSpace.rowTouch : AkSpace.rowCompact + 8),
+                      constraints: BoxConstraints(minHeight: akIsTouch(context) ? AkSpace.rowTouch : AkSpace.rowCompact + 8),
                       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: 6),
                       decoration: BoxDecoration(
                         border: Border(bottom: BorderSide(color: t.border)),

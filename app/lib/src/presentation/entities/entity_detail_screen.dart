@@ -83,7 +83,7 @@ class _FicheTab extends ConsumerWidget {
         ref.invalidate(entitiesListProvider);
         ref.invalidate(entityDashboardProvider);
         ref.invalidate(entityHistoryProvider(entity.id));
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fiche enregistrée.')));
+        if (context.mounted) showAkToast(context, 'Fiche enregistrée.');
       },
     );
   }
@@ -171,7 +171,7 @@ class _DirectorDialogState extends ConsumerState<DirectorDialog> {
   Widget build(BuildContext context) {
     return AkDialog(
       title: 'Dirigeant',
-      width: 380,
+      size: AkDialogSize.s,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -352,7 +352,7 @@ class _FiscalYearCard extends ConsumerWidget {
         await repo.unlockPeriod(p.id, reason.trim());
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Refusé : $e')));
+      if (context.mounted) showAkToast(context, 'Refusé : $e', kind: AkToastKind.danger);
     }
     ref.invalidate(periodsProvider(fiscalYear.id));
   }
@@ -438,7 +438,7 @@ class _FiscalYearDialogState extends ConsumerState<FiscalYearDialog> {
   Widget build(BuildContext context) {
     return AkDialog(
       title: widget.previous == null ? 'Premier exercice' : 'Exercice suivant',
-      width: 380,
+      size: AkDialogSize.s,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

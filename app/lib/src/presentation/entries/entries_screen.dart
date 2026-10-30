@@ -260,10 +260,10 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
   Future<void> _validateSelected(BuildContext context) async {
     try {
       await ref.read(entriesRepositoryProvider).validateMany(_selected.toList());
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${_selected.length} écriture(s) validée(s).')));
+      if (context.mounted) showAkToast(context, '${_selected.length} écriture(s) validée(s).');
       setState(_selected.clear);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchEntryError(e)), backgroundColor: context.ak.danger));
+      if (context.mounted) showAkToast(context, frenchEntryError(e), kind: AkToastKind.danger);
     }
     ref.invalidate(entriesListProvider(widget.entity.id));
     ref.invalidate(entityDashboardProvider);
@@ -278,7 +278,7 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
     try {
       await ref.read(entriesRepositoryProvider).review(e.id, status: result.$1, comment: result.$2);
     } catch (err) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchEntryError(err))));
+      if (context.mounted) showAkToast(context, frenchEntryError(err), kind: AkToastKind.danger);
     }
     ref.invalidate(entriesListProvider(widget.entity.id));
     ref.invalidate(entityDashboardProvider);
@@ -292,9 +292,9 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
     if (result == null) return;
     try {
       await ref.read(entriesRepositoryProvider).reverse(e.id, reason: result.$1, date: result.$2);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Écriture contre-passée (écriture inverse validée).')));
+      if (context.mounted) showAkToast(context, 'Écriture contre-passée (écriture inverse validée).');
     } catch (err) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(frenchEntryError(err)), backgroundColor: context.ak.danger));
+      if (context.mounted) showAkToast(context, frenchEntryError(err), kind: AkToastKind.danger);
     }
     ref.invalidate(entriesListProvider(widget.entity.id));
   }
@@ -432,7 +432,7 @@ class _EntryTile extends StatelessWidget {
       );
     }
     return Material(
-      color: selected ? t.brandTint : Colors.transparent,
+      color: selected ? t.rowSelected : Colors.transparent,
       child: InkWell(
         onTap: onOpen,
         child: Padding(
@@ -478,16 +478,14 @@ class _ReviewDialogState extends State<ReviewDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          RadioGroup<String>(
-            groupValue: _status,
-            onChanged: (v) => setState(() => _status = v ?? 'reviewed'),
-            child: const Column(
-              children: [
-                RadioListTile(value: 'reviewed', title: Text('Revue, conforme')),
-                RadioListTile(value: 'to_correct', title: Text('À corriger (commentaire obligatoire)')),
-                RadioListTile(value: 'not_reviewed', title: Text('Remettre en « non revue »')),
-              ],
-            ),
+          AkRadioGroup<String>(
+            value: _status,
+            onChanged: (v) => setState(() => _status = v),
+            options: const [
+              AkOption('reviewed', 'Revue, conforme'),
+              AkOption('to_correct', 'À corriger (commentaire obligatoire)'),
+              AkOption('not_reviewed', 'Remettre en « non revue »'),
+            ],
           ),
           AkTextField(
             controller: _comment,
@@ -529,7 +527,7 @@ class _ReversalDialogState extends State<ReversalDialog> {
     final date = Fmt.parseDate(_date.text);
     return AkDialog(
       title: 'Contre-passer ${widget.entry.numberLabel}',
-      width: 380,
+      size: AkDialogSize.s,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

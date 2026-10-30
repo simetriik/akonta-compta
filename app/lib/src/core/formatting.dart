@@ -12,6 +12,12 @@ abstract final class Fmt {
     return _amount.format(amount);
   }
 
+  /// Solde signé (débit − crédit) sans signe moins : « 1 250 000 D », « 340 000 C », « 0 » s'il est nul.
+  static String balance(int signed) {
+    if (signed == 0) return '0';
+    return '${_amount.format(signed.abs())} ${signed > 0 ? 'D' : 'C'}';
+  }
+
   static String date(DateTime? d) => d == null ? '' : _date.format(d);
 
   static String month(DateTime d) => _month.format(d);

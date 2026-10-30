@@ -207,12 +207,12 @@ class _Stepper extends StatelessWidget {
         width: 24,
         height: 24,
         alignment: Alignment.center,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: active ? t.brand : (done ? t.successTint : t.surfaceSunken)),
+        decoration: BoxDecoration(shape: BoxShape.circle, color: active ? t.accent : (done ? t.successTint : t.surfaceSunken)),
         child: done
             ? Icon(Icons.check, size: 16, color: t.success)
             : Text(
                 '${i + 1}',
-                style: AkText.label.copyWith(color: active ? t.onBrand : t.textMuted, fontWeight: FontWeight.w600, letterSpacing: 0),
+                style: AkText.label.copyWith(color: active ? t.onAccent : t.textMuted, fontWeight: FontWeight.w600, letterSpacing: 0),
               ),
       );
       return Semantics(
@@ -231,7 +231,7 @@ class _Stepper extends StatelessWidget {
                 Text(
                   '${i + 1}. ${steps[i]}',
                   style: AkText.table.copyWith(
-                    color: active ? t.brandText : (done ? t.text : t.textMuted),
+                    color: active ? t.textStrong : (done ? t.text : t.textMuted),
                     fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
@@ -793,7 +793,7 @@ class ProvisionalStep extends ConsumerWidget {
                             try {
                               await repo.closeProvisional(entity.id, fy.id);
                               onChanged();
-                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clôture provisoire prononcée.')));
+                              if (context.mounted) showAkToast(context, 'Clôture provisoire prononcée.');
                             } catch (e) {
                               if (context.mounted) showErrorSnack(context, frenchRpcError(e));
                             }
@@ -918,7 +918,7 @@ class _FinalStepState extends ConsumerState<FinalStep> {
                         try {
                           final archive = await ref.read(closingRepositoryProvider).closeFinal(widget.entity.id, widget.fy.id, _confirm.text.trim());
                           widget.onChanged();
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exercice arrêté. Archive $archive.')));
+                          if (context.mounted) showAkToast(context, 'Exercice arrêté. Archive $archive.');
                         } catch (e) {
                           if (context.mounted) showErrorSnack(context, frenchRpcError(e));
                         }

@@ -41,7 +41,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         _section(
           'Palette',
           Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, children: [
-            for (final (n, c) in [('brand', t.brand), ('brandTint', t.brandTint), ('success', t.success), ('warning', t.warning), ('danger', t.danger), ('info', t.info), ('surfaceSunken', t.surfaceSunken), ('border', t.border), ('text', t.text), ('textMuted', t.textMuted)])
+            for (final (n, c) in [('brand', t.accent), ('brandTint', t.rowSelected), ('success', t.success), ('warning', t.warning), ('danger', t.danger), ('info', t.info), ('surfaceSunken', t.surfaceSunken), ('border', t.border), ('text', t.text), ('textMuted', t.textMuted)])
               Column(children: [Container(width: 72, height: 40, decoration: BoxDecoration(color: c, borderRadius: AkRadius.mdAll, border: Border.all(color: t.border))), Text(n, style: AkText.caption)]),
           ]),
         ),

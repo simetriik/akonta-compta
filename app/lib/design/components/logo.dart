@@ -1,28 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-/// Logo Akonta d'après le kit `outputs/logo-akonta` (PNG transparents embarqués dans `assets/logo/`).
-/// Horizontal (symbole + nom) par défaut ; symbole seul avec [symbolOnly] (version petite taille sous 32 px).
+/// Version du logo : [auto] bicolore (A orange) en thème clair et blanc en thème sombre ;
+/// [blue] tout en bleu nuit (petites tailles, documents) ; [onDark] pour un fond sombre fixe (rail).
+enum AkLogoTone { auto, blue, onDark }
+
+/// Logo Akonta (SVG vectoriel du système de design). Horizontal par défaut ; symbole seul avec [symbolOnly].
+/// Sous 32 px de hauteur, le symbole passe en version bleue (lisibilité).
 class AkLogo extends StatelessWidget {
-  const AkLogo({super.key, this.height = 40, this.symbolOnly = false});
+  const AkLogo({super.key, this.height = 40, this.symbolOnly = false, this.tone = AkLogoTone.auto});
 
   final double height;
   final bool symbolOnly;
+  final AkLogoTone tone;
+
+  static const _dir = 'assets/logo';
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final String asset;
-    if (symbolOnly) {
-      asset = height < 32
-          ? 'assets/logo/akonta-symbol-small-${dark ? 'white' : 'black'}-48.png'
-          : 'assets/logo/akonta-symbol-${dark ? 'white' : 'black'}-128.png';
-    } else {
-      asset = 'assets/logo/akonta-lockup-horizontal-${dark ? 'white' : 'black'}-1200.png';
-    }
+    final variant = switch (tone) {
+      AkLogoTone.onDark => 'sombre',
+      AkLogoTone.blue => dark ? 'sombre' : 'bleu',
+      AkLogoTone.auto => dark ? 'sombre' : (symbolOnly && height < 32 ? 'bleu' : 'bicolore'),
+    };
+    final asset = symbolOnly
+        ? '$_dir/akonta-symbole-${variant == 'sombre' ? 'blanc' : variant}.svg'
+        : '$_dir/akonta-logo-horizontal${variant == 'bicolore' ? '' : '-$variant'}.svg';
     return Semantics(
       label: 'Akonta',
       image: true,
-      child: Image.asset(asset, height: height, fit: BoxFit.contain, filterQuality: FilterQuality.high, excludeFromSemantics: true),
+      child: ExcludeSemantics(child: SvgPicture.asset(asset, height: height, fit: BoxFit.contain)),
     );
   }
 }

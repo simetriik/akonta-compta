@@ -280,7 +280,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
           minWidth: 480,
           emptyMessage: 'Rien à pointer.',
           onRowTap: toggle,
-          rowColor: (r) => selected(r) ? t.brandTint : null,
+          rowColor: (r) => selected(r) ? t.rowSelected : null,
           columns: [
             AkColumn<R>(
               label: '',
@@ -315,7 +315,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
         n++;
       } catch (_) {}
     }
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$n pointage(s) effectué(s).')));
+    if (mounted) showAkToast(context, '$n pointage(s) effectué(s).');
     await _load();
   }
 
@@ -392,7 +392,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
             templateId: templateId,
             fileName: file.name,
           );
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${parsed.lines.length} lignes de relevé importées.')));
+      if (mounted) showAkToast(context, '${parsed.lines.length} lignes de relevé importées.');
     } catch (e) {
       if (mounted) showErrorSnack(context, _french(e));
     }
@@ -402,7 +402,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
   Future<void> _finalize() async {
     try {
       await ref.read(reconciliationRepositoryProvider).finalize(_journal!.id, _until);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('État de rapprochement figé. Exportez le PDF pour l\'archiver.')));
+      if (mounted) showAkToast(context, 'État de rapprochement figé. Exportez le PDF pour l\'archiver.');
     } catch (e) {
       if (mounted) showErrorSnack(context, _french(e));
     }
@@ -517,7 +517,7 @@ class _EntryFromLineDialogState extends State<_EntryFromLineDialog> {
     final l = widget.line;
     return AkDialog(
       title: 'Créer l\'écriture depuis le relevé',
-      width: 460,
+      size: AkDialogSize.m,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -604,7 +604,7 @@ class _TemplateDialogState extends State<_TemplateDialog> {
   Widget build(BuildContext context) {
     return AkDialog(
       title: 'Gabarit du relevé',
-      width: 520,
+      size: AkDialogSize.m,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -745,7 +745,7 @@ class _StatementParamsDialogState extends State<_StatementParamsDialog> {
   Widget build(BuildContext context) {
     return AkDialog(
       title: 'Relevé : ${widget.count} lignes lues',
-      width: 460,
+      size: AkDialogSize.m,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

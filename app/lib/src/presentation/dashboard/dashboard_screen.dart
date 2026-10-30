@@ -50,13 +50,12 @@ class _Totals extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = context.ak;
     int sum(int Function(EntitySummary) f) => entities.fold(0, (a, e) => a + f(e));
     final items = [
-      ('Brouillards', sum((e) => e.draftCount), t.statusDraft),
-      ('Écritures non revues', sum((e) => e.unreviewedCount), t.statusReview),
-      ('À corriger', sum((e) => e.toCorrectCount), t.statusFix),
-      ('Pièces en attente', sum((e) => e.inboxCount), t.textMuted),
+      ('Brouillards', sum((e) => e.draftCount), false, Icons.edit_outlined),
+      ('Écritures non revues', sum((e) => e.unreviewedCount), false, Icons.fact_check_outlined),
+      ('À corriger', sum((e) => e.toCorrectCount), true, Icons.error_outline),
+      ('Pièces en attente', sum((e) => e.inboxCount), false, Icons.receipt_long_outlined),
     ];
     return LayoutBuilder(
       builder: (context, c) {
@@ -67,36 +66,10 @@ class _Totals extends StatelessWidget {
           spacing: gap,
           runSpacing: gap,
           children: [
-            for (final (label, value, color) in items)
+            for (final (label, value, problem, icon) in items)
               SizedBox(
                 width: w,
-                child: AkCard(
-                  padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          _Dot(color: color),
-                          const SizedBox(width: AkSpace.s2),
-                          Flexible(
-                            child: Text(
-                              label,
-                              style: AkText.caption.copyWith(color: t.textMuted),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AkSpace.s1),
-                      Text(
-                        '$value',
-                        style: AkText.amount.copyWith(fontSize: 24, height: 32 / 24, fontWeight: FontWeight.w600, color: t.text),
-                      ),
-                    ],
-                  ),
-                ),
+                child: AkStat(label: label, value: '$value', icon: icon, problem: problem && value > 0),
               ),
           ],
         );
@@ -133,19 +106,6 @@ class _CardGrid extends StatelessWidget {
   }
 }
 
-class _Dot extends StatelessWidget {
-  const _Dot({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 8,
-    height: 8,
-    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-  );
-}
-
 class DossierCard extends ConsumerWidget {
   const DossierCard({super.key, required this.entity});
 
@@ -165,7 +125,7 @@ class DossierCard extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(selected ? Icons.folder_open : Icons.folder_outlined, size: 20, color: selected ? t.brandText : t.textMuted),
+              Icon(selected ? Icons.folder_open : Icons.folder_outlined, size: 20, color: selected ? t.textStrong : t.textMuted),
               const SizedBox(width: AkSpace.s2),
               Expanded(
                 child: Column(
@@ -189,7 +149,7 @@ class DossierCard extends ConsumerWidget {
                     style: AkText.caption.copyWith(color: t.textMuted),
                   ),
                 ),
-                if (selected) Text('Dossier courant', style: AkText.label.copyWith(color: t.brandText)),
+                if (selected) Text('Dossier courant', style: AkText.label.copyWith(color: t.textStrong)),
               ],
             ),
           ],

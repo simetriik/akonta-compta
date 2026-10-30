@@ -12,7 +12,7 @@ from .formatting import fcfa, fcfa_total, fr_date
 from .models import AgedBalanceDocument, DocumentHeader, FinancialStatementsDocument, JournalDocument, LedgerDocument, ReconciliationDocument, StatementPostRow, TrialBalanceDocument
 
 INK = colors.HexColor("#1A1A18")
-TERRACOTTA = colors.HexColor("#B5472A")
+NAVY = colors.HexColor("#1E2A5A")
 SAND = colors.HexColor("#F7F3EC")
 
 _styles = getSampleStyleSheet()
@@ -42,7 +42,7 @@ def _table(data: list[list], col_widths: list[float], numeric_from: int, total_r
         ("TEXTCOLOR", (0, 0), (-1, 0), INK),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 7.5),
-        ("LINEBELOW", (0, 0), (-1, 0), 0.8, TERRACOTTA),
+        ("LINEBELOW", (0, 0), (-1, 0), 0.8, NAVY),
         ("LINEBELOW", (0, 1), (-1, -1), 0.2, colors.HexColor("#DDD8CF")),
         ("ALIGN", (numeric_from, 1), (-1, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),

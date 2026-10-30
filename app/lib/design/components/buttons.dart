@@ -5,7 +5,7 @@ import 'layout.dart';
 
 enum AkButtonVariant { primary, secondary, danger, dangerOutline, ghost }
 
-/// Bouton unique de l'application : primaire (terracotta), secondaire (contour), danger (cramoisi),
+/// Bouton unique de l'application : primaire (orange d'action), secondaire (contour), danger (cramoisi),
 /// danger secondaire (contour cramoisi) et discret (texte). Même hauteur que les champs (40 px, 48 px sur mobile).
 class AkButton extends StatelessWidget {
   const AkButton({
@@ -47,7 +47,7 @@ class AkButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
-    final height = dense && !akIsCompact(context) ? AkSpace.controlDense : akControlHeight(context);
+    final height = dense && !akIsTouch(context) ? AkSpace.controlDense : akControlHeight(context);
     final enabled = onPressed != null && !loading;
     final base = ButtonStyle(
       minimumSize: WidgetStatePropertyAll(Size(expand ? double.infinity : 0, height)),
@@ -60,18 +60,18 @@ class AkButton extends StatelessWidget {
       visualDensity: VisualDensity.standard,
     );
     final (Color fg, Color? bg, Color? border) = switch (variant) {
-      AkButtonVariant.primary => (t.onBrand, t.brand, null),
-      AkButtonVariant.secondary => (t.text, t.surface, t.borderStrong),
+      AkButtonVariant.primary => (t.onAccent, t.accent, null),
+      AkButtonVariant.secondary => (t.text, t.surface, t.borderControl),
       AkButtonVariant.danger => (t.onDanger, t.dangerSolid, null),
       AkButtonVariant.dangerOutline => (t.danger, t.surface, t.danger),
-      AkButtonVariant.ghost => (t.brandText, null, null),
+      AkButtonVariant.ghost => (t.textStrong, null, null),
     };
     final style = base.copyWith(
       foregroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.disabled) ? t.textDisabled : fg),
       backgroundColor: WidgetStateProperty.resolveWith((s) {
         if (s.contains(WidgetState.disabled)) return variant == AkButtonVariant.ghost || border != null ? null : t.disabledFill;
         final hover = s.contains(WidgetState.hovered) || s.contains(WidgetState.pressed);
-        if (variant == AkButtonVariant.primary) return hover ? t.brandHover : t.brand;
+        if (variant == AkButtonVariant.primary) return hover ? t.accentHover : t.accent;
         if (variant == AkButtonVariant.danger) return hover ? t.dangerSolidHover : t.dangerSolid;
         return hover ? t.surfaceHover : bg;
       }),

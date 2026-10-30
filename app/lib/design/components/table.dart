@@ -81,10 +81,10 @@ class AkTable<R> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
-    final rowH = akIsCompact(context) ? AkSpace.rowTouch : AkSpace.rowCompact;
+    final rowH = akIsTouch(context) ? AkSpace.rowTouch : AkSpace.rowCompact;
     final header = Container(
       height: rowH,
-      color: t.surfaceSunken,
+      color: t.tableHead,
       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3),
       child: _cells(context, [
         for (final c in columns)
@@ -92,7 +92,7 @@ class AkTable<R> extends StatelessWidget {
             c.label,
             overflow: TextOverflow.ellipsis,
             textAlign: c.numeric ? TextAlign.right : TextAlign.start,
-            style: AkText.label.copyWith(color: t.textMuted),
+            style: AkText.tableHead.copyWith(color: t.textMuted),
           ),
       ]),
     );
@@ -106,7 +106,7 @@ class AkTable<R> extends StatelessWidget {
         ),
         child: _cells(context, [for (final c in columns) c.cell(context, r)]),
       );
-      return onRowTap == null ? content : InkWell(hoverColor: t.surfaceHover, onTap: () => onRowTap!(r), child: content);
+      return onRowTap == null ? content : InkWell(hoverColor: t.rowSelected, onTap: () => onRowTap!(r), child: content);
     }
 
     final hasFooter = footerLabel != null;
@@ -114,7 +114,8 @@ class AkTable<R> extends StatelessWidget {
       constraints: BoxConstraints(minHeight: rowH),
       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: 2),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: t.borderStrong, width: 2)),
+        color: t.surfaceSunken,
+        border: Border(top: BorderSide(color: t.borderControl, width: 2)),
       ),
       child: _cells(context, [
         for (var i = 0; i < columns.length; i++)
@@ -122,7 +123,7 @@ class AkTable<R> extends StatelessWidget {
             i == 0 && columns[i].footer == null ? footerLabel! : (columns[i].footer ?? ''),
             overflow: TextOverflow.ellipsis,
             textAlign: columns[i].numeric ? TextAlign.right : TextAlign.start,
-            style: (columns[i].numeric ? AkText.amount : AkText.bodyStrong).copyWith(color: t.text),
+            style: (columns[i].numeric ? AkText.amountTotal : AkText.tableHead).copyWith(color: t.textStrong),
           ),
       ]),
     );

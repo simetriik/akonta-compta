@@ -82,3 +82,9 @@ Parcours dans le navigateur intégré (`flutter run -d web-server`, fenêtre 144
 - **Jeu de données** `recette/` (généré par `generer-jeu.py`) : PME fictive de Cotonou, 45 opérations (T1 2027, TVA, AIB et TVA retenue, paie, euro, dollar, acquisition et cession), export Perfecto simulé au format réel (cp1252), relevé Ecobank avec lignes non rapprochables, 12 pièces PDF/JPEG, données d'inventaire, balance attendue.
 - **Vérifié** : pgTAP `150` (import en mode essai sans erreur) et `151` (les 44 opérations hors cession et les à-nouveaux sont validés par la base, balance conforme), Flutter `recette_jeu_test`.
 - **Écarts relevés** (non corrigés, Q-007 à Q-015) : création du mot de passe depuis l'invitation, verrouillage après 5 échecs, devise dans la grille, reclassement, associés, modèles d'écritures, manifestes mobiles. Contournements dans `recette/LISEZMOI.md`.
+
+## Changement d'identité visuelle (30 oct. 2026, branche `refonte-identite`)
+- Audit du design (`docs/audit-design.md`), puis intégration du système de design bleu nuit / orange (D-016) dans `app/lib/design/` : jetons, thème clair et sombre, logos SVG (`flutter_svg`), shell (rail étendu, rail réduit tablette, barre basse mobile, Ctrl K), `AkToast`, `AkGrid`, `AkStat`, `AkListRow`, `AkRadioGroup`, grille de saisie sans bordures avec ligne active, barre d'équilibre, soldes « D / C ».
+- Tests : contrastes étendus (rail, statuts, toast, contrôles à 3:1), garde-fou étendu (`SnackBar`, `ListTile`, `RadioListTile`), goldens régénérés (`docs/design/identite-bleu-nuit/`).
+- Reste : voir D-016 (PDF du service Python, réglage manuel du thème, `TabBar`/`PopupMenuButton`).
+

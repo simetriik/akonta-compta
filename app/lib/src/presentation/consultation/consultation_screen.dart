@@ -194,7 +194,7 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
         padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3),
         decoration: BoxDecoration(
           color: t.surface,
-          border: Border.all(color: t.borderStrong),
+          border: Border.all(color: t.borderControl),
           borderRadius: AkRadius.mdAll,
         ),
         child: Row(
@@ -225,10 +225,10 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
         if (!await f.exists() || await f.length() == 0) await f.writeAsBytes(bytes);
       }
       if (mounted && uri != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export enregistré : ${uri.scheme == 'file' ? uri.toFilePath() : uri}')));
+        showAkToast(context, 'Export enregistré : ${uri.scheme == 'file' ? uri.toFilePath() : uri}');
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: context.ak.danger));
+      if (mounted) showAkToast(context, '$e', kind: AkToastKind.danger);
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -236,32 +236,8 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
 }
 
 // ---------------------------------------------------------------------------
-// Tableau commun : en-tête fixe, lignes de section, ligne de totaux en gras
+// Cellules de tableau communes (le tableau lui-même est AkGrid)
 // ---------------------------------------------------------------------------
-
-/// Colonne du tableau ; `grow` absorbe la largeur disponible en plus de la largeur minimale.
-class _Col {
-  const _Col(this.label, this.width, {this.numeric = false, this.grow = false});
-
-  final String label;
-  final double width;
-  final bool numeric;
-  final bool grow;
-}
-
-enum _RowKind { normal, section, total }
-
-class _GRow {
-  const _GRow(this.cells, {this.kind = _RowKind.normal, this.onTap}) : sectionChild = null;
-
-  /// Ligne de section pleine largeur (classe, compte, journal).
-  const _GRow.section(Widget this.sectionChild) : cells = const [], kind = _RowKind.section, onTap = null;
-
-  final List<Widget> cells;
-  final _RowKind kind;
-  final VoidCallback? onTap;
-  final Widget? sectionChild;
-}
 
 Widget _txt(BuildContext context, String s, {bool bold = false, bool muted = false}) => Text(
   s,
@@ -278,148 +254,6 @@ Widget _codeTxt(BuildContext context, String s, {bool bold = false}) => Text(
 );
 
 Widget _amt(String s, {bool bold = false}) => AkAmountText(s, bold: bold);
-
-class _DataGrid extends StatelessWidget {
-  const _DataGrid({required this.columns, required this.rows, this.groups});
-
-  final List<_Col> columns;
-  final List<_GRow> rows;
-
-  /// Regroupements d'en-têtes (libellé, nombre de colonnes) ; libellé vide = pas de regroupement.
-  final List<(String, int)>? groups;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.ak;
-    final rowH = akIsCompact(context) ? AkSpace.rowTouch : AkSpace.rowCompact;
-    return LayoutBuilder(
-      builder: (context, c) {
-        final base = columns.fold<double>(0, (s, col) => s + col.width);
-        final extra = c.maxWidth.isFinite && c.maxWidth > base ? c.maxWidth - base : 0.0;
-        final widths = [for (final col in columns) col.width + (col.grow ? extra : 0)];
-        final total = base + extra;
-        // Colonnes qui ouvrent un groupe : filet vertical à gauche.
-        final starts = <int>{};
-        if (groups != null) {
-          var i = 0;
-          for (final g in groups!) {
-            if (g.$1.isNotEmpty) starts.add(i);
-            i += g.$2;
-          }
-        }
-        BoxDecoration? sep(int j) => starts.contains(j)
-            ? BoxDecoration(
-                border: Border(left: BorderSide(color: t.border)),
-              )
-            : null;
-
-        Widget headerCell(int j) => Container(
-          width: widths[j],
-          padding: EdgeInsets.symmetric(horizontal: j == 0 ? AkSpace.s4 : AkSpace.s3),
-          alignment: columns[j].numeric ? Alignment.centerRight : Alignment.centerLeft,
-          decoration: sep(j),
-          child: Text(
-            columns[j].label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AkText.label.copyWith(color: t.textMuted),
-          ),
-        );
-        final groupCells = <Widget>[];
-        if (groups != null) {
-          var i = 0;
-          for (final g in groups!) {
-            final start = i;
-            i += g.$2;
-            final w = widths.sublist(start, start + g.$2).fold<double>(0, (s, x) => s + x);
-            groupCells.add(
-              Container(
-                width: w,
-                alignment: Alignment.center,
-                decoration: sep(start),
-                child: Text(g.$1, style: AkText.label.copyWith(color: t.textMuted)),
-              ),
-            );
-          }
-        }
-        final header = Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (groups != null)
-              Container(
-                height: rowH,
-                color: t.surfaceSunken,
-                child: Row(children: groupCells),
-              ),
-            Container(
-              height: rowH,
-              decoration: BoxDecoration(
-                color: t.surfaceSunken,
-                border: Border(bottom: BorderSide(color: t.border)),
-              ),
-              child: Row(children: [for (var j = 0; j < columns.length; j++) headerCell(j)]),
-            ),
-          ],
-        );
-
-        Widget rowAt(int i) {
-          final r = rows[i];
-          if (r.kind == _RowKind.section) {
-            return Container(
-              width: total,
-              height: rowH,
-              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: t.surfaceSunken,
-                border: Border(bottom: BorderSide(color: t.border)),
-              ),
-              child: r.sectionChild,
-            );
-          }
-          final isTotal = r.kind == _RowKind.total;
-          Widget row = Container(
-            height: rowH,
-            decoration: BoxDecoration(
-              color: isTotal ? t.surfaceSunken : null,
-              border: Border(
-                top: isTotal ? BorderSide(color: t.borderStrong) : BorderSide.none,
-                bottom: BorderSide(color: t.border),
-              ),
-            ),
-            child: Row(
-              children: [
-                for (var j = 0; j < columns.length; j++)
-                  Container(
-                    width: widths[j],
-                    padding: EdgeInsets.symmetric(horizontal: j == 0 ? AkSpace.s4 : AkSpace.s3),
-                    alignment: columns[j].numeric ? Alignment.centerRight : Alignment.centerLeft,
-                    decoration: sep(j),
-                    child: j < r.cells.length ? r.cells[j] : null,
-                  ),
-              ],
-            ),
-          );
-          if (r.onTap != null) row = InkWell(onTap: r.onTap, child: row);
-          return row;
-        }
-
-        final content = Column(
-          children: [
-            header,
-            Expanded(
-              child: ListView.builder(itemCount: rows.length, itemBuilder: (_, i) => rowAt(i)),
-            ),
-          ],
-        );
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(width: total, child: content),
-        );
-      },
-    );
-  }
-}
 
 /// Libellé de classe SYSCOHADA pour les lignes de section de la balance.
 String _classLabel(int c) => switch (c) {
@@ -512,10 +346,10 @@ class _LedgerGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rows = <_GRow>[
+    final rows = <AkGridRow>[
       for (final it in items)
         switch (it) {
-          _LHead h => _GRow.section(
+          _LHead h => AkGridRow.section(
             Row(
               children: [
                 _codeTxt(context, h.code, bold: true),
@@ -524,7 +358,7 @@ class _LedgerGrid extends StatelessWidget {
               ],
             ),
           ),
-          _LLine(:final line) => _GRow([
+          _LLine(:final line) => AkGridRow([
             _txt(context, Fmt.date(line.entryDate)),
             _codeTxt(context, '${line.journalCode}-${line.number}'),
             _codeTxt(context, line.reference ?? ''),
@@ -532,10 +366,10 @@ class _LedgerGrid extends StatelessWidget {
             _codeTxt(context, line.thirdPartyCode ?? ''),
             _amt(Fmt.fcfa(line.debit)),
             _amt(Fmt.fcfa(line.credit)),
-            _amt(Fmt.fcfa(line.runningBalance, showZero: true)),
+            _amt(Fmt.balance(line.runningBalance)),
             _codeTxt(context, line.letterCode ?? ''),
           ], onTap: () => context.go('/saisie/${line.entryId}')),
-          _LTotal tot => _GRow([
+          _LTotal tot => AkGridRow([
             const SizedBox.shrink(),
             const SizedBox.shrink(),
             const SizedBox.shrink(),
@@ -543,21 +377,21 @@ class _LedgerGrid extends StatelessWidget {
             const SizedBox.shrink(),
             _amt(Fmt.fcfa(tot.debit, showZero: true), bold: true),
             _amt(Fmt.fcfa(tot.credit, showZero: true), bold: true),
-            _amt(Fmt.fcfa(tot.debit - tot.credit, showZero: true), bold: true),
-          ], kind: _RowKind.total),
+            _amt(Fmt.balance(tot.debit - tot.credit), bold: true),
+          ], kind: AkGridRowKind.total),
         },
     ];
-    return _DataGrid(
+    return AkGrid(
       columns: const [
-        _Col('Date', 116),
-        _Col('Pièce', 124),
-        _Col('Référence', 110),
-        _Col('Libellé', 240, grow: true),
-        _Col('Tiers', 90),
-        _Col('Débit', 120, numeric: true),
-        _Col('Crédit', 120, numeric: true),
-        _Col('Solde', 130, numeric: true),
-        _Col('Lettre', 70),
+        AkGridColumn('Date', 116),
+        AkGridColumn('Pièce', 124),
+        AkGridColumn('Référence', 110),
+        AkGridColumn('Libellé', 240, grow: true),
+        AkGridColumn('Tiers', 90),
+        AkGridColumn('Débit', 120, numeric: true),
+        AkGridColumn('Crédit', 120, numeric: true),
+        AkGridColumn('Solde', 130, numeric: true),
+        AkGridColumn('Lettre', 70),
       ],
       rows: rows,
     );
@@ -619,7 +453,7 @@ class _LedgerList extends StatelessWidget {
                     children: [
                       AkAmountText('D ${Fmt.fcfa(tot.debit, showZero: true)}', bold: true),
                       AkAmountText('C ${Fmt.fcfa(tot.credit, showZero: true)}', bold: true),
-                      AkAmountText('Solde ${Fmt.fcfa(tot.debit - tot.credit, showZero: true)}', bold: true),
+                      AkAmountText('Solde ${Fmt.balance(tot.debit - tot.credit)}', bold: true),
                     ],
                   ),
                 ],
@@ -675,7 +509,7 @@ class _LedgerList extends StatelessWidget {
                       children: [
                         AkAmountText('${debit ? 'D' : 'C'} ${Fmt.fcfa(debit ? line.debit : line.credit)}', bold: true),
                         Text(
-                          'Solde ${Fmt.fcfa(line.runningBalance, showZero: true)}',
+                          'Solde ${Fmt.balance(line.runningBalance)}',
                           style: AkText.caption.copyWith(color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]),
                         ),
                       ],
@@ -711,18 +545,18 @@ class _BalanceTab extends ConsumerWidget {
         final prevByCode = {for (final r in prevRows ?? const <BalanceRow>[]) r.accountCode: r};
         int t(int Function(BalanceRow) f) => list.fold(0, (s, r) => s + f(r));
         final withPrev = previous != null;
-        final grid = <_GRow>[];
+        final grid = <AkGridRow>[];
         int? lastClass;
         for (final r in list) {
           final cls = r.accountCode.isEmpty ? null : int.tryParse(r.accountCode[0]);
           if (cls != null && cls != lastClass) {
             lastClass = cls;
             final label = _classLabel(cls);
-            grid.add(_GRow.section(_sectionText(context, label.isEmpty ? 'Classe $cls' : 'Classe $cls · $label')));
+            grid.add(AkGridRow.section(_sectionText(context, label.isEmpty ? 'Classe $cls' : 'Classe $cls · $label')));
           }
           final prev = prevByCode[r.accountCode];
           grid.add(
-            _GRow([
+            AkGridRow([
               _codeTxt(context, r.accountCode),
               _txt(context, r.accountLabel),
               _amt(Fmt.fcfa(r.openingDebit)),
@@ -731,12 +565,12 @@ class _BalanceTab extends ConsumerWidget {
               _amt(Fmt.fcfa(r.periodCredit)),
               _amt(Fmt.fcfa(r.closingDebit)),
               _amt(Fmt.fcfa(r.closingCredit)),
-              if (withPrev) _amt(Fmt.fcfa((prev?.closingDebit ?? 0) - (prev?.closingCredit ?? 0), showZero: true)),
+              if (withPrev) _amt(Fmt.balance((prev?.closingDebit ?? 0) - (prev?.closingCredit ?? 0))),
             ]),
           );
         }
         grid.add(
-          _GRow([
+          AkGridRow([
             const SizedBox.shrink(),
             _txt(context, 'Totaux', bold: true),
             _amt(Fmt.fcfa(t((r) => r.openingDebit), showZero: true), bold: true),
@@ -746,20 +580,20 @@ class _BalanceTab extends ConsumerWidget {
             _amt(Fmt.fcfa(t((r) => r.closingDebit), showZero: true), bold: true),
             _amt(Fmt.fcfa(t((r) => r.closingCredit), showZero: true), bold: true),
             if (withPrev) const SizedBox.shrink(),
-          ], kind: _RowKind.total),
+          ], kind: AkGridRowKind.total),
         );
-        return _DataGrid(
+        return AkGrid(
           groups: [..._balanceGroups, if (withPrev) ('', 1)],
           columns: [
-            const _Col('Compte', 110),
-            const _Col('Intitulé', 260, grow: true),
-            const _Col('Débit', 112, numeric: true),
-            const _Col('Crédit', 112, numeric: true),
-            const _Col('Débit', 112, numeric: true),
-            const _Col('Crédit', 112, numeric: true),
-            const _Col('Débit', 112, numeric: true),
-            const _Col('Crédit', 112, numeric: true),
-            if (withPrev) const _Col('Solde N-1', 120, numeric: true),
+            const AkGridColumn('Compte', 110),
+            const AkGridColumn('Intitulé', 260, grow: true),
+            const AkGridColumn('Débit', 112, numeric: true),
+            const AkGridColumn('Crédit', 112, numeric: true),
+            const AkGridColumn('Débit', 112, numeric: true),
+            const AkGridColumn('Crédit', 112, numeric: true),
+            const AkGridColumn('Débit', 112, numeric: true),
+            const AkGridColumn('Crédit', 112, numeric: true),
+            if (withPrev) const AkGridColumn('Solde N-1', 120, numeric: true),
           ],
           rows: grid,
         );
@@ -914,11 +748,11 @@ class _CentralizationTab extends ConsumerWidget {
         for (final r in list) {
           byJournal.putIfAbsent(r.journalCode, () => []).add(r);
         }
-        final grid = <_GRow>[];
+        final grid = <AkGridRow>[];
         for (final e in byJournal.entries) {
           final label = journals.where((j) => j.code == e.key).firstOrNull?.label ?? e.value.first.journalLabel;
           grid.add(
-            _GRow.section(
+            AkGridRow.section(
               Row(
                 children: [
                   _codeTxt(context, e.key, bold: true),
@@ -930,7 +764,7 @@ class _CentralizationTab extends ConsumerWidget {
           );
           for (final r in e.value) {
             grid.add(
-              _GRow([
+              AkGridRow([
                 _txt(context, Fmt.month(r.monthStart)),
                 _txt(context, '${r.entriesCount} écr.', muted: true),
                 _amt(Fmt.fcfa(r.totalDebit, showZero: true)),
@@ -939,16 +773,16 @@ class _CentralizationTab extends ConsumerWidget {
             );
           }
           grid.add(
-            _GRow([
+            AkGridRow([
               _txt(context, 'Total journal', bold: true),
               const SizedBox.shrink(),
               _amt(Fmt.fcfa(e.value.fold<int>(0, (s, r) => s + r.totalDebit), showZero: true), bold: true),
               _amt(Fmt.fcfa(e.value.fold<int>(0, (s, r) => s + r.totalCredit), showZero: true), bold: true),
-            ], kind: _RowKind.total),
+            ], kind: AkGridRowKind.total),
           );
         }
-        return _DataGrid(
-          columns: const [_Col('Mois', 200, grow: true), _Col('Écritures', 100), _Col('Débit', 140, numeric: true), _Col('Crédit', 140, numeric: true)],
+        return AkGrid(
+          columns: const [AkGridColumn('Mois', 200, grow: true), AkGridColumn('Écritures', 100), AkGridColumn('Débit', 140, numeric: true), AkGridColumn('Crédit', 140, numeric: true)],
           rows: grid,
         );
       },

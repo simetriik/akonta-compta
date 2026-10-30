@@ -242,7 +242,7 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
   }
 }
 
-/// Pastille numérotée d'étape : terracotta pour l'étape courante, coche pour les étapes terminées.
+/// Pastille numérotée d'étape : orange pour l'étape courante, coche pour les étapes terminées.
 class _StepDot extends StatelessWidget {
   const _StepDot({required this.index, required this.current});
 
@@ -259,7 +259,7 @@ class _StepDot extends StatelessWidget {
       height: 24,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: active ? t.brand : t.surfaceSunken,
+        color: active ? t.accent : t.surfaceSunken,
         shape: BoxShape.circle,
         border: active ? null : Border.all(color: t.borderControl),
       ),

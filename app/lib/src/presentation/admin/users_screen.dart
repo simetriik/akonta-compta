@@ -182,7 +182,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
         return;
       }
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invitation envoyée à ${_email.text.trim()}')));
+      showAkToast(context, 'Invitation envoyée à ${_email.text.trim()}');
     } catch (e) {
       setState(() => _error = 'Invitation impossible : $e');
     } finally {
@@ -194,7 +194,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
   Widget build(BuildContext context) {
     return AkDialog(
       title: 'Inviter un collaborateur',
-      width: 380,
+      size: AkDialogSize.s,
       content: Form(
         key: _form,
         child: Column(
@@ -235,5 +235,5 @@ class ProfileTile extends StatelessWidget {
   final Profile profile;
 
   @override
-  Widget build(BuildContext context) => ListTile(title: Text(profile.fullName), subtitle: Text(profile.email));
+  Widget build(BuildContext context) => AkListRow(title: Text(profile.fullName), subtitle: Text(profile.email));
 }
