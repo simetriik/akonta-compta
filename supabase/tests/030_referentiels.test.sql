@@ -75,7 +75,7 @@ select lives_ok(format('insert into public.third_party_accounts select t.id, a.i
 select is(public.tax_rate_at(:'a_id', 'TVA', '2026-06-30'), 0.18::numeric, 'TVA 18 % en vigueur');
 select throws_ok(format('insert into public.tax_rates (cabinet_id, code, label, rate, valid_from) values (%L, ''TVA'', ''TVA bis'', 0.2, ''2026-01-01'')', :'a_id'),
                  '23P01', null, 'pas de chevauchement de validité pour un même taux');
-select is((select count(*) from public.entry_templates where cabinet_id = :'a_id' and entity_id is null), 5::bigint, '5 modèles d''écritures fournis au cabinet');
+select is((select count(*) from public.entry_templates where cabinet_id = :'a_id' and entity_id is null), 30::bigint, '30 modèles d''écritures fournis au cabinet (5 de base + bibliothèque)');
 select is((select count(*) from public.entry_template_lines l join public.entry_templates t on t.id = l.template_id where t.cabinet_id = :'a_id' and t.code = 'SALAIRES'), 6::bigint,
           'modèle salaires : 6 lignes');
 select is((select count(*) from public.journal_templates where cabinet_id = :'a_id'), 7::bigint, '7 journaux dans le modèle du cabinet');

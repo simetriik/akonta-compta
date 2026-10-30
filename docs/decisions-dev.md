@@ -82,3 +82,34 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Raison** : lisibilité en saisie intensive, hiérarchie visuelle, cohérence des tableaux, adaptation tablette. Aucun changement de logique métier ni de base.
 - **Reste** : documents PDF et liasse du service Python (identité à reprendre), réglage manuel clair/sombre dans le menu utilisateur, `TabBar` et `PopupMenuButton` encore Material thémés, choix de langue du kit logo `outputs/logo-akonta/` (ancien, conservé tel quel).
 
+
+## D-017 — 2026-10-30 — L'administrateur technique est invisible des membres du cabinet
+- **Contexte** : constaté en recette (voir Q-016) : `profiles_select` et `assignments_select` montraient l'administrateur technique à tous les membres, et la piste d'audit affichait son nom. La conception le définit « sans accès aux données comptables » sans traiter sa visibilité ; décision de Dansi le 30 oct. 2026.
+- **Choix** : migration `20261030100001_tech_admin_invisible.sql`. Fonction `is_tech_admin(uuid)` ; politiques `profiles_select` et `assignments_select` qui masquent les administrateurs techniques aux autres (ils se voient entre eux et se voient eux-mêmes) ; fonction `actor_labels(uuid[])` qui rend le libellé « Administration technique » dans la piste d'audit pour les non-administrateurs. Les actions restent tracées (la piste d'audit n'est pas altérée). L'écran d'audit lit les libellés par cette fonction.
+- **Test** : `supabase/tests/160_tech_admin_invisible.test.sql`.
+- **Raison** : séparation des pouvoirs ; la règle vit dans la base, pas dans Flutter.
+- **Reste** : les relations imbriquées vers `profiles` (créateur, auteur d'une écriture) renvoient `null` pour un administrateur ; à vérifier dans les écrans au fil de la recette.
+
+## D-018 — 2026-10-30 — Le créateur d'un dossier le voit dès l'insertion (INSERT ... RETURNING)
+- **Contexte** : en recette, l'associé ne pouvait pas créer de dossier (« violation RLS »). `entities_repository.create` utilise `insert(...).select()` ; la politique `entities_select` appelle `can_access_entity(id)`, qui relit `entities` (contrôle du cabinet) et ne voit pas la ligne insérée par la commande en cours. Régression introduite par le contrôle de cabinet ajouté à `can_access_entity` (migration dossiers) ; aucun test ne couvrait l'insertion avec RETURNING.
+- **Choix** : migration `20261030100002_entities_select_creator.sql` : `entities_select` accepte aussi `created_by = auth.uid()`. Test : `supabase/tests/170_entities_insert_returning.test.sql`.
+- **Conséquence acceptée** : un créateur qui perdrait ensuite son affectation continue de voir le dossier qu'il a créé.
+- **Alternative écartée** : id généré côté Flutter (dépendance `uuid` à ajouter), fonction volatile (coût sur toutes les lectures).
+
+## D-019 — 2026-10-30 — Affectations : politique d'écriture scindée pour que la lecture reste filtrée
+- **Contexte** : après D-017, l'écran Cabinet > Affectations plantait (« type error ») pour l'associé. `assignments_write` était `FOR ALL` : elle comprend la lecture et donnait à l'associé (`assignments.manage`) la ligne de l'administrateur technique, contournant `assignments_select` ; le profil lié étant masqué, `(r['profiles'] as Map)` recevait `null`. Le test 160 passait à tort : il connectait l'associé en aal1 (le rôle exige le TOTP), donc sans aucun droit.
+- **Choix** : migration `20261030100003_assignments_write_split.sql` : `assignments_write` remplacée par `assignments_insert`, `assignments_update`, `assignments_delete` ; update/delete interdits sur l'affectation d'un administrateur technique sauf pour un administrateur technique. Le dépôt de données ignore une ligne dont le profil est illisible. Test 160 refait en aal2.
+- **Leçon** : une politique `FOR ALL` s'ajoute (OU) aux politiques de lecture ; tout test RLS d'un rôle `requires_mfa` doit s'authentifier en aal2. Autres politiques `FOR ALL` du schéma (liste dans la session) : sans lien avec un masquage de lecture pour l'instant.
+
+## D-020 — 2026-10-30 — Sélecteurs à recherche au-delà de 12 options
+- **Contexte** : en recette, les listes déroulantes longues (dossiers, comptes, tiers, collaborateurs, bientôt une vingtaine de modèles d'écriture) obligeaient à faire défiler. La conception ne prévoit l'autocomplétion que pour la grille de saisie ; les 34 autres `AkDropdown` n'avaient pas été revus.
+- **Choix** : `AkDropdown` bascule seul vers `AkSearchSelect` quand il a plus de `akSearchThreshold` (12) options ; paramètre `searchable` pour forcer (`true`) ou interdire (`false`). Aucun écran modifié. Filtre sans casse ni accents, tous les mots saisis requis, libellés commençant par la saisie en tête ; ↑ ↓ Entrée Échap ; en quittant le champ, une saisie qui ne désigne qu'une option la retient, sinon l'option précédente est rétablie. Les options à valeur nulle (« Tous les tiers ») restent choisissables.
+- **Test** : `app/test/search_select_test.dart`. Aucune migration.
+- **Reste** : affichage enrichi des options (code en chasse fixe, intitulé en dessous) pour comptes et tiers, à faire si la recette le demande ; vérification visuelle sur mobile.
+
+## D-021 — 2026-10-30 — Bibliothèque de 25 modèles d'écritures supplémentaires
+- **Contexte** : la recette a montré que 5 modèles ne suffisent pas à accélérer la saisie.
+- **Choix** : migration `20261030100004_entry_template_library.sql`. Fonction `seed_entry_template_library(cabinet)`, rejouable, appelée à la création d'un cabinet et pour les cabinets existants : 25 modèles (achats courants avec TVA, loyer avec/sans TVA, immobilisation, ventes de services et exonérées, avoirs client/fournisseur, règlements banque et caisse, versement d'espèces, paiements TVA / CNSS / IRPP). Comptes pris dans le plan de référence du dépôt, à la longueur du plan de l'entité. Correction de Q-013 : `SALAIRES` vise `422` (et non 4221) ; `FRAIS_BQ_TAF` et `REGL_CLIENT_RET` visent `521` (aligné sur le compte du journal de banque, 5210000) au lieu de 5211.
+- **Hypothèse à confirmer** : les comptes et la TVA de chaque modèle (voir `outputs/modeles-ecritures-a-valider.md`). Choix prudents : loyer proposé avec et sans TVA ; prime d'assurance sans TVA ; avoirs inscrits sur les comptes de vente et d'achat (le plan de référence n'a pas de compte 709) ; versement d'espèces direct caisse → banque sans compte de virement interne.
+- **Test** : `supabase/tests/180_entry_template_library.test.sql` (comptes au plan, tiers sur collectifs, taux existants, une ligne solde par modèle, Q-013, rejouable) ; `030_referentiels` passe de 5 à 30 modèles.
+- **Limite connue** : le modèle `SALAIRES` garde sa ligne d'IRPP « saisie » qui reprend le montant de base ; non modifié ici.

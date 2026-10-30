@@ -434,7 +434,11 @@ class AkDropdown<T> extends StatelessWidget {
     this.required = false,
     this.dense = false,
     this.isExpanded = true,
+    this.searchable,
   });
+
+  /// Recherche par saisie : forcée (`true`), interdite (`false`) ou, par défaut, automatique au-delà de [akSearchThreshold] options.
+  final bool? searchable;
 
   final List<AkOption<T>> items;
   final ValueChanged<T?>? onChanged;
@@ -449,6 +453,19 @@ class AkDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (searchable ?? items.length > akSearchThreshold) {
+      return AkSearchSelect<T>(
+        items: items,
+        onChanged: onChanged,
+        value: value,
+        label: label,
+        hint: hint,
+        helper: helper,
+        errorText: errorText,
+        required: required,
+        dense: dense,
+      );
+    }
     final t = context.ak;
     final selected = items.any((o) => o.value == value) ? value : null;
     final field = DropdownButtonFormField<T>(
@@ -485,6 +502,191 @@ class AkDropdown<T> extends StatelessWidget {
     );
     if (dense && label == null && errorText == null && helper == null) return field;
     return AkFieldFrame(label: label, required: required, helper: helper, error: errorText, child: field);
+  }
+}
+
+/// Nombre d'options au-delà duquel une liste déroulante devient un champ à recherche (voir [AkDropdown.searchable]).
+const akSearchThreshold = 12;
+
+const _accentsFrom = 'àâäáãåçéèêëíìîïñóòôöõúùûüýÿœæ';
+const _accentsTo = 'aaaaaaceeeeiiiinooooouuuuyyoa';
+
+/// Minuscules sans accents, pour comparer une saisie à un libellé.
+String akFold(String s) {
+  final b = StringBuffer();
+  for (final c in s.toLowerCase().split('')) {
+    final i = _accentsFrom.indexOf(c);
+    b.write(i < 0 ? c : _accentsTo[i]);
+  }
+  return b.toString();
+}
+
+/// Options correspondant à la saisie : tous les mots saisis doivent figurer dans le libellé, sans tenir compte
+/// de la casse ni des accents. Les libellés qui commencent par la saisie passent d'abord, puis ceux dont un mot commence par elle.
+List<AkOption<T>> akFilterOptions<T>(List<AkOption<T>> items, String query) {
+  final words = akFold(query).split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  if (words.isEmpty) return items;
+  final scored = <(int, AkOption<T>)>[];
+  for (final o in items) {
+    final label = akFold(o.label);
+    if (!words.every(label.contains)) continue;
+    final rank = label.startsWith(words.first) ? 0 : (label.contains(' ${words.first}') || label.contains('·${words.first}') ? 1 : 2);
+    scored.add((rank, o));
+  }
+  // Tri stable : à rang égal, l'ordre d'origine est conservé.
+  final indexed = [for (var i = 0; i < scored.length; i++) (scored[i].$1, i, scored[i].$2)];
+  indexed.sort((a, b) => a.$1 != b.$1 ? a.$1.compareTo(b.$1) : a.$2.compareTo(b.$2));
+  return [for (final e in indexed) e.$3];
+}
+
+/// Sélecteur à recherche : même interface que [AkDropdown], pour les longues listes (dossiers, comptes, tiers, modèles).
+/// Le champ affiche l'option retenue ; en y entrant, toute la liste s'ouvre, et la frappe la filtre (↑ ↓ Entrée Échap).
+/// En quittant le champ, une saisie qui ne désigne qu'une option la retient, sinon l'option précédente est rétablie.
+class AkSearchSelect<T> extends StatefulWidget {
+  const AkSearchSelect({
+    super.key,
+    required this.items,
+    required this.onChanged,
+    this.value,
+    this.label,
+    this.hint,
+    this.helper,
+    this.errorText,
+    this.required = false,
+    this.dense = false,
+  });
+
+  final List<AkOption<T>> items;
+  final ValueChanged<T?>? onChanged;
+  final T? value;
+  final String? label;
+  final String? hint;
+  final String? helper;
+  final String? errorText;
+  final bool required;
+  final bool dense;
+
+  @override
+  State<AkSearchSelect<T>> createState() => _AkSearchSelectState<T>();
+}
+
+class _AkSearchSelectState<T> extends State<AkSearchSelect<T>> {
+  final _controller = TextEditingController();
+  final _focus = FocusNode();
+
+  AkOption<T>? get _selected => widget.items.where((o) => o.value == widget.value).firstOrNull;
+  String get _selectedLabel => _selected?.label ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.text = _selectedLabel;
+    _focus.addListener(_onFocus);
+  }
+
+  @override
+  void didUpdateWidget(AkSearchSelect<T> old) {
+    super.didUpdateWidget(old);
+    // Valeur ou liste modifiée de l'extérieur (liste chargée après coup, réinitialisation) : le texte suit, hors saisie en cours.
+    if (!_focus.hasFocus && (old.value != widget.value || old.items.length != widget.items.length) && _controller.text != _selectedLabel) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_focus.hasFocus) _controller.text = _selectedLabel;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _focus.removeListener(_onFocus);
+    _focus.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onFocus() {
+    if (_focus.hasFocus) {
+      // Tout le texte est sélectionné : la frappe remplace l'option affichée.
+      _controller.selection = TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
+      return;
+    }
+    final text = _controller.text;
+    if (text == _selectedLabel) return;
+    final matches = text.trim().isEmpty ? const <AkOption<Never>>[] : akFilterOptions(widget.items, text);
+    if (matches.length == 1) {
+      _controller.text = matches.first.label;
+      widget.onChanged?.call(matches.first.value);
+    } else {
+      _controller.text = _selectedLabel;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    final enabled = widget.onChanged != null;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final width = c.maxWidth.isFinite ? c.maxWidth : 360.0;
+        return RawAutocomplete<AkOption<T>>(
+          textEditingController: _controller,
+          focusNode: _focus,
+          displayStringForOption: (o) => o.label,
+          optionsBuilder: (v) => v.text == _selectedLabel ? widget.items : akFilterOptions(widget.items, v.text),
+          onSelected: (o) {
+            widget.onChanged?.call(o.value);
+            _focus.unfocus();
+          },
+          fieldViewBuilder: (context, controller, focus, onSubmit) => AkTextField(
+            controller: controller,
+            focusNode: focus,
+            label: widget.label,
+            hint: widget.hint,
+            helper: widget.helper,
+            errorText: widget.errorText,
+            required: widget.required,
+            enabled: enabled,
+            dense: widget.dense,
+            textInputAction: TextInputAction.next,
+            suffix: Icon(Icons.expand_more, size: 20, color: t.textMuted),
+            onSubmitted: (_) => onSubmit(),
+          ),
+          optionsViewBuilder: (context, onSelect, opts) => Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              color: t.surface,
+              elevation: 4,
+              shadowColor: t.shadowOverlay,
+              shape: RoundedRectangleBorder(borderRadius: AkRadius.mdAll, side: BorderSide(color: t.border)),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 280, maxWidth: width.clamp(240.0, 560.0)),
+                child: opts.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(AkSpace.s3),
+                        child: Text('Aucun résultat', style: AkText.body.copyWith(color: t.textMuted)),
+                      )
+                    : ListView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        itemCount: opts.length,
+                        itemBuilder: (context, i) {
+                          final o = opts.elementAt(i);
+                          final highlighted = AutocompleteHighlightedOption.of(context) == i;
+                          return InkWell(
+                            onTap: () => onSelect(o),
+                            child: Container(
+                              color: highlighted ? t.rowSelected : null,
+                              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: AkSpace.s2),
+                              child: o.child ?? Text(o.label, overflow: TextOverflow.ellipsis, style: AkText.body.copyWith(color: t.text)),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
