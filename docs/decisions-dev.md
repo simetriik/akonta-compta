@@ -95,3 +95,8 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Choix** : migration `20261030100002_entities_select_creator.sql` : `entities_select` accepte aussi `created_by = auth.uid()`. Test : `supabase/tests/170_entities_insert_returning.test.sql`.
 - **Conséquence acceptée** : un créateur qui perdrait ensuite son affectation continue de voir le dossier qu'il a créé.
 - **Alternative écartée** : id généré côté Flutter (dépendance `uuid` à ajouter), fonction volatile (coût sur toutes les lectures).
+
+## D-019 — 2026-10-30 — Affectations : politique d'écriture scindée pour que la lecture reste filtrée
+- **Contexte** : après D-017, l'écran Cabinet > Affectations plantait (« type error ») pour l'associé. `assignments_write` était `FOR ALL` : elle comprend la lecture et donnait à l'associé (`assignments.manage`) la ligne de l'administrateur technique, contournant `assignments_select` ; le profil lié étant masqué, `(r['profiles'] as Map)` recevait `null`. Le test 160 passait à tort : il connectait l'associé en aal1 (le rôle exige le TOTP), donc sans aucun droit.
+- **Choix** : migration `20261030100003_assignments_write_split.sql` : `assignments_write` remplacée par `assignments_insert`, `assignments_update`, `assignments_delete` ; update/delete interdits sur l'affectation d'un administrateur technique sauf pour un administrateur technique. Le dépôt de données ignore une ligne dont le profil est illisible. Test 160 refait en aal2.
+- **Leçon** : une politique `FOR ALL` s'ajoute (OU) aux politiques de lecture ; tout test RLS d'un rôle `requires_mfa` doit s'authentifier en aal2. Autres politiques `FOR ALL` du schéma (liste dans la session) : sans lien avec un masquage de lecture pour l'instant.

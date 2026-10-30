@@ -122,7 +122,9 @@ class AdminRepository {
         .select('id, user_id, entity_id, role_id, profiles!assignments_user_id_fkey(full_name, email), roles(name, code), entities(name)')
         .order('created_at', ascending: true);
     return [
+      // Une ligne dont le profil n'est pas lisible (masqué par la RLS) est ignorée plutôt que de faire échouer la liste.
       for (final r in rows)
+        if (r['profiles'] is Map)
         Assignment(
           id: r['id'] as String,
           userId: r['user_id'] as String,
