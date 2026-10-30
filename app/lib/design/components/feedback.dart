@@ -224,7 +224,7 @@ class AkAmountText extends StatelessWidget {
     return Text(
       text,
       textAlign: TextAlign.right,
-      style: AkText.amount.copyWith(color: color ?? context.ak.text, fontWeight: bold ? FontWeight.w500 : FontWeight.w400),
+      style: (bold ? AkText.amountTotal : AkText.amount).copyWith(color: color ?? (bold ? context.ak.textStrong : context.ak.text)),
     );
   }
 }
@@ -250,11 +250,50 @@ class AkAvatar extends StatelessWidget {
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: t.brandTint, shape: BoxShape.circle),
+      decoration: BoxDecoration(color: t.rowSelected, shape: BoxShape.circle),
       child: Text(
         _initials,
-        style: AkText.label.copyWith(color: t.brandText, fontWeight: FontWeight.w600),
+        style: AkText.label.copyWith(color: t.textStrong, fontWeight: FontWeight.w600),
       ),
     );
   }
+}
+
+/// Nature d'un toast : la pastille de couleur accompagne toujours un message complet.
+enum AkToastKind { success, info, warning, danger }
+
+/// Toast : confirme une action qui vient de se terminer (remplace les `SnackBar`).
+/// En bas à droite au bureau, en bas au-dessus de la barre d'onglets sur mobile ; disparaît après 5 secondes.
+void showAkToast(BuildContext context, String message, {AkToastKind kind = AkToastKind.success, String? actionLabel, VoidCallback? onAction}) {
+  final t = context.ak;
+  final dot = switch (kind) {
+    AkToastKind.success => t.success,
+    AkToastKind.info => t.info,
+    AkToastKind.warning => t.warning,
+    AkToastKind.danger => t.danger,
+  };
+  final width = MediaQuery.sizeOf(context).width;
+  const maxWidth = 440.0;
+  final wide = width >= AkBreakpoint.medium;
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      duration: const Duration(seconds: 5),
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: t.toastBg,
+      elevation: 0,
+      width: wide ? maxWidth : null,
+      margin: wide ? null : const EdgeInsets.all(AkSpace.s4),
+      shape: const RoundedRectangleBorder(borderRadius: AkRadius.lgAll),
+      action: actionLabel == null ? null : SnackBarAction(label: actionLabel, textColor: t.toastFg, onPressed: onAction ?? () {}),
+      content: Row(
+        children: [
+          Container(width: 10, height: 10, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+          const SizedBox(width: AkSpace.s3),
+          Expanded(child: Text(message, style: AkText.body.copyWith(color: t.toastFg))),
+        ],
+      ),
+    ),
+  );
 }

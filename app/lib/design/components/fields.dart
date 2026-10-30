@@ -77,7 +77,7 @@ InputDecoration akInputDecoration(
   bool dense = false,
   bool hasError = false,
 }) {
-  final h = dense && !akIsCompact(context) ? AkSpace.controlDense : akControlHeight(context);
+  final h = dense && !akIsTouch(context) ? AkSpace.controlDense : akControlHeight(context);
   return InputDecoration(
     hintText: hint,
     isDense: true,
@@ -464,7 +464,7 @@ class AkDropdown<T> extends StatelessWidget {
       decoration: akInputDecoration(context, dense: dense, hasError: errorText != null).copyWith(
         contentPadding: EdgeInsets.symmetric(
           horizontal: dense ? AkSpace.s2 : AkSpace.s3,
-          vertical: ((dense && !akIsCompact(context) ? AkSpace.controlDense : akControlHeight(context)) - 16) / 2,
+          vertical: ((dense && !akIsTouch(context) ? AkSpace.controlDense : akControlHeight(context)) - 16) / 2,
         ),
       ),
       items: [
@@ -610,7 +610,7 @@ class AkAutocompleteField<T extends Object> extends StatelessWidget {
                     return InkWell(
                       onTap: () => onSelect(o),
                       child: Container(
-                        color: highlighted ? t.brandTint : null,
+                        color: highlighted ? t.rowSelected : null,
                         padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: AkSpace.s2),
                         child: Text(
                           (optionLabel ?? display)(o),
@@ -853,6 +853,47 @@ class AkSegmented<T> extends StatelessWidget {
       segments: [for (final o in options) ButtonSegment<T>(value: o.value, label: Text(o.label))],
       selected: {selected},
       onSelectionChanged: (s) => onChanged(s.first),
+    );
+  }
+}
+
+/// Choix exclusif présenté en liste de boutons radio (peu d'options, libellés longs).
+class AkRadioGroup<T> extends StatelessWidget {
+  const AkRadioGroup({super.key, required this.value, required this.options, required this.onChanged});
+
+  final T value;
+  final List<AkOption<T>> options;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return RadioGroup<T>(
+      groupValue: value,
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final o in options)
+            InkWell(
+              borderRadius: AkRadius.mdAll,
+              onTap: () => onChanged(o.value),
+              child: Container(
+                constraints: BoxConstraints(minHeight: akIsTouch(context) ? AkSpace.rowTouch : AkSpace.rowComfort),
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  children: [
+                    Radio<T>(value: o.value, activeColor: t.textStrong),
+                    const SizedBox(width: AkSpace.s2),
+                    Expanded(child: Text(o.label, style: AkText.body.copyWith(color: t.text))),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

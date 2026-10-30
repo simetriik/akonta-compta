@@ -32,8 +32,8 @@ class AkontaApp extends ConsumerWidget {
       ],
       routerConfig: router,
       builder: (context, child) {
-        // Écrans étroits : contrôles tactiles de 44 px (système de design).
-        final touch = MediaQuery.sizeOf(context).width < 600;
+        // Écrans de moins de 900 px : contrôles tactiles de 48 px (système de design).
+        final touch = MediaQuery.sizeOf(context).width < AkBreakpoint.expanded;
         final dark = Theme.of(context).brightness == Brightness.dark;
         return Theme(
           data: dark ? buildAkontaDarkTheme(touch: touch) : buildAkontaTheme(touch: touch),

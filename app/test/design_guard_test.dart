@@ -17,7 +17,7 @@ void main() {
 
   final rawWidgets = RegExp(
     r'\b(TextField|TextFormField|ElevatedButton|FilledButton|OutlinedButton|TextButton|IconButton|DropdownButton|DropdownButtonFormField|DropdownMenu|'
-    r'AlertDialog|SimpleDialog|DataTable|Checkbox|CheckboxListTile|Switch|SwitchListTile|SegmentedButton|Autocomplete|RawAutocomplete|Card|showDatePicker)\b(?!\.)',
+    r'AlertDialog|SimpleDialog|DataTable|Checkbox|CheckboxListTile|Switch|SwitchListTile|SegmentedButton|Autocomplete|RawAutocomplete|Card|showDatePicker|SnackBar|SnackBarAction|ListTile|RadioListTile)\b(?!\.)',
   );
 
   test('aucun widget brut Material hors de lib/design/', () {

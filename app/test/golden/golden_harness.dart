@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -75,9 +76,10 @@ Future<void> expectGolden(WidgetTester tester, String name) => expectLater(find.
 Future<void> pumpScreen(WidgetTester tester, Widget app) async {
   await tester.pumpWidget(app);
   await tester.runAsync(() async {
-    final context = tester.element(find.byType(MaterialApp));
-    for (final name in ['akonta-lockup-horizontal-black-1200', 'akonta-symbol-black-128', 'akonta-symbol-small-black-48']) {
-      await precacheImage(AssetImage('assets/logo/$name.png'), context);
+    // Logos SVG : chargés dans le cache de flutter_svg avant la capture.
+    for (final name in ['akonta-logo-horizontal', 'akonta-logo-horizontal-bleu', 'akonta-logo-horizontal-sombre', 'akonta-symbole-bleu', 'akonta-symbole-blanc', 'akonta-symbole-bicolore']) {
+      final loader = SvgAssetLoader('assets/logo/$name.svg');
+      await svg.cache.putIfAbsent(loader.cacheKey(null), () => loader.loadBytes(null));
     }
   });
   await tester.pumpAndSettle();

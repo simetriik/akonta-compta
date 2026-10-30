@@ -3,27 +3,38 @@ import 'package:flutter/material.dart';
 import '../tokens.dart';
 import 'buttons.dart';
 
+/// Largeur d'un dialogue : trois tailles, rien d'autre (jetons `dialog-s`, `dialog-m`, `dialog-l`).
+enum AkDialogSize {
+  s(AkSpace.dialogS),
+  m(AkSpace.dialogM),
+  l(AkSpace.dialogL);
+
+  const AkDialogSize(this.width);
+  final double width;
+}
+
 /// Boîte de dialogue unique : titre, contenu défilant, actions alignées à droite (secondaire puis principale).
 class AkDialog extends StatelessWidget {
-  const AkDialog({super.key, required this.title, required this.content, this.actions = const [], this.width = 480});
+  const AkDialog({super.key, required this.title, required this.content, this.actions = const [], this.size = AkDialogSize.m});
 
   final String title;
   final Widget content;
   final List<Widget> actions;
-  final double width;
+  final AkDialogSize size;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
     return AlertDialog(
-      title: Text(title, style: AkText.title.copyWith(color: t.text)),
+      title: Text(title, style: AkText.heading.copyWith(color: t.textStrong)),
       titlePadding: const EdgeInsets.fromLTRB(AkSpace.s6, AkSpace.s6, AkSpace.s6, AkSpace.s3),
       contentPadding: const EdgeInsets.symmetric(horizontal: AkSpace.s6),
       actionsPadding: const EdgeInsets.all(AkSpace.s4),
       actionsOverflowButtonSpacing: AkSpace.s2,
       insetPadding: const EdgeInsets.all(AkSpace.s4),
+      elevation: 0,
       content: SizedBox(
-        width: width,
+        width: size.width,
         child: SingleChildScrollView(
           child: DefaultTextStyle.merge(
             style: AkText.body.copyWith(color: t.text),

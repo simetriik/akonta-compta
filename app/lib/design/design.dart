@@ -3,8 +3,10 @@ library;
 
 export 'components/buttons.dart';
 export 'components/dialog.dart';
+export 'components/entry_grid.dart';
 export 'components/feedback.dart';
 export 'components/fields.dart';
+export 'components/grid.dart';
 export 'components/layout.dart';
 export 'components/logo.dart';
 export 'components/table.dart';
