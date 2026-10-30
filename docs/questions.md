@@ -59,3 +59,8 @@
 ## Q-015 — Cabinet-coquille de l'instance de recette
 - **Constat** : aucun écran ne crée un cabinet et `profiles.cabinet_id` est obligatoire ; « aucun cabinet » est donc impossible pour l'administrateur technique.
 - **Hypothèse appliquée** : `recette/bootstrap-admin.sql` crée un cabinet minimal « Cabinet de recette Simetriik » (nom seul) et l'administrateur. Pour ABC, le cabinet sera créé par une procédure d'amorçage à définir.
+
+## Q-016 — Aucun rôle donné aux utilisateurs invités (associé inclus)
+- **Constat** : la fonction `invite-user` crée le compte et le profil mais aucune ligne dans `assignments`. Un utilisateur invité n'a donc aucun droit. L'écran Cabinet > Affectations est réservé à l'associé, qui n'a lui-même aucun rôle : impasse. L'administrateur technique ne voit pas les données comptables et n'a pas d'écran pour affecter. Constaté le 30 oct. 2026 sur l'instance de recette (seul `admin.recette` avait une affectation).
+- **Hypothèse appliquée** : pour la recette, l'hôte insère à la main l'affectation `partner` (portée cabinet) de l'associé ; l'associé affecte ensuite les autres depuis l'application.
+- **À décider** : l'invitation doit-elle porter le rôle (choisi par l'administrateur ou l'associé) et créer l'affectation ? À trancher avant la recette avec ABC.
