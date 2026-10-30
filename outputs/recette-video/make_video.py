@@ -19,14 +19,15 @@ import textwrap
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-FRAMES = ROOT / "frames"
+FRAMES = ROOT / "frames-v2"
 WORK = ROOT / "build"
 VOICE = Path.home() / ".local/share/piper/fr_FR-siwis-medium.onnx"
 FONT_TEXT = "/usr/local/share/fonts/google-fonts/ofl/notosans/NotoSans[wdth,wght].ttf"
 FONT_TITLE = "/usr/local/share/fonts/google-fonts/ofl/poppins/Poppins-SemiBold.ttf"
-LOGO = ROOT.parent / "logo-akonta/akonta-lockup-horizontal-black-1200.png"
+LOGO = ROOT / "logo-horizontal.png"  # SVG du système de design (app/assets/logo/akonta-logo-horizontal.svg), rasterisé
 W, H, FPS = 1920, 1080, 25
-SAND, INK, TERRACOTTA = "0xF7F3EC", "0x1A1A18", "0xB5472A"
+# Identité bleu nuit : fond neutre bleuté, encre bleu nuit, texte atténué (l'orange, couleur d'action, reste réservé au logo).
+SAND, INK, TERRACOTTA = "0xF5F6F8", "0x1E2A5A", "0x5A6274"
 MIN_BEAT = 3.0      # durée minimale d'un temps (s)
 PAUSE = 0.7         # silence après chaque phrase (s)
 
@@ -59,7 +60,7 @@ def caption_file(text: str, path: Path) -> Path:
 
 
 def title_card(title: str, subtitle: str, secs: float, out: Path) -> None:
-    """Carte-titre : fond sable, logo, titre Poppins, sous-titre."""
+    """Carte-titre : fond neutre, logo, titre Poppins, sous-titre."""
     vf = (
         f"[1:v]scale=720:-1[logo];[0:v][logo]overlay=(W-w)/2:300[b];"
         f"[b]drawtext=fontfile='{FONT_TITLE}':text='{escape(title)}':fontsize=64:fontcolor={INK}:x=(w-text_w)/2:y=600,"
