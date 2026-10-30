@@ -82,3 +82,10 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Raison** : lisibilité en saisie intensive, hiérarchie visuelle, cohérence des tableaux, adaptation tablette. Aucun changement de logique métier ni de base.
 - **Reste** : documents PDF et liasse du service Python (identité à reprendre), réglage manuel clair/sombre dans le menu utilisateur, `TabBar` et `PopupMenuButton` encore Material thémés, choix de langue du kit logo `outputs/logo-akonta/` (ancien, conservé tel quel).
 
+
+## D-017 — 2026-10-30 — L'administrateur technique est invisible des membres du cabinet
+- **Contexte** : constaté en recette (voir Q-016) : `profiles_select` et `assignments_select` montraient l'administrateur technique à tous les membres, et la piste d'audit affichait son nom. La conception le définit « sans accès aux données comptables » sans traiter sa visibilité ; décision de Dansi le 30 oct. 2026.
+- **Choix** : migration `20261030100001_tech_admin_invisible.sql`. Fonction `is_tech_admin(uuid)` ; politiques `profiles_select` et `assignments_select` qui masquent les administrateurs techniques aux autres (ils se voient entre eux et se voient eux-mêmes) ; fonction `actor_labels(uuid[])` qui rend le libellé « Administration technique » dans la piste d'audit pour les non-administrateurs. Les actions restent tracées (la piste d'audit n'est pas altérée). L'écran d'audit lit les libellés par cette fonction.
+- **Test** : `supabase/tests/160_tech_admin_invisible.test.sql`.
+- **Raison** : séparation des pouvoirs ; la règle vit dans la base, pas dans Flutter.
+- **Reste** : les relations imbriquées vers `profiles` (créateur, auteur d'une écriture) renvoient `null` pour un administrateur ; à vérifier dans les écrans au fil de la recette.

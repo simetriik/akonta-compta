@@ -167,9 +167,10 @@ class AdminRepository {
     final actorIds = {for (final r in rows) if (r['actor_id'] != null) r['actor_id'] as String};
     final names = <String, String>{};
     if (actorIds.isNotEmpty) {
-      final profiles = await _client.from('profiles').select('id, full_name, email').inFilter('id', actorIds.toList());
-      for (final p in profiles) {
-        names[p['id'] as String] = (p['full_name'] as String?)?.isNotEmpty == true ? p['full_name'] as String : p['email'] as String;
+      // Libellés fournis par la base : un administrateur technique y apparaît sous un nom générique (D-017).
+      final labels = await _client.rpc('actor_labels', params: {'p_ids': actorIds.toList()}) as List;
+      for (final l in labels) {
+        names[l['id'] as String] = l['label'] as String;
       }
     }
     return [
