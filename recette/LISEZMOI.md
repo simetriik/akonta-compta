@@ -93,6 +93,7 @@ Constatés par lecture du code et par essais sur l'instance ; aucun n'a été co
 | 10 | 7.3 / 8.3 / 11.3 | Les exports PDF / Excel / DGI **n'ont jamais été testés de bout en bout depuis l'interface** avec cette instance (service lancé et en bonne santé, liaison Edge → service non exercée) | Lancer le service (§ 4) ; toute erreur d'export est une anomalie à consigner |
 | 11 | 1.2 / 2.3 | **Un utilisateur invité n'a aucun rôle** : l'invitation ne crée pas d'affectation, et l'écran Affectations est réservé à l'associé, qui n'en a pas non plus (impasse, voir Q-016). À noter comme anomalie majeure | Donner le rôle associé à la main, avec `recette/definir-role-associe.sh <e-mail>` ; l'associé affecte ensuite chef, assistant et stagiaire au dossier depuis Cabinet > Affectations |
 | 12 | 1.4 | **L'administrateur technique était visible des membres** (liste des utilisateurs, affectations, audit). Corrigé le 30 oct. 2026 (D-017, migration `20261030100001`) : il est invisible, et apparaît sous « Administration technique » dans l'audit | Aucun. Si l'instance a été créée avant cette date, appliquer la migration (`scripts/reset-recette.sh` la prend en compte) |
+| 13 | 2.2 | **Création d'un dossier refusée (violation RLS)** pour l'associé et le chef : l'`INSERT ... RETURNING` échouait. Corrigé le 30 oct. 2026 (D-018, migration `20261030100002`) | Aucun si la migration est appliquée. L'associé doit s'être connecté avec son code TOTP (session aal2), sinon il n'a aucun droit |
 
 ## 7. Contrôles automatiques du jeu de données
 

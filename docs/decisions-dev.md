@@ -89,3 +89,9 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Test** : `supabase/tests/160_tech_admin_invisible.test.sql`.
 - **Raison** : séparation des pouvoirs ; la règle vit dans la base, pas dans Flutter.
 - **Reste** : les relations imbriquées vers `profiles` (créateur, auteur d'une écriture) renvoient `null` pour un administrateur ; à vérifier dans les écrans au fil de la recette.
+
+## D-018 — 2026-10-30 — Le créateur d'un dossier le voit dès l'insertion (INSERT ... RETURNING)
+- **Contexte** : en recette, l'associé ne pouvait pas créer de dossier (« violation RLS »). `entities_repository.create` utilise `insert(...).select()` ; la politique `entities_select` appelle `can_access_entity(id)`, qui relit `entities` (contrôle du cabinet) et ne voit pas la ligne insérée par la commande en cours. Régression introduite par le contrôle de cabinet ajouté à `can_access_entity` (migration dossiers) ; aucun test ne couvrait l'insertion avec RETURNING.
+- **Choix** : migration `20261030100002_entities_select_creator.sql` : `entities_select` accepte aussi `created_by = auth.uid()`. Test : `supabase/tests/170_entities_insert_returning.test.sql`.
+- **Conséquence acceptée** : un créateur qui perdrait ensuite son affectation continue de voir le dossier qu'il a créé.
+- **Alternative écartée** : id généré côté Flutter (dépendance `uuid` à ajouter), fonction volatile (coût sur toutes les lectures).
