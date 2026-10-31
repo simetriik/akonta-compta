@@ -68,7 +68,7 @@
 
 ## Q-017 — Associations (SYCEBNL) : besoin réel du cabinet
 - **Constat** : la conception range SYCEBNL hors V1. L'utilisateur souhaite l'ajouter à Akonta (31 oct. 2026) ; voir D-022.
-- **À demander à ABC** : gère-t-il des associations, ONG, fondations ou syndicats, combien, et pour quand ? Tient-il leurs comptes dans Perfecto (impact sur l'import) ? Quels états produit-il pour eux (compte d'emploi des ressources, annexes) ?
+- **À demander à ABC** : gère-t-il des associations, ONG, fondations ou syndicats, combien, et pour quand ? Tient-il leurs comptes dans Perfecto (impact sur l'import) ? Quels états produit-il pour eux (bilan, compte de résultat, tableau des flux, notes annexes) ?
 - **À obtenir** : texte officiel du SYCEBNL (plan de comptes, états financiers, modèles de liasse).
 - **Hypothèse appliquée** : aucune ; le schéma n'accepte que `'normal'`. Rien n'est livré avant la réponse.
 
