@@ -15,15 +15,15 @@ select tests.assign(:'manager_id', :'a_id', 'manager', :'e1_id');
 select tests.assign(:'assist_id',  :'a_id', 'assistant', :'e1_id');
 
 -- 1. Plan de référence seedé
-select is((select count(*) from public.reference_accounts), 1339::bigint, '1 339 comptes de référence seedés');
-select is((select normal_side::text from public.reference_accounts where code = '4011'), 'credit', '4011 fournisseurs : sens créditeur');
-select is((select normal_side::text from public.reference_accounts where code = '4111'), 'debit', '4111 clients : sens débiteur');
-select ok((select is_collective from public.reference_accounts where code = '4011'), '4011 est un collectif');
-select is((select parent_code from public.reference_accounts where code = '4452'), '445', 'parent de 4452 = 445');
+select is((select count(*) from public.reference_accounts where system = 'normal'), 1339::bigint, '1 339 comptes de référence seedés');
+select is((select normal_side::text from public.reference_accounts where system = 'normal' and code = '4011'), 'credit', '4011 fournisseurs : sens créditeur');
+select is((select normal_side::text from public.reference_accounts where system = 'normal' and code = '4111'), 'debit', '4111 clients : sens débiteur');
+select ok((select is_collective from public.reference_accounts where system = 'normal' and code = '4011'), '4011 est un collectif');
+select is((select parent_code from public.reference_accounts where system = 'normal' and code = '4452'), '445', 'parent de 4452 = 445');
 
 -- 2. Copie du plan dans l'entité à la longueur fixe
 select is((select count(*) from public.accounts where entity_id = :'e1_id'),
-          (select count(distinct rpad(code, 7, '0')) from public.reference_accounts where class between 1 and 8), 'plan de référence (classes 1-8) copié dans l''entité, un compte par numéro complété');
+          (select count(distinct rpad(code, 7, '0')) from public.reference_accounts where system = 'normal' and class between 1 and 8), 'plan de référence (classes 1-8) copié dans l''entité, un compte par numéro complété');
 select ok(exists (select 1 from public.accounts where entity_id = :'e1_id' and code = '4011000' and label = 'Fournisseurs'), 'numéros complétés à 7 chiffres (4011 → 4011000)');
 select is((select p.code from public.accounts a join public.accounts p on p.id = a.parent_id where a.entity_id = :'e1_id' and a.code = '4011000'),
           '4010000', 'hiérarchie reprise : 4011000 a pour parent 4010000');
@@ -75,7 +75,7 @@ select lives_ok(format('insert into public.third_party_accounts select t.id, a.i
 select is(public.tax_rate_at(:'a_id', 'TVA', '2026-06-30'), 0.18::numeric, 'TVA 18 % en vigueur');
 select throws_ok(format('insert into public.tax_rates (cabinet_id, code, label, rate, valid_from) values (%L, ''TVA'', ''TVA bis'', 0.2, ''2026-01-01'')', :'a_id'),
                  '23P01', null, 'pas de chevauchement de validité pour un même taux');
-select is((select count(*) from public.entry_templates where cabinet_id = :'a_id' and entity_id is null), 30::bigint, '30 modèles d''écritures fournis au cabinet (5 de base + bibliothèque)');
+select is((select count(*) from public.entry_templates where cabinet_id = :'a_id' and entity_id is null and accounting_system = 'normal'), 30::bigint, '30 modèles d''écritures fournis au cabinet (5 de base + bibliothèque)');
 select is((select count(*) from public.entry_template_lines l join public.entry_templates t on t.id = l.template_id where t.cabinet_id = :'a_id' and t.code = 'SALAIRES'), 6::bigint,
           'modèle salaires : 6 lignes');
 select is((select count(*) from public.journal_templates where cabinet_id = :'a_id'), 7::bigint, '7 journaux dans le modèle du cabinet');
