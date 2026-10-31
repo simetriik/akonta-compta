@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
-import '../../data/auth_repository.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
+import '../../application/providers/repositories.dart';
+import '../../application/providers/session_providers.dart';
+import 'offline_gate.dart';
 
 /// Gabarit commun : rail de navigation bleu nuit (étendu au bureau, réduit sur tablette, barre basse sur mobile)
 /// et barre supérieure avec le dossier courant toujours visible, ouvrable par Ctrl K (§12.3).
@@ -81,7 +82,7 @@ class AppShell extends ConsumerWidget {
                 child: Column(
                   children: [
                     _TopBar(entity: entity, profile: profile, onSignOut: signOut, onPick: pickEntity),
-                    Expanded(child: child),
+                    Expanded(child: OfflineGate(location: location, child: child)),
                   ],
                 ),
               ),
@@ -133,7 +134,7 @@ class AppShell extends ConsumerWidget {
             ),
           ),
         ),
-        body: child,
+        body: OfflineGate(location: location, child: child),
         // Mobile : barre d'onglets basse sur le fond du rail, centrée sur la capture des pièces ; le reste est dans le tiroir.
         bottomNavigationBar: Builder(
           builder: (context) {

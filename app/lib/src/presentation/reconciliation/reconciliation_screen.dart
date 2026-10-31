@@ -7,16 +7,17 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/consultation_repository.dart';
-import '../../data/import_repository.dart';
-import '../../data/reconciliation_repository.dart';
-import '../../data/references_repository.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/bank_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
-import '../inventory/inventory_screen.dart' show showErrorSnack;
+import '../inventory/inventory_screen.dart';
 import '../widgets/require_entity.dart';
+import '../../application/providers/reconciliation_providers.dart';
+import '../../application/providers/references_providers.dart';
+import '../../core/text_decoding.dart';
+import '../../domain/consultation_models.dart';
+import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Rapprochement bancaire (§10.7) : import du relevé selon un gabarit mémorisé, deux volets relevé / comptabilité,
 /// propositions, pointage 1-1 ou n-n, état mensuel, écriture depuis une ligne, état figé et archivé en PDF.
@@ -53,7 +54,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
     final j = _journal;
     if (j == null) return;
     setState(() => _busy = true);
-    final repo = ref.read(reconciliationRepositoryProvider);
+    final repo = ref.read(reconciliationServiceProvider);
     try {
       final bank = await repo.unmatchedStatementLines(j.id, until: _until);
       final book = await repo.unmatchedBookLines(j.id, until: _until);
@@ -308,7 +309,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
   }
 
   Future<void> _acceptAllProposals() async {
-    final repo = ref.read(reconciliationRepositoryProvider);
+    final repo = ref.read(reconciliationServiceProvider);
     var n = 0;
     for (final p in _proposals) {
       try {
@@ -322,7 +323,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
 
   Future<void> _matchSelected() async {
     try {
-      await ref.read(reconciliationRepositoryProvider).match(_journal!.id, _selBank.toList(), _selBook.toList());
+      await ref.read(reconciliationServiceProvider).match(_journal!.id, _selBank.toList(), _selBook.toList());
     } catch (e) {
       if (mounted) showErrorSnack(context, errorText(e));
     }
@@ -341,7 +342,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
     if (result == null) return;
     try {
       await ref
-          .read(reconciliationRepositoryProvider)
+          .read(reconciliationServiceProvider)
           .entryFromLine(l.id, accountId: result.$1.id, thirdPartyId: result.$2?.id, label: result.$3, entryDate: result.$4, validate: true);
       ref.invalidate(entityDashboardProvider);
     } catch (e) {
@@ -378,11 +379,11 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
       String? templateId = template.id;
       if (templateId == null) {
         final cabinet = await ref.read(currentCabinetProvider.future);
-        templateId = (await ref.read(reconciliationRepositoryProvider).saveTemplate(cabinet!.id, template)).id;
+        templateId = (await ref.read(reconciliationServiceProvider).saveTemplate(cabinet!.id, template)).id;
         ref.invalidate(statementTemplatesProvider);
       }
       await ref
-          .read(reconciliationRepositoryProvider)
+          .read(reconciliationServiceProvider)
           .importStatement(
             journalId: _journal!.id,
             from: params.$1,
@@ -402,7 +403,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
 
   Future<void> _finalize() async {
     try {
-      await ref.read(reconciliationRepositoryProvider).finalize(_journal!.id, _until);
+      await ref.read(reconciliationServiceProvider).finalize(_journal!.id, _until);
       if (mounted) showAkToast(context, 'État de rapprochement figé. Exportez le PDF pour l\'archiver.');
     } catch (e) {
       if (mounted) showErrorSnack(context, errorText(e));
@@ -414,7 +415,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
     setState(() => _busy = true);
     try {
       final p = ConsultationParams(entityId: widget.entity.id, from: DateTime(_until.year, _until.month, 1), to: _until, journalId: _journal!.id);
-      final (name, bytes) = await ref.read(consultationRepositoryProvider).export(p: p, kind: 'reconciliation', format: 'pdf');
+      final (name, bytes) = await ref.read(consultationServiceProvider).export(p: p, kind: 'reconciliation', format: 'pdf');
       final uri = await FilePicker.saveFile(dialogTitle: 'Enregistrer l\'état de rapprochement', fileName: name, bytes: bytes);
       if (uri != null && uri.scheme == 'file') {
         final f = File(uri.toFilePath());

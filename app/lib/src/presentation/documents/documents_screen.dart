@@ -8,13 +8,15 @@ import 'package:akonta/design/design.dart';
 
 import '../widgets/error_display.dart';
 import '../../core/formatting.dart';
-import '../../data/documents_repository.dart';
-import '../../data/entries_repository.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 import 'launch_url.dart';
+import '../../application/providers/documents_providers.dart';
+import '../../application/providers/entries_providers.dart';
+import '../../domain/documents_models.dart';
+import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Pièces justificatives du dossier : dépôt (fichier ou photo sur mobile), boîte de réception, rattachement, visionneuse (§10.5).
 class DocumentsScreen extends StatelessWidget {
@@ -160,7 +162,8 @@ class _DocumentsBodyState extends ConsumerState<_DocumentsBody> {
     setState(() => _busy = true);
     try {
       final cabinet = await ref.read(currentCabinetProvider.future);
-      await ref.read(documentsRepositoryProvider).upload(cabinetId: cabinet!.id, entityId: widget.entity.id, fileName: name, bytes: bytes, capturedVia: via);
+      final sent = await ref.read(documentsServiceProvider).upload(cabinetId: cabinet!.id, entityId: widget.entity.id, fileName: name, bytes: bytes, capturedVia: via);
+      if (sent == null && mounted) showAkToast(context, 'Hors connexion : la pièce est conservée sur cet appareil et sera envoyée à la reconnexion.', kind: AkToastKind.info);
       ref.invalidate(documentsProvider(widget.entity.id));
       ref.invalidate(entityDashboardProvider);
     } catch (e) {
@@ -241,13 +244,13 @@ class DocumentTile extends ConsumerWidget {
                         builder: (_) => _EntryPicker(entity: entity),
                       );
                       if (entryId == null) return;
-                      await ref.read(documentsRepositoryProvider).attach(entryId, d.id);
+                      await ref.read(documentsServiceProvider).attach(entryId, d.id);
                     case 'draft':
                       if (context.mounted) context.go('/saisie/nouvelle?document=${d.id}');
                       return;
                     case 'delete':
                       try {
-                        await ref.read(documentsRepositoryProvider).delete(d);
+                        await ref.read(documentsServiceProvider).delete(d);
                       } catch (e) {
                         if (context.mounted) {
                           showAkToast(context, 'Pièce liée à une écriture validée : non supprimable.', kind: AkToastKind.warning);
@@ -315,7 +318,7 @@ class DocumentViewer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.ak;
-    final repo = ref.watch(documentsRepositoryProvider);
+    final repo = ref.watch(documentsServiceProvider);
     final size = MediaQuery.sizeOf(context);
     final d = document;
     return AkDialog(

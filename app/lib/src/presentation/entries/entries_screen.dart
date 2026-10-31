@@ -5,14 +5,15 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/entries_repository.dart';
-import '../../data/references_repository.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/entry_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
+import '../../application/providers/entries_providers.dart';
+import '../../application/providers/references_providers.dart';
+import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Liste des écritures du dossier courant : filtres journal / mois / statut, recherche, validation par lot,
 /// file « à revoir » pour le chef de mission, contre-passation (§10.4).
@@ -260,7 +261,7 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
 
   Future<void> _validateSelected(BuildContext context) async {
     try {
-      await ref.read(entriesRepositoryProvider).validateMany(_selected.toList());
+      await ref.read(entriesServiceProvider).validateMany(_selected.toList());
       if (context.mounted) showAkToast(context, '${_selected.length} écriture(s) validée(s).');
       setState(_selected.clear);
     } catch (e) {
@@ -277,7 +278,7 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
     );
     if (result == null) return;
     try {
-      await ref.read(entriesRepositoryProvider).review(e.id, status: result.$1, comment: result.$2);
+      await ref.read(entriesServiceProvider).review(e.id, status: result.$1, comment: result.$2);
     } catch (err) {
       if (context.mounted) showAkToast(context, errorText(err), kind: AkToastKind.danger);
     }
@@ -292,7 +293,7 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
     );
     if (result == null) return;
     try {
-      await ref.read(entriesRepositoryProvider).reverse(e.id, reason: result.$1, date: result.$2);
+      await ref.read(entriesServiceProvider).reverse(e.id, reason: result.$1, date: result.$2);
       if (context.mounted) showAkToast(context, 'Écriture contre-passée (écriture inverse validée).');
     } catch (err) {
       if (context.mounted) showAkToast(context, errorText(err), kind: AkToastKind.danger);

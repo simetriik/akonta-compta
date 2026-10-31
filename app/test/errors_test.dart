@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:akonta/src/core/errors/errors.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException, AuthRetryableFetchException, FunctionException, FunctionsFetchException, PostgrestException, StorageException;
+import 'package:akonta/src/infrastructure/supabase/supabase_error_classifier.dart';
 
 /// Mots qui ne doivent jamais apparaître à l'écran : le vocabulaire de la base de données et de ses erreurs.
 final _leaks = RegExp(r'postgres|constraint|relation|policy|violates|column|PGRST|SQLSTATE|exception|row-level|duplicate key|null value|public\.', caseSensitive: false);
@@ -11,6 +12,7 @@ final _leaks = RegExp(r'postgres|constraint|relation|policy|violates|column|PGRS
 AppError h(Object e, [StackTrace? stack]) => humanizeError(e, stack);
 
 void main() {
+  setUpAll(() => ErrorClassifiers.register(classifier: classifySupabaseError, describer: describeSupabaseError));
   setUp(ErrorLog.instance.clear);
 
   group('règles métier de la base', () {

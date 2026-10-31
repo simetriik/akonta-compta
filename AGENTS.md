@@ -7,7 +7,7 @@ Akonta : logiciel comptable conforme au SYSCOHADA révisé pour le cabinet ABC E
 Les trois lots sont construits (tags `lot1`, `lot2`, `lot3` sur `main`) ; la recette avec ABC reste à organiser.
 - `inputs/` (lecture seule, non versionné) : `conception.md` est la **référence unique** des décisions. Ne pas rouvrir une décision qui y figure ; sur un point non tranché, choisir l'option la plus prudente et la consigner dans `docs/decisions-dev.md`. On référence `inputs/`, on ne le copie pas dans `docs/` (D-001).
 - `supabase/` : migrations SQL versionnées (règles comptables, RLS, fonctions), `seed.sql` (démonstration), `tests/` pgTAP, `functions/` Edge (Deno).
-- `app/` : application Flutter desktop + mobile (couches core / domain / data / presentation, Riverpod, go_router).
+- `app/` : application Flutter desktop + mobile, **architecture clean** (couches core / domain / application / infrastructure / composition / presentation, Riverpod, go_router) ; règles vérifiées par `test/architecture_test.dart`, détail dans `docs/architecture.md` (D-031). Mode hors connexion : base locale chiffrée, file d'envoi, synchronisation.
 - `service-documents/` : service Python FastAPI (PDF, Excel, liasse DGI avec `keep_vba`).
 - `scripts/` : `setup.sh`, `start.sh`, `stop.sh`, `reset-db.sh`, `demo.sh`, `test.sh` (toute la suite), générateurs de seed.
 - `docs/` : `plan.md`, `avancement.md`, `decisions-dev.md`, `questions.md`, `audit.md`, `environnement.md`, `livraison-lot{1,2,3}.md`, `prompt-claude-design.md`.
@@ -18,7 +18,7 @@ Avant de déclarer une tâche terminée : `scripts/test.sh` (pgTAP, Flutter, pyt
 ## Stack imposée (prévaut sur la stack par défaut globale)
 
 - **Flutter** : une base de code pour desktop (Windows/macOS/Linux, saisie intensive au clavier) et mobile (Android/iOS, capture de pièces, consultation). Couches présentation / domaine / données.
-- **Supabase** : PostgreSQL (source de vérité), Auth (MFA TOTP), RLS, Storage privé (URL signées), Edge Functions en TypeScript (invitations, imports, propositions de lettrage).
+- **Supabase** (adaptateur actuel, derrière les ports de `domain/repositories/`) : PostgreSQL (source de vérité), Auth (MFA TOTP), RLS, Storage privé (URL signées), Edge Functions en TypeScript (invitations, imports, propositions de lettrage).
 - **Service Python séparé** (appelé par une Edge Function) : génération PDF et remplissage du modèle Excel DGI avec `openpyxl` (`keep_vba`).
 - Environnement local sous **Podman** (pas de Docker) : pour la Supabase CLI, activer `systemctl --user enable --now podman.socket` et exporter `DOCKER_HOST` vers ce socket ; sinon PostgreSQL + pgTAP dans un conteneur Podman, documenté dans `docs/environnement.md`.
 - Tests : pgTAP (règles comptables et toutes les politiques RLS), tests Flutter (unitaires + widgets), pytest (service de documents). Chaque règle de la conception doit être traçable vers au moins un test.

@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Journal technique des erreurs de cet appareil, réservé à l'administrateur technique : il retrouve ici, à partir de la référence
 /// communiquée par l'utilisateur, le détail que l'écran ne montre jamais. Le journal reste local : rien n'est envoyé ailleurs.

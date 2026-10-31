@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:akonta/src/data/documents_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:akonta/src/core/file_tools.dart';
 
 void main() {
   test('types admis déduits de l\'extension', () {

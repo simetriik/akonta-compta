@@ -1,12 +1,5 @@
 import 'package:akonta/design/design.dart';
-import 'package:akonta/src/data/consultation_repository.dart';
-import 'package:akonta/src/data/entities_repository.dart';
-import 'package:akonta/src/data/closing_repository.dart';
-import 'package:akonta/src/data/lettering_repository.dart';
-import 'package:akonta/src/data/references_repository.dart';
-import 'package:akonta/src/data/suggestions_repository.dart';
 import 'package:akonta/src/domain/suggestion_models.dart';
-import 'package:akonta/src/data/supabase_providers.dart';
 import 'package:akonta/src/domain/entity_models.dart';
 import 'package:akonta/src/domain/models.dart';
 import 'package:akonta/src/domain/reference_models.dart';
@@ -22,6 +15,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_repositories.dart';
 import 'golden_harness.dart';
+import 'package:akonta/src/application/providers/consultation_providers.dart';
+import 'package:akonta/src/application/providers/entities_providers.dart';
+import 'package:akonta/src/application/providers/references_providers.dart';
+import 'package:akonta/src/application/providers/repositories.dart';
+import 'package:akonta/src/domain/consultation_models.dart';
+import 'package:akonta/src/domain/repositories/suggestions_repository.dart';
+import 'package:akonta/src/application/providers/session_providers.dart';
 
 class _FixedEntity extends CurrentEntityNotifier {
   @override

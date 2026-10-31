@@ -1,9 +1,9 @@
 import 'package:akonta/design/design.dart';
-import 'package:akonta/src/data/closing_repository.dart';
 import 'package:akonta/src/presentation/closing/statement_notes_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:akonta/src/domain/closing_models.dart';
 
 NoteLine _line(String note, String title, String code, String label, int amount, {int? previous, String kind = 'line'}) =>
     NoteLine(noteCode: note, noteTitle: title, lineCode: code, label: label, kind: kind, amount: amount, previous: previous);

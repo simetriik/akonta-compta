@@ -8,16 +8,17 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/closing_repository.dart';
-import '../../data/consultation_repository.dart';
-import '../../data/entities_repository.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import '../../domain/models.dart';
 import '../inventory/inventory_screen.dart';
 import 'statement_notes_section.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
+import '../../application/providers/entities_providers.dart';
+import '../../domain/closing_models.dart';
+import '../../domain/consultation_models.dart';
+import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Assistant de clôture (§10.9) : contrôles → inventaire → fiscalité → états financiers → clôture provisoire → arrêté définitif → N+1.
 class ClosingScreen extends StatelessWidget {
@@ -313,7 +314,7 @@ class ChecksStep extends ConsumerStatefulWidget {
 }
 
 class _ChecksStepState extends ConsumerState<ChecksStep> {
-  late Future<List<ClosingCheck>> _future = ref.read(closingRepositoryProvider).runChecks(widget.entity.id, widget.fy.id);
+  late Future<List<ClosingCheck>> _future = ref.read(closingServiceProvider).runChecks(widget.entity.id, widget.fy.id);
 
   @override
   Widget build(BuildContext context) {
@@ -334,7 +335,7 @@ class _ChecksStepState extends ConsumerState<ChecksStep> {
               trailing: AkButton.secondary(
                 'Relancer',
                 icon: Icons.refresh,
-                onPressed: () => setState(() => _future = ref.read(closingRepositoryProvider).runChecks(widget.entity.id, widget.fy.id)),
+                onPressed: () => setState(() => _future = ref.read(closingServiceProvider).runChecks(widget.entity.id, widget.fy.id)),
               ),
             ),
             const SizedBox(height: AkSpace.s3),
@@ -408,11 +409,11 @@ class _ChecksStepState extends ConsumerState<ChecksStep> {
                 final comment = await _askText(context, title: 'Lever : ${c.label}', label: 'Commentaire (obligatoire)', confirmLabel: 'Lever l\'alerte');
                 if (comment == null || comment.trim().isEmpty) return;
                 try {
-                  await ref.read(closingRepositoryProvider).waive(widget.fy.id, c.code, comment.trim());
+                  await ref.read(closingServiceProvider).waive(widget.fy.id, c.code, comment.trim());
                 } catch (e) {
                   if (context.mounted) showErrorSnack(context, errorText(e));
                 }
-                setState(() => _future = ref.read(closingRepositoryProvider).runChecks(widget.entity.id, widget.fy.id));
+                setState(() => _future = ref.read(closingServiceProvider).runChecks(widget.entity.id, widget.fy.id));
               },
             ),
           ],
@@ -454,7 +455,7 @@ class _TaxStepState extends ConsumerState<TaxStep> {
   }
 
   Future<void> _load() async {
-    final repo = ref.read(closingRepositoryProvider);
+    final repo = ref.read(closingServiceProvider);
     final adj = await repo.proposeAdjustments(widget.entity.id, widget.fy.id);
     final acc = await repo.accountingResult(widget.entity.id, widget.fy.id);
     final res = await repo.taxComputation(widget.fy.id);
@@ -529,7 +530,7 @@ class _TaxStepState extends ConsumerState<TaxStep> {
                 onPressed: () async {
                   setState(() => _busy = true);
                   try {
-                    final r = await ref.read(closingRepositoryProvider).computeTax(widget.entity.id, widget.fy.id, adj);
+                    final r = await ref.read(closingServiceProvider).computeTax(widget.entity.id, widget.fy.id, adj);
                     setState(() => _result = r);
                     ref.invalidate(entityDashboardProvider);
                   } catch (e) {
@@ -589,7 +590,7 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
   @override
   void initState() {
     super.initState();
-    ref.read(closingRepositoryProvider).latestStatements(widget.fy.id).then((v) {
+    ref.read(closingServiceProvider).latestStatements(widget.fy.id).then((v) {
       if (mounted) setState(() => _fs = v);
     });
   }
@@ -598,7 +599,7 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
     setState(() => _busy = true);
     try {
       final p = ConsultationParams(entityId: widget.entity.id, from: widget.fy.startDate, to: widget.fy.endDate);
-      final (name, bytes) = await ref.read(consultationRepositoryProvider).export(p: p, kind: kind, format: format);
+      final (name, bytes) = await ref.read(consultationServiceProvider).export(p: p, kind: kind, format: format);
       final uri = await FilePicker.saveFile(dialogTitle: 'Enregistrer', fileName: name, bytes: bytes);
       if (uri != null && uri.scheme == 'file') {
         final f = File(uri.toFilePath());
@@ -635,7 +636,7 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
               onPressed: () async {
                 setState(() => _busy = true);
                 try {
-                  final v = await ref.read(closingRepositoryProvider).generateStatements(widget.entity.id, widget.fy.id);
+                  final v = await ref.read(closingServiceProvider).generateStatements(widget.entity.id, widget.fy.id);
                   setState(() => _fs = v);
                 } catch (e) {
                   if (context.mounted) showErrorSnack(context, errorText(e));
@@ -862,7 +863,7 @@ class ProvisionalStep extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.read(closingRepositoryProvider);
+    final repo = ref.read(closingServiceProvider);
     final t = context.ak;
     return ListView(
       padding: _bodyPad(context),
@@ -1019,7 +1020,7 @@ class _FinalStepState extends ConsumerState<FinalStep> {
                     ? null
                     : () async {
                         try {
-                          final archive = await ref.read(closingRepositoryProvider).closeFinal(widget.entity.id, widget.fy.id, _confirm.text.trim());
+                          final archive = await ref.read(closingServiceProvider).closeFinal(widget.entity.id, widget.fy.id, _confirm.text.trim());
                           widget.onChanged();
                           if (context.mounted) showAkToast(context, 'Exercice arrêté. Archive $archive.');
                         } catch (e) {
@@ -1092,7 +1093,7 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
 
   @override
   Widget build(BuildContext context) {
-    final repo = ref.read(closingRepositoryProvider);
+    final repo = ref.read(closingServiceProvider);
     final next = widget.next;
     final t = context.ak;
     final nonProfit = ref.watch(entityProvider(widget.entity.id)).value?.accountingSystem == 'sycebnl';

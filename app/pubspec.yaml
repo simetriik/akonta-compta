@@ -8,19 +8,24 @@ environment:
 
 dependencies:
   crypto: ^3.0.7
+  drift: ^2.35.3
   file_picker: ^13.2.0
   flutter:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^3.4.3
+  flutter_secure_storage: ^11.2.0
   flutter_svg: ^2.3.2
   go_router: ^18.1.1
+  http: ^1.6.0
   image_picker: ^1.2.4
   intl: ^0.20.3
   path: ^1.9.1
+  path_provider: ^2.1.6
   qr_flutter: ^4.1.0
   shared_preferences: ^2.5.6
+  sqlite3: ^3.8.0
   supabase_flutter: ^2.18.3
   url_launcher: ^6.3.3
 
@@ -30,6 +35,8 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   mocktail: ^1.0.5
   fake_async: ^1.3.3
+  drift_dev: ^2.35.2
+  build_runner: ^2.17.1
 
 flutter:
   uses-material-design: true
@@ -57,3 +64,9 @@ flutter:
       fonts:
         - asset: assets/fonts/Poppins-SemiBold.ttf
           weight: 600
+
+# Base locale chiffrée : SQLite3 Multiple Ciphers à la place de SQLite (voir docs/decisions-dev.md, D-031).
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc

@@ -4,10 +4,12 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/admin_repository.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
+import '../../application/providers/admin_providers.dart';
+import '../../domain/admin_models.dart';
+import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Espace de l'associé : paramètres du cabinet, rôles et permissions, affectations, piste d'audit.
 class CabinetScreen extends StatelessWidget {
@@ -112,7 +114,7 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
                           showAkToast(context, 'Longueur 6-12, inactivité 5-480 minutes.', kind: AkToastKind.warning);
                           return;
                         }
-                        await ref.read(adminRepositoryProvider).updateCabinet(c.id, {
+                        await ref.read(adminServiceProvider).updateCabinet(c.id, {
                           'name': _name.text.trim(),
                           'default_account_length': len,
                           'inactivity_minutes': min,
@@ -163,7 +165,7 @@ class RolesTab extends ConsumerWidget {
                         dense: true,
                         value: r.permissions.contains(p.code),
                         onChanged: (v) async {
-                          await ref.read(adminRepositoryProvider).setRolePermission(r.id, p.code, v);
+                          await ref.read(adminServiceProvider).setRolePermission(r.id, p.code, v);
                           ref.invalidate(rolesProvider);
                           ref.invalidate(permissionsProvider);
                         },
@@ -241,7 +243,7 @@ class AssignmentsTab extends ConsumerWidget {
                               icon: Icons.delete_outline,
                               dense: true,
                               onPressed: () async {
-                                await ref.read(adminRepositoryProvider).removeAssignment(a.id);
+                                await ref.read(adminServiceProvider).removeAssignment(a.id);
                                 ref.invalidate(assignmentsProvider);
                               },
                             ),
@@ -321,7 +323,7 @@ class _AssignmentDialogState extends ConsumerState<AssignmentDialog> {
             }
             try {
               await ref
-                  .read(adminRepositoryProvider)
+                  .read(adminServiceProvider)
                   .addAssignment(cabinetId: cabinet.id, userId: _user!, roleId: _role!, entityId: cabinetScope ? null : _entity);
               ref.invalidate(assignmentsProvider);
               if (context.mounted) Navigator.pop(context);
@@ -379,7 +381,7 @@ class _ReassignDialogState extends ConsumerState<ReassignDialog> {
           onPressed: _from == null || _to == null || _from == _to || cabinet == null
               ? null
               : () async {
-                  final n = await ref.read(adminRepositoryProvider).reassignAll(cabinetId: cabinet.id, fromUserId: _from!, toUserId: _to!);
+                  final n = await ref.read(adminServiceProvider).reassignAll(cabinetId: cabinet.id, fromUserId: _from!, toUserId: _to!);
                   ref.invalidate(assignmentsProvider);
                   if (context.mounted) {
                     Navigator.pop(context);
@@ -404,7 +406,7 @@ class _AuditTabState extends ConsumerState<AuditTab> {
   String _action = '';
   late Future<List<AuditEvent>> _future = _load();
 
-  Future<List<AuditEvent>> _load() => ref.read(adminRepositoryProvider).auditLog(action: _action.isEmpty ? null : _action);
+  Future<List<AuditEvent>> _load() => ref.read(adminServiceProvider).auditLog(action: _action.isEmpty ? null : _action);
 
   @override
   Widget build(BuildContext context) {
@@ -446,7 +448,7 @@ class _AuditTabState extends ConsumerState<AuditTab> {
                 onPressed: cabinet == null
                     ? null
                     : () async {
-                        final broken = await ref.read(adminRepositoryProvider).verifyChain(cabinet.id);
+                        final broken = await ref.read(adminServiceProvider).verifyChain(cabinet.id);
                         if (!context.mounted) return;
                         showAkToast(
                           context,

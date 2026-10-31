@@ -6,15 +6,17 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/entries_repository.dart';
-import '../../data/references_repository.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/entry_models.dart';
 import '../../domain/suggestion_models.dart';
 import 'entry_suggestions_panel.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
 import '../widgets/require_entity.dart';
+import '../../application/providers/entries_providers.dart';
+import '../../application/providers/references_providers.dart';
+import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
+import '../../application/offline/outbox_codec.dart';
 
 /// Saisie d'une écriture (grille au clavier) : journal, date, référence, libellé ; lignes compte / tiers / libellé / débit / crédit ;
 /// autocomplétion, contrepartie automatique (Ctrl+B), modèles d'écritures, équilibre affiché, validation (§10.4).
@@ -57,7 +59,7 @@ class _EditorState extends ConsumerState<_Editor> {
 
   Future<void> _load() async {
     if (widget.entryId != null) {
-      final e = await ref.read(entriesRepositoryProvider).get(widget.entryId!);
+      final e = await ref.read(entriesServiceProvider).get(widget.entryId!);
       _loaded = e;
       _draft = EntryDraft.fromEntry(e);
       _date.text = Fmt.date(_draft.entryDate);
@@ -96,14 +98,14 @@ class _EditorState extends ConsumerState<_Editor> {
     });
     try {
       final cabinet = await ref.read(currentCabinetProvider.future);
-      final repo = ref.read(entriesRepositoryProvider);
+      final repo = ref.read(entriesServiceProvider);
       final id = await repo.saveDraft(cabinet!.id, widget.entity.id, _draft);
       _draft.id = id;
       if (validate) {
         final n = await repo.validate(id);
         if (mounted) showAkToast(context, 'Écriture validée : n° $n');
       } else if (mounted) {
-        showAkToast(context, 'Brouillard enregistré.');
+        showAkToast(context, isLocalDraftId(id) ? 'Hors connexion : brouillard conservé sur cet appareil, il sera envoyé à la reconnexion.' : 'Brouillard enregistré.', kind: isLocalDraftId(id) ? AkToastKind.info : AkToastKind.success);
       }
       ref.invalidate(entriesListProvider(widget.entity.id));
       ref.invalidate(entityDashboardProvider);
@@ -117,7 +119,7 @@ class _EditorState extends ConsumerState<_Editor> {
 
   Future<void> _delete() async {
     if (_draft.id == null) return;
-    await ref.read(entriesRepositoryProvider).deleteDraft(_draft.id!);
+    await ref.read(entriesServiceProvider).deleteDraft(_draft.id!);
     ref.invalidate(entriesListProvider(widget.entity.id));
     if (mounted) context.go('/saisie');
   }

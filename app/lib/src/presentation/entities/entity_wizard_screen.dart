@@ -4,11 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
-import '../../data/entities_repository.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import 'entity_detail_screen.dart';
 import 'entity_form.dart';
+import '../../application/providers/entities_providers.dart';
+import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Assistant d'ouverture en 5 étapes : fiche entité → exercice → plan de comptes → journaux → soldes d'ouverture (§10.2).
 class EntityWizardScreen extends ConsumerStatefulWidget {
@@ -78,8 +79,8 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
           submitLabel: 'Créer le dossier et continuer',
           onSubmit: (input) async {
             if (cabinetId == null) throw const AppError.business('Cabinet inconnu : reconnectez-vous.');
-            final e = await ref.read(entitiesRepositoryProvider).create(cabinetId, input);
-            final count = await ref.read(entitiesRepositoryProvider).accountCount(e.id);
+            final e = await ref.read(entitiesServiceProvider).create(cabinetId, input);
+            final count = await ref.read(entitiesServiceProvider).accountCount(e.id);
             ref.invalidate(entitiesListProvider);
             ref.invalidate(entityDashboardProvider);
             setState(() {
@@ -134,8 +135,8 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
               AkButton.primary(
                 'Continuer',
                 onPressed: () async {
-                  final templates = await ref.read(entitiesRepositoryProvider).journalTemplates();
-                  final accounts = await ref.read(entitiesRepositoryProvider).treasuryAccounts(_entity!.id);
+                  final templates = await ref.read(entitiesServiceProvider).journalTemplates();
+                  final accounts = await ref.read(entitiesServiceProvider).treasuryAccounts(_entity!.id);
                   setState(() {
                     _journalCodes.addAll(templates.where((t) => t.isDefaultChecked && t.type != 'opening').map((t) => t.code));
                     _class5 = accounts;
@@ -193,7 +194,7 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
               AkButton.primary(
                 'Créer les journaux et continuer',
                 onPressed: () async {
-                  final repo = ref.read(entitiesRepositoryProvider);
+                  final repo = ref.read(entitiesServiceProvider);
                   try {
                     final plain = templates.where((t) => _journalCodes.contains(t.code) && !t.isTreasury).map((t) => t.code).toList();
                     await repo.createJournalsFromTemplate(_entity!.id, plain);

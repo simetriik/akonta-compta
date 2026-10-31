@@ -1,6 +1,4 @@
 import 'package:akonta/design/design.dart';
-import 'package:akonta/src/data/references_repository.dart';
-import 'package:akonta/src/data/supabase_providers.dart';
 import 'package:akonta/src/domain/models.dart';
 import 'package:akonta/src/domain/reference_models.dart';
 import 'package:akonta/src/presentation/entries/entry_editor_screen.dart';
@@ -8,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:akonta/src/application/providers/references_providers.dart';
+import 'package:akonta/src/application/providers/session_providers.dart';
 
 /// Dossier courant pré-sélectionné pour les tests.
 class _FixedEntity extends CurrentEntityNotifier {

@@ -4,6 +4,9 @@ library;
 /// Nature d'une erreur : détermine l'icône éventuelle, la possibilité de réessayer et l'affichage de la référence.
 enum AppErrorKind {
   network,
+
+  /// Fonction qui exige une connexion alors que l'appareil est hors ligne.
+  offline,
   timeout,
   session,
   forbidden,
@@ -23,6 +26,10 @@ class AppError implements Exception {
 
   /// Refus d'une règle métier ou message rédigé par l'application : affiché tel quel, sans référence.
   const AppError.business(String message) : this(kind: AppErrorKind.businessRule, message: message);
+
+  /// Fonction réservée à l'utilisation en ligne (grand livre, balance, validation…) tentée sans connexion.
+  AppError.offline(String capability)
+      : this(kind: AppErrorKind.offline, message: '$capability nécessite une connexion internet. Reconnectez-vous pour continuer.', retryable: true);
 
   final AppErrorKind kind;
 

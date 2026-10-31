@@ -1,11 +1,11 @@
-import 'package:akonta/src/data/closing_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:akonta/src/infrastructure/supabase/mappers/closing_repository_mappers.dart';
 
 void main() {
   Map<String, dynamic> row(String code, String label, int amount) => {'post_code': code, 'post_label': label, 'column_role': 'amount', 'amount': amount, 'sort_order': 10};
 
   test('les états SYCEBNL portent le tableau des flux de N et de N-1', () {
-    final fs = FinancialStatements.fromJson({
+    final fs = financialStatementsFromJson({
       'id': 's1',
       'generated_at': '2026-12-31T10:00:00Z',
       'is_final': false,
@@ -28,7 +28,7 @@ void main() {
   });
 
   test('un état du système normal n\'a pas de tableau des flux', () {
-    final fs = FinancialStatements.fromJson({
+    final fs = financialStatementsFromJson({
       'id': 's2',
       'generated_at': '2026-12-31T10:00:00Z',
       'checks': <dynamic>[],
@@ -39,7 +39,7 @@ void main() {
   });
 
   test('les notes annexes SYCEBNL sont lues avec leurs montants de N et de N-1', () {
-    final fs = FinancialStatements.fromJson({
+    final fs = financialStatementsFromJson({
       'id': 's3',
       'generated_at': '2026-12-31T10:00:00Z',
       'checks': <dynamic>[],
