@@ -44,13 +44,19 @@ Mis à jour le 31 oct. 2026. Ce fichier rassemble ce qui a été décidé, étud
 - `recette/definir-role-associe.sh` jamais exécuté (seulement `bash -n`) ; limite du modèle `SALAIRES` (la ligne d'IRPP reprend le montant de base).
 
 ## 4. Chantiers techniques ouverts
-- **Gestion des erreurs (D-030)** : à chaque nouvelle contrainte d'unicité de la base, ajouter son message dans `_constraintMessages` (`app/lib/src/core/errors/error_mapper.dart`) ; journal conservé en mémoire seulement (pas de persistance ni d'envoi à l'équipe) ; vérification visuelle sur mobile à faire.
+- **Gestion des erreurs (D-030)** : à chaque nouvelle contrainte d'unicité de la base, ajouter son message dans `_constraintMessages` (`app/lib/src/infrastructure/supabase/supabase_error_classifier.dart`) ; journal conservé en mémoire seulement (pas de persistance ni d'envoi à l'équipe) ; vérification visuelle sur mobile à faire.
 - **Dépôt `hsounton/akonta`** (vide, créé par erreur) : à supprimer par l'utilisateur après `! gh auth refresh -h github.com -s delete_repo`.
 - **Déploiement Dokploy par API** : non commencé. Il faut l'URL, un jeton fourni par variable d'environnement hors du dépôt (`DOKPLOY_URL`, `DOKPLOY_TOKEN`) et le choix du périmètre ; recommandation : commencer par un accès en lecture seule, puis la Supabase de recette complète.
 - **Erreurs d'inventaire connues** : l'écran Inventaire propose le compte de variation 603 pour les stocks 31 à 33 et 73 sinon ; pour le SYCEBNL le stock 34 (dons en nature) relève plutôt de 6035 (D-025).
 - **Anomalies de solde** : un solde dans le sens anormal (ex. 4991 au débit) reste hors des postes des états ; le contrôle « actif = passif » le signale (D-024).
 - **Plan SYCEBNL** : classe 9 (contributions volontaires en nature) non copiée dans l'entité ; cinq comptes de regroupement (28, 29, 49, 59, 68) confondus avec leur sous-compte une fois complétés (D-022).
 - **Invitation et rôles** : l'invitation ne crée pas d'affectation (Q-016).
+
+## 4 bis. Architecture clean et mode hors connexion (D-031)
+- **Écrans géants à découper** : `references_screen` (1 335 lignes), `closing_screen` (1 200), `inventory_screen` (1 125), `entry_editor_screen` (870), `reconciliation_screen` (800) mêlent mise en page, calculs de présentation et orchestration ; à scinder en widgets et contrôleurs Riverpod, un écran à la fois.
+- **Autre moteur de données (Oracle…)** : écrire un adaptateur par port et, pour un moteur sans PostgREST, un serveur d'API qui reprend le contrat des ports ; les règles comptables, aujourd'hui en SQL PostgreSQL, devraient alors être réécrites (PL/SQL) ou sorties de la base. Choix à faire quand un client Oracle sera réel.
+- **Hors connexion, limites connues** : la modification hors ligne d'un brouillon déjà enregistré sur le serveur est mise en file mais la liste montre l'ancienne version jusqu'à la synchronisation ; pas de stockage local chiffré sur le web ; la file d'envoi n'est pas vidée à la déconnexion (les éléments restent à envoyer par le prochain utilisateur de l'appareil, sous ses droits) ; pas de résolution de conflit entre deux appareils (le serveur fait foi) ; compilation Linux de bureau non vérifiée (bibliothèque `libsecret` absente de la machine de développement).
+- **À essayer en recette** : couper le réseau, saisir un brouillon et déposer une pièce, rétablir le réseau et vérifier l'envoi ; vérifier que grand livre, balance, validation et clôture sont bien refusés avec leur message.
 
 ## 5. IA locale (à analyser avant tout code)
 - **Palier 0 livré** (D-026) : suggestions par ressemblance de texte, sans modèle.

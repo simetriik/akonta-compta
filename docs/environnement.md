@@ -7,6 +7,7 @@
 | Supabase CLI | 2.121 | Pile locale, migrations, seed, tests pgTAP, Edge Functions. |
 | Flutter SDK | 3.47 (Dart 3.13) | Application desktop (Linux, Windows, macOS) et mobile (Android, iOS). |
 | Android SDK 36 + OpenJDK 21 | — | Build Android. |
+| `libsecret-1-dev` (Linux) | — | Compilation de l'application de bureau Linux : trousseau où est conservée la clé de la base locale chiffrée (`sudo apt install libsecret-1-dev`). |
 | Python 3.13 + `uv` | — | Service de documents (PDF, Excel DGI). |
 | Deno 2 | — | Tests des Edge Functions. |
 | `psql` 17 | — | Requêtes manuelles (`psql "$(supabase status -o env | grep DB_URL | cut -d= -f2-)"`). |
