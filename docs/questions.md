@@ -65,3 +65,9 @@
 - **Constat** : la fonction `invite-user` crée le compte et le profil mais aucune ligne dans `assignments`. Un utilisateur invité n'a donc aucun droit. L'écran Cabinet > Affectations est réservé à l'associé, qui n'a lui-même aucun rôle : impasse. L'administrateur technique ne voit pas les données comptables et n'a pas d'écran pour affecter. Constaté le 30 oct. 2026 sur l'instance de recette (seul `admin.recette` avait une affectation).
 - **Hypothèse appliquée** : pour la recette, l'hôte insère à la main l'affectation `partner` (portée cabinet) de l'associé ; l'associé affecte ensuite les autres depuis l'application.
 - **À décider** : l'invitation doit-elle porter le rôle (choisi par l'administrateur ou l'associé) et créer l'affectation ? À trancher avant la recette avec ABC.
+
+## Q-017 — Associations (SYCEBNL) : besoin réel du cabinet
+- **Constat** : la conception range SYCEBNL hors V1. L'utilisateur souhaite l'ajouter à Akonta (31 oct. 2026) ; voir D-022.
+- **À demander à ABC** : gère-t-il des associations, ONG, fondations ou syndicats, combien, et pour quand ? Tient-il leurs comptes dans Perfecto (impact sur l'import) ? Quels états produit-il pour eux (compte d'emploi des ressources, annexes) ?
+- **À obtenir** : texte officiel du SYCEBNL (plan de comptes, états financiers, modèles de liasse).
+- **Hypothèse appliquée** : aucune ; le schéma n'accepte que `'normal'`. Rien n'est livré avant la réponse.
