@@ -68,6 +68,17 @@
 
 ## Q-017 — Associations (SYCEBNL) : besoin réel du cabinet
 - **Constat** : la conception range SYCEBNL hors V1. L'utilisateur souhaite l'ajouter à Akonta (31 oct. 2026) ; voir D-022.
-- **À demander à ABC** : gère-t-il des associations, ONG, fondations ou syndicats, combien, et pour quand ? Tient-il leurs comptes dans Perfecto (impact sur l'import) ? Quels états produit-il pour eux (compte d'emploi des ressources, annexes) ?
+- **À demander à ABC** : gère-t-il des associations, ONG, fondations ou syndicats, combien, et pour quand ? Tient-il leurs comptes dans Perfecto (impact sur l'import) ? Quels états produit-il pour eux (bilan, compte de résultat, tableau des flux, notes annexes) ?
 - **À obtenir** : texte officiel du SYCEBNL (plan de comptes, états financiers, modèles de liasse).
 - **Hypothèse appliquée** : aucune ; le schéma n'accepte que `'normal'`. Rien n'est livré avant la réponse.
+
+## Q-018 — Sens normal erroné dans les plans d'entités SYSCOHADA déjà créés
+- **Constat** : jusqu'à la migration `20261031100001`, la copie du plan de référence faisait hériter le sens du compte de classe. Dans la base de recette, `2800000` (amortissements) est au débit, `1390000` (perte) au crédit, `1090000` au crédit au lieu de leur sens de référence (voir D-023). Les comptes subdivisés à la main sous ces comptes ont hérité du même sens. Les entités créées après la migration sont correctes.
+- **Impact à mesurer** : le sens normal sert aux alertes de solde et à l'affichage ; pas à l'équilibre des écritures. Le déclencheur interdit de modifier le sens d'un compte existant.
+- **À décider** : migration de correction des entités existantes (mise à jour du sens d'après `reference_accounts`, déclencheur contourné par le même réglage transactionnel) ; modification de données, donc à faire valider avant application, sur la recette puis chez ABC.
+- **Résolu le 31 oct. 2026** : migration `20261031100004_fix_reference_account_sides.sql` (fonction `fix_reference_account_sides()`, rejouable) ; test dans `190_sycebnl_referentiel.test.sql`.
+
+## Q-019 — Plan SYCEBNL : source et sens normal à valider
+- **Constat** : le plan de 1 130 comptes vient d'un site tiers ; le sens normal, les collectifs et les comptes lettrables sont déduits de règles par préfixe (`scripts/generate_sycebnl_accounts.py`). Les 19 modèles `AS_*` sont sans TVA.
+- **À faire** : rapprocher du Journal officiel OHADA (acte uniforme du 22 déc. 2022) ; faire valider par ABC les comptes des modèles et les sens ambigus (87, 88, 169, 475, comptes à recevoir).
+

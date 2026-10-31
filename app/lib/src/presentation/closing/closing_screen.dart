@@ -67,6 +67,18 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (ref.watch(entityProvider(widget.entity.id)).value?.accountingSystem == 'sycebnl') ...[
+                    const AkBanner(
+                      key: Key('sycebnl-closing-notice'),
+                      kind: AkBannerKind.warning,
+                      icon: Icons.info_outline,
+                      child: Text(
+                        'Dossier SYCEBNL : les états financiers, la fiscalité et la clôture de cet assistant suivent encore le SYSCOHADA. '
+                        'Ne pas les utiliser pour cette association tant que les états SYCEBNL ne sont pas livrés.',
+                      ),
+                    ),
+                    const SizedBox(height: AkSpace.s3),
+                  ],
                   AkPageHead(
                     title: 'Clôture de l\'exercice',
                     subtitle: widget.entity.name,

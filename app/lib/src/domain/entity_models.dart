@@ -21,6 +21,7 @@ class EntityDetail {
     this.secondaryActivities = const [],
     this.activityCode,
     this.accountLength = 7,
+    this.accountingSystem = 'normal',
     this.monthlyLockEnabled = false,
     this.isActive = true,
   });
@@ -43,6 +44,9 @@ class EntityDetail {
   final List<String> secondaryActivities;
   final String? activityCode;
   final int accountLength;
+
+  /// Référentiel comptable choisi à la création, non modifiable : `normal` (SYSCOHADA) ou `sycebnl` (entités à but non lucratif).
+  final String accountingSystem;
   final bool monthlyLockEnabled;
   final bool isActive;
 
@@ -65,6 +69,7 @@ class EntityDetail {
         secondaryActivities: ((j['secondary_activities'] as List?) ?? const []).cast<String>(),
         activityCode: j['activity_code'] as String?,
         accountLength: (j['account_length'] as num?)?.toInt() ?? 7,
+        accountingSystem: (j['accounting_system'] as String?) ?? 'normal',
         monthlyLockEnabled: (j['monthly_lock_enabled'] as bool?) ?? false,
         isActive: (j['is_active'] as bool?) ?? true,
       );
@@ -89,6 +94,7 @@ class EntityInput {
     this.secondaryActivities = const [],
     this.activityCode,
     this.accountLength,
+    this.accountingSystem,
     this.monthlyLockEnabled,
   });
 
@@ -108,6 +114,9 @@ class EntityInput {
   final List<String> secondaryActivities;
   final String? activityCode;
   final int? accountLength;
+
+  /// Renseigné à la création seulement : le référentiel ne se modifie plus ensuite.
+  final String? accountingSystem;
   final bool? monthlyLockEnabled;
 
   Map<String, dynamic> toJson() => {
@@ -127,10 +136,19 @@ class EntityInput {
         'secondary_activities': secondaryActivities,
         'activity_code': _n(activityCode),
         if (accountLength != null) 'account_length': accountLength,
+        if (accountingSystem != null) 'accounting_system': accountingSystem,
         if (monthlyLockEnabled != null) 'monthly_lock_enabled': monthlyLockEnabled,
       };
 
   static String? _n(String? s) => (s == null || s.trim().isEmpty) ? null : s.trim();
+
+  /// Référentiel suggéré par la forme juridique saisie : `sycebnl` pour les associations, ONG, fondations,
+  /// syndicats et autres entités à but non lucratif, `null` sinon (le choix reste à l'utilisateur).
+  static String? suggestAccountingSystem(String? legalForm) {
+    final s = ' ${(legalForm ?? '').toLowerCase()} ';
+    const keywords = [' association', ' ong ', ' o.n.g', ' fondation', ' syndicat', 'but non lucratif'];
+    return keywords.any(s.contains) ? 'sycebnl' : null;
+  }
 
   /// Validation de la fiche : dénomination obligatoire, IFU béninois à 13 chiffres s'il est saisi.
   static String? validateName(String? v) => (v ?? '').trim().length < 2 ? 'Dénomination obligatoire' : null;
