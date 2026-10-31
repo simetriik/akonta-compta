@@ -6,9 +6,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'src/app.dart';
 import 'src/core/config.dart';
+import 'src/core/errors/errors.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  installErrorHooks();
   Intl.defaultLocale = 'fr_FR';
   await initializeDateFormatting('fr_FR');
   await Supabase.initialize(
