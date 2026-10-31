@@ -74,7 +74,7 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
                       icon: Icons.info_outline,
                       child: Text(
                         'Dossier SYCEBNL : bilan, compte de résultat, à-nouveaux et affectation du résultat suivent le référentiel des entités à but non lucratif. '
-                        'Tableau des flux, notes annexes, exports PDF / Excel et travaux d\'inventaire SYCEBNL : à venir.',
+                        'Tableau des flux, notes annexes et exports PDF / Excel : à venir.',
                       ),
                     ),
                     const SizedBox(height: AkSpace.s3),
