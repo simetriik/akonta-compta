@@ -12,6 +12,9 @@ import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import '../inventory/inventory_widgets.dart';
 import 'closing_widgets.dart';
+import '../../application/closing/tax_worksheet.dart';
+import '../../application/providers/closing_providers.dart';
+import '../widgets/async_view.dart';
 
 class TaxStep extends ConsumerStatefulWidget {
   const TaxStep({super.key, required this.entity, required this.fy});
@@ -24,11 +27,12 @@ class TaxStep extends ConsumerStatefulWidget {
 }
 
 class _TaxStepState extends ConsumerState<TaxStep> {
-  List<TaxAdjustment>? _adjustments;
-  TaxComputation? _result;
-  int? _accounting;
+  /// Dernier calcul fait depuis cet écran ; à défaut, celui déjà enregistré pour l'exercice.
+  TaxComputation? _computed;
   bool _busy = false;
   final _amountControllers = <TaxAdjustment, TextEditingController>{};
+
+  ClosingKey get _key => (entityId: widget.entity.id, fyId: widget.fy.id);
 
   @override
   void dispose() {
@@ -39,31 +43,18 @@ class _TaxStepState extends ConsumerState<TaxStep> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final repo = ref.read(closingServiceProvider);
-    final adj = await repo.proposeAdjustments(widget.entity.id, widget.fy.id);
-    final acc = await repo.accountingResult(widget.entity.id, widget.fy.id);
-    final res = await repo.taxComputation(widget.fy.id);
-    if (!mounted) return;
-    setState(() {
-      _adjustments = adj;
-      _accounting = acc;
-      _result = res;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
+    return AsyncView(
+      value: ref.watch(taxWorksheetProvider(_key)),
+      onRetry: () => ref.invalidate(taxWorksheetProvider(_key)),
+      builder: (sheet) => _content(context, sheet),
+    );
+  }
+
+  Widget _content(BuildContext context, TaxWorksheet sheet) {
     final t = context.ak;
-    final adj = _adjustments;
-    if (adj == null) return const AkLoading();
-    final addBacks = adj.where((a) => a.kind == 'add_back').fold<int>(0, (s, a) => s + a.amount);
-    final deductions = adj.where((a) => a.kind == 'deduction').fold<int>(0, (s, a) => s + a.amount);
+    final adj = sheet.adjustments;
+    final result = _computed ?? sheet.computation;
     return ListView(
       padding: closingBodyPadding(context),
       children: [
@@ -74,7 +65,7 @@ class _TaxStepState extends ConsumerState<TaxStep> {
               const AkSectionTitle('Tableau de passage du résultat comptable au résultat fiscal'),
               const SizedBox(height: AkSpace.s2),
               Text(
-                'Résultat comptable avant impôt : ${Fmt.fcfa(_accounting, showZero: true)} FCFA',
+                'Résultat comptable avant impôt : ${Fmt.fcfa(sheet.accountingResult, showZero: true)} FCFA',
                 style: AkText.amount.copyWith(fontWeight: FontWeight.w600, color: t.text),
               ),
               const SizedBox(height: AkSpace.s2),
@@ -109,7 +100,7 @@ class _TaxStepState extends ConsumerState<TaxStep> {
                 ),
               Divider(height: AkSpace.s6, color: t.border),
               Text(
-                'Résultat fiscal : ${Fmt.fcfa((_accounting ?? 0) + addBacks - deductions, showZero: true)} FCFA',
+                'Résultat fiscal : ${Fmt.fcfa(sheet.taxableResult, showZero: true)} FCFA',
                 style: AkText.amount.copyWith(fontWeight: FontWeight.w600, color: t.text),
               ),
               const SizedBox(height: AkSpace.s3),
@@ -121,7 +112,7 @@ class _TaxStepState extends ConsumerState<TaxStep> {
                   setState(() => _busy = true);
                   try {
                     final r = await ref.read(closingServiceProvider).computeTax(widget.entity.id, widget.fy.id, adj);
-                    setState(() => _result = r);
+                    setState(() => _computed = r);
                     ref.invalidate(entityDashboardProvider);
                   } catch (e) {
                     if (context.mounted) showErrorSnack(context, errorText(e));
@@ -133,7 +124,7 @@ class _TaxStepState extends ConsumerState<TaxStep> {
             ],
           ),
         ),
-        if (_result != null) ...[
+        if (result != null) ...[
           const SizedBox(height: AkSpace.s3),
           AkCard(
             child: Column(
@@ -142,18 +133,18 @@ class _TaxStepState extends ConsumerState<TaxStep> {
                 const AkSectionTitle('Impôt sur les sociétés'),
                 const SizedBox(height: AkSpace.s2),
                 Text(
-                  'IS au taux de ${(_result!.isRate * 100).toStringAsFixed(0)} % : ${Fmt.fcfa(_result!.computedTax, showZero: true)}',
+                  'IS au taux de ${(result.isRate * 100).toStringAsFixed(0)} % : ${Fmt.fcfa(result.computedTax, showZero: true)}',
                   style: AkText.body.copyWith(color: t.text),
                 ),
                 Text(
-                  'Minimum d\'impôt (sur CA ${Fmt.fcfa(_result!.revenue, showZero: true)}, plancher 250 000) : ${Fmt.fcfa(_result!.minimumTax, showZero: true)}',
+                  'Minimum d\'impôt (sur CA ${Fmt.fcfa(result.revenue, showZero: true)}, plancher 250 000) : ${Fmt.fcfa(result.minimumTax, showZero: true)}',
                   style: AkText.body.copyWith(color: t.text),
                 ),
                 Text(
-                  'IS dû : ${Fmt.fcfa(_result!.taxDue, showZero: true)} · acomptes 4492 : ${Fmt.fcfa(_result!.prepayments, showZero: true)} · solde à payer : ${Fmt.fcfa(_result!.balanceDue, showZero: true)}',
+                  'IS dû : ${Fmt.fcfa(result.taxDue, showZero: true)} · acomptes 4492 : ${Fmt.fcfa(result.prepayments, showZero: true)} · solde à payer : ${Fmt.fcfa(result.balanceDue, showZero: true)}',
                   style: AkText.bodyStrong.copyWith(color: t.text),
                 ),
-                if (_result!.entryId != null) AkButton.ghost('Ouvrir l\'écriture d\'IS', onPressed: () => context.go('/saisie/${_result!.entryId}')),
+                if (result.entryId != null) AkButton.ghost('Ouvrir l\'écriture d\'IS', onPressed: () => context.go('/saisie/${result.entryId}')),
               ],
             ),
           ),

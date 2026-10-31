@@ -13,6 +13,7 @@ import '../../domain/inventory_models.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'inventory_widgets.dart';
+import '../../application/rules/account_selection.dart';
 
 class StocksTab extends ConsumerWidget {
   const StocksTab({super.key, required this.entity, required this.fy});
@@ -25,7 +26,7 @@ class StocksTab extends ConsumerWidget {
     final t = context.ak;
     final stocks = ref.watch(stocksProvider(fy.id));
     final accounts = ref.watch(accountsProvider(entity.id)).value ?? const <Account>[];
-    final stockAccounts = accounts.where((a) => a.classNo == 3 && a.allowPosting && a.isActive && !a.code.startsWith('39')).toList();
+    final stockAccounts = AccountSelection.stocks(accounts);
     final opening = ref.watch(stockOpeningBalancesProvider((entityId: entity.id, startDate: fy.startDate))).value ?? const <String, int>{};
     return AsyncView(
       value: stocks,
@@ -56,7 +57,7 @@ class StocksTab extends ConsumerWidget {
               account: a,
               existing: list.where((s) => s.stockAccountCode == a.code).firstOrNull,
               openingValue: opening[a.code] ?? 0,
-              variationAccounts: accounts.where((x) => x.allowPosting && x.isActive && (x.code.startsWith('603') || x.code.startsWith('73'))).toList(),
+              variationAccounts: AccountSelection.stockVariation(accounts),
             ),
           if (stockAccounts.isEmpty) Text('Aucun compte de stock imputable dans le plan.', style: AkText.body.copyWith(color: t.textMuted)),
         ],

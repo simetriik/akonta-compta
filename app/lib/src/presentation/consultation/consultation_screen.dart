@@ -1,6 +1,4 @@
-import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +14,7 @@ import '../../application/providers/entities_providers.dart';
 import '../../application/providers/references_providers.dart';
 import '../../domain/consultation_models.dart';
 import '../../application/providers/services.dart';
+import '../widgets/save_export.dart';
 
 /// Consultation du dossier courant : grand livre, balances, balance âgée, centralisateur ; période libre, comparaison N-1, exports (§10.6).
 class ConsultationScreen extends StatelessWidget {
@@ -222,11 +221,7 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
     setState(() => _exporting = true);
     try {
       final (name, bytes) = await ref.read(consultationServiceProvider).export(p: p, kind: parts[0], format: parts[1]);
-      final uri = await FilePicker.saveFile(dialogTitle: 'Enregistrer l\'export', fileName: name, bytes: bytes);
-      if (uri != null && uri.scheme == 'file') {
-        final f = File(uri.toFilePath());
-        if (!await f.exists() || await f.length() == 0) await f.writeAsBytes(bytes);
-      }
+      final uri = await saveExportedFile(dialogTitle: 'Enregistrer l\'export', fileName: name, bytes: bytes);
       if (mounted && uri != null) {
         showAkToast(context, 'Export enregistré : ${uri.scheme == 'file' ? uri.toFilePath() : uri}');
       }

@@ -107,7 +107,7 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
   Widget _stepBody(FiscalYear fy, List<FiscalYear> all) {
     switch (_step) {
       case 0:
-        return ChecksStep(entity: widget.entity, fy: fy);
+        return ChecksStep(key: ValueKey('${fy.id}-ChecksStep'), entity: widget.entity, fy: fy);
       case 1:
         return ListView(
           padding: closingBodyPadding(context),
@@ -143,15 +143,15 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
             ],
           );
         }
-        return TaxStep(entity: widget.entity, fy: fy);
+        return TaxStep(key: ValueKey('${fy.id}-TaxStep'), entity: widget.entity, fy: fy);
       case 3:
-        return StatementsStep(entity: widget.entity, fy: fy);
+        return StatementsStep(key: ValueKey('${fy.id}-StatementsStep'), entity: widget.entity, fy: fy);
       case 4:
-        return ProvisionalStep(entity: widget.entity, fy: fy, onChanged: () => ref.invalidate(fiscalYearsProvider(widget.entity.id)));
+        return ProvisionalStep(key: ValueKey('${fy.id}-ProvisionalStep'), entity: widget.entity, fy: fy, onChanged: () => ref.invalidate(fiscalYearsProvider(widget.entity.id)));
       case 5:
-        return FinalStep(entity: widget.entity, fy: fy, onChanged: () => ref.invalidate(fiscalYearsProvider(widget.entity.id)));
+        return FinalStep(key: ValueKey('${fy.id}-FinalStep'), entity: widget.entity, fy: fy, onChanged: () => ref.invalidate(fiscalYearsProvider(widget.entity.id)));
       default:
-        return NextYearStep(entity: widget.entity, fy: fy, next: all.where((f) => f.startDate == fy.endDate.add(const Duration(days: 1))).firstOrNull);
+        return NextYearStep(key: ValueKey('${fy.id}-NextYearStep'), entity: widget.entity, fy: fy, next: all.where((f) => f.startDate == fy.endDate.add(const Duration(days: 1))).firstOrNull);
     }
   }
 }

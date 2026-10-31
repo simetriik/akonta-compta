@@ -10,6 +10,7 @@ import '../../application/providers/references_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'references_widgets.dart';
+import '../../application/rules/account_selection.dart';
 
 class ThirdPartiesTab extends ConsumerStatefulWidget {
   const ThirdPartiesTab({super.key, required this.entity});
@@ -46,7 +47,7 @@ class _ThirdPartiesTabState extends ConsumerState<ThirdPartiesTab> {
             value: tps,
             onRetry: () => ref.invalidate(thirdPartiesProvider(widget.entity.id)),
             builder: (list) {
-              final filtered = list.where((p) => _search.isEmpty || p.code.toLowerCase().contains(_search) || p.name.toLowerCase().contains(_search)).toList();
+              final filtered = AccountSelection.filterThirdParties(list, _search);
               if (filtered.isEmpty) return const AkEmptyState('Aucun tiers.');
               return ListView.builder(
                 itemCount: filtered.length,
@@ -145,7 +146,7 @@ class _ThirdPartyDialogState extends ConsumerState<ThirdPartyDialog> {
   @override
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountsProvider(widget.entity.id)).value ?? const <Account>[];
-    final collectives = accounts.where((a) => a.isCollective && a.allowPosting && a.isActive).toList();
+    final collectives = AccountSelection.collectives(accounts);
     if (!_loaded && widget.initial != null && accounts.isNotEmpty) {
       _collectives.addAll(collectives.where((a) => widget.initial!.collectiveCodes.contains(a.code)).map((a) => a.id));
       _loaded = true;

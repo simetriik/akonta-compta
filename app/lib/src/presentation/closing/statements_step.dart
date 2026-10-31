@@ -1,6 +1,4 @@
-import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
@@ -16,6 +14,8 @@ import '../../domain/consultation_models.dart';
 import '../../application/providers/services.dart';
 import '../inventory/inventory_widgets.dart';
 import 'closing_widgets.dart';
+import '../widgets/save_export.dart';
+import '../../application/providers/closing_providers.dart';
 
 class StatementsStep extends ConsumerStatefulWidget {
   const StatementsStep({super.key, required this.entity, required this.fy});
@@ -28,27 +28,16 @@ class StatementsStep extends ConsumerStatefulWidget {
 }
 
 class _StatementsStepState extends ConsumerState<StatementsStep> {
-  FinancialStatements? _fs;
+  /// États que l'on vient de générer ; à défaut, les derniers enregistrés pour l'exercice.
+  FinancialStatements? _generated;
   bool _busy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    ref.read(closingServiceProvider).latestStatements(widget.fy.id).then((v) {
-      if (mounted) setState(() => _fs = v);
-    });
-  }
 
   Future<void> _export(BuildContext context, String kind, String format) async {
     setState(() => _busy = true);
     try {
       final p = ConsultationParams(entityId: widget.entity.id, from: widget.fy.startDate, to: widget.fy.endDate);
       final (name, bytes) = await ref.read(consultationServiceProvider).export(p: p, kind: kind, format: format);
-      final uri = await FilePicker.saveFile(dialogTitle: 'Enregistrer', fileName: name, bytes: bytes);
-      if (uri != null && uri.scheme == 'file') {
-        final f = File(uri.toFilePath());
-        if (!await f.exists() || await f.length() == 0) await f.writeAsBytes(bytes);
-      }
+      await saveExportedFile(dialogTitle: 'Enregistrer', fileName: name, bytes: bytes);
     } catch (e) {
       if (context.mounted) showErrorSnack(context, errorText(e));
     } finally {
@@ -59,7 +48,10 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
-    final fs = _fs;
+    final saved = ref.watch(latestStatementsProvider(widget.fy.id));
+    if (saved.hasError && _generated == null) return AkErrorMessage(errorText(saved.error!));
+    if (saved.isLoading && _generated == null) return const AkLoading();
+    final fs = _generated ?? saved.value;
     final nonProfit = ref.watch(entityProvider(widget.entity.id)).value?.accountingSystem == 'sycebnl';
     return ListView(
       padding: closingBodyPadding(context),
@@ -81,7 +73,7 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
                 setState(() => _busy = true);
                 try {
                   final v = await ref.read(closingServiceProvider).generateStatements(widget.entity.id, widget.fy.id);
-                  setState(() => _fs = v);
+                  setState(() => _generated = v);
                 } catch (e) {
                   if (context.mounted) showErrorSnack(context, errorText(e));
                 } finally {

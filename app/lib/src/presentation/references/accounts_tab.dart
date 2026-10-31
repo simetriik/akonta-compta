@@ -12,6 +12,7 @@ import '../../application/providers/references_providers.dart';
 import '../../application/providers/entities_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
+import '../../application/rules/account_selection.dart';
 
 class AccountsTab extends ConsumerStatefulWidget {
   const AccountsTab({super.key, required this.entity});
@@ -59,13 +60,7 @@ class _AccountsTabState extends ConsumerState<AccountsTab> {
             value: accounts,
             onRetry: () => ref.invalidate(accountsProvider(widget.entity.id)),
             builder: (list) {
-              final filtered = list
-                  .where(
-                    (a) =>
-                        (_classFilter == null || a.classNo == _classFilter) &&
-                        (_search.isEmpty || a.code.startsWith(_search) || a.label.toLowerCase().contains(_search)),
-                  )
-                  .toList();
+              final filtered = AccountSelection.filterPlan(list, search: _search, classNo: _classFilter);
               if (filtered.isEmpty) return const AkEmptyState('Aucun compte.');
               return ListView.builder(
                 itemCount: filtered.length,
@@ -177,9 +172,15 @@ class _AccountDialogState extends ConsumerState<AccountDialog> {
   @override
   void initState() {
     super.initState();
-    ref.read(entityProvider(widget.entity.id).future).then((e) {
-      if (mounted) setState(() => _length = e.accountLength);
-    });
+    ref
+        .read(entityProvider(widget.entity.id).future)
+        .then((e) {
+          if (mounted) setState(() => _length = e.accountLength);
+        })
+        .catchError((Object e) {
+          // Longueur par défaut conservée ; le serveur refuse de toute façon un numéro de mauvaise longueur.
+          if (mounted) setState(() => _error = errorText(e));
+        });
   }
 
   @override

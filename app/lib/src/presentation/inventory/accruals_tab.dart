@@ -14,6 +14,7 @@ import '../../domain/inventory_models.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'inventory_widgets.dart';
+import '../../application/rules/account_selection.dart';
 
 class AccrualsTab extends ConsumerWidget {
   const AccrualsTab({super.key, required this.entity, required this.fy});
@@ -127,13 +128,8 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final accounts = (ref.watch(accountsProvider(widget.entity.id)).value ?? const <Account>[]).where((a) => a.allowPosting && a.isActive).toList();
-    final defaultCounterpart = switch (_kind) {
-      'cap' => '408',
-      'par' => '418',
-      'cca' => '476',
-      _ => '477',
-    };
+    final accounts = AccountSelection.postable(ref.watch(accountsProvider(widget.entity.id)).value ?? const <Account>[]);
+    final defaultCounterpart = AccountSelection.accrualDefaultPrefix(_kind);
     return AkDialog(
       title: 'Régularisation',
       size: AkDialogSize.m,
@@ -152,14 +148,14 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
           const SizedBox(height: AkSpace.s2),
           AkAccountField(
             label: 'Compte de charge ou de produit',
-            accounts: accounts.where((a) => a.classNo == 6 || a.classNo == 7).toList(),
+            accounts: AccountSelection.accrualResults(accounts),
             onSelected: (a) => _account = a.id,
           ),
           const SizedBox(height: AkSpace.s2),
           AkAccountField(
             label: 'Compte de régularisation (défaut $defaultCounterpart)',
-            accounts: accounts.where((a) => a.classNo == 4).toList(),
-            selected: accounts.where((a) => a.classNo == 4 && a.code.startsWith(defaultCounterpart)).firstOrNull,
+            accounts: AccountSelection.accrualCounterparts(accounts),
+            selected: AccountSelection.accrualCounterparts(accounts).where((a) => a.code.startsWith(defaultCounterpart)).firstOrNull,
             onSelected: (a) => _counterpart = a.id,
           ),
           const SizedBox(height: AkSpace.s2),

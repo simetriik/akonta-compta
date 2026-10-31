@@ -10,6 +10,7 @@ import '../../application/providers/references_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'references_widgets.dart';
+import '../../application/rules/account_selection.dart';
 
 class JournalsTab extends ConsumerWidget {
   const JournalsTab({super.key, required this.entity});
@@ -130,9 +131,7 @@ class _JournalDialogState extends ConsumerState<JournalDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final accounts = (ref.watch(accountsProvider(widget.entity.id)).value ?? const <Account>[])
-        .where((a) => a.classNo == 5 && a.allowPosting && a.isActive)
-        .toList();
+    final accounts = AccountSelection.treasury(ref.watch(accountsProvider(widget.entity.id)).value ?? const <Account>[]);
     final treasury = _type == 'bank' || _type == 'cash';
     return AkDialog(
       title: widget.initial == null ? 'Nouveau journal' : 'Journal ${widget.initial!.code}',

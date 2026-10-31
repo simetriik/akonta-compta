@@ -21,6 +21,7 @@ import 'entry_balance_bar.dart';
 import 'entry_grid.dart';
 import 'entry_shortcuts_dialog.dart';
 import 'entry_template_picker.dart';
+import '../../application/entries/entry_editor_logic.dart';
 
 /// Saisie d'une écriture (grille au clavier) : journal, date, référence, libellé ; lignes compte / tiers / libellé / débit / crédit ;
 /// autocomplétion, contrepartie automatique (Ctrl+B), modèles d'écritures, équilibre affiché, validation (§10.4).
@@ -51,6 +52,7 @@ class _EditorState extends ConsumerState<_Editor> {
   bool _loading = true;
   bool _busy = false;
   List<String> _errors = const [];
+  String? _loadError;
   late final _date = TextEditingController(text: Fmt.date(_draft.entryDate));
   late final _reference = TextEditingController();
   late final _label = TextEditingController();
@@ -62,16 +64,39 @@ class _EditorState extends ConsumerState<_Editor> {
   }
 
   Future<void> _load() async {
-    if (widget.entryId != null) {
-      final e = await ref.read(entriesServiceProvider).get(widget.entryId!);
-      _loaded = e;
-      _draft = EntryDraft.fromEntry(e);
-      _date.text = Fmt.date(_draft.entryDate);
-      _reference.text = _draft.reference;
-      _label.text = _draft.label;
-      if (_draft.lines.length < 2) _draft.lines.add(DraftLine());
+    try {
+      if (widget.entryId != null) {
+        final e = await ref.read(entriesServiceProvider).get(widget.entryId!);
+        _loaded = e;
+        _draft = EntryDraft.fromEntry(e);
+        _date.text = Fmt.date(_draft.entryDate);
+        _reference.text = _draft.reference;
+        _label.text = _draft.label;
+        if (_draft.lines.length < 2) _draft.lines.add(DraftLine());
+      }
+      _loadError = null;
+    } catch (e) {
+      _loadError = errorText(e);
     }
     if (mounted) setState(() => _loading = false);
+  }
+
+  /// Relance le chargement après un échec.
+  void _retryLoad() {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    _load();
+  }
+
+  /// Exécute une action asynchrone de l'éditeur et annonce l'erreur au lieu de la laisser remonter.
+  Future<void> _guard(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (e) {
+      if (mounted) showAkToast(context, errorText(e), kind: AkToastKind.danger);
+    }
   }
 
   bool get _readOnly => _loaded != null && !_loaded!.isDraft;
@@ -85,13 +110,7 @@ class _EditorState extends ConsumerState<_Editor> {
       return;
     }
     _draft.entryDate = d;
-    final errors = validate
-        ? _draft.validationErrors()
-        : [
-            if (_draft.journalId == null) 'Journal requis',
-            if (_draft.label.trim().isEmpty) 'Libellé requis',
-            if (_draft.nonEmptyLines.any((l) => l.accountId == null)) 'Chaque ligne saisie doit avoir un compte',
-          ];
+    final errors = EntryEditorLogic.errors(_draft, validate: validate);
     if (errors.isNotEmpty) {
       setState(() => _errors = errors);
       return;
@@ -132,7 +151,9 @@ class _EditorState extends ConsumerState<_Editor> {
     if (mounted) context.go('/saisie');
   }
 
-  Future<void> _applyTemplate({String? preselectedId}) async {
+  Future<void> _applyTemplate({String? preselectedId}) => _guard(() => _applyTemplateNow(preselectedId));
+
+  Future<void> _applyTemplateNow(String? preselectedId) async {
     final templates = await ref.read(templatesProvider(widget.entity.id).future);
     final accounts = await ref.read(accountsProvider(widget.entity.id).future);
     final rates = await ref.read(taxRatesProvider.future);
@@ -143,72 +164,36 @@ class _EditorState extends ConsumerState<_Editor> {
     );
     if (result == null) return;
     final (template, amount) = result;
-    final today = DateTime.now();
-    double? rateOf(String code) {
-      final r = rates.where((r) => r.code == code && !r.validFrom.isAfter(today) && (r.validTo == null || !r.validTo!.isBefore(today))).firstOrNull;
-      return r?.rate;
-    }
-
-    Account? resolve(String code) => accounts.where((a) => a.code == padAccountCode(code, accounts.first.code.length)).firstOrNull;
     setState(() {
-      _draft.lines
-        ..clear()
-        ..addAll(applyTemplate(template, baseAmount: amount, rateOf: rateOf, resolveAccount: resolve))
-        ..add(DraftLine());
+      EntryEditorLogic.applyTemplateTo(_draft, template, baseAmount: amount, accounts: accounts, rates: rates, today: DateTime.now());
       if (_label.text.isEmpty) _label.text = template.label;
     });
   }
 
   /// Reprend les comptes, tiers et sens d'une écriture passée (sans montants), après confirmation si la grille est déjà remplie.
-  Future<void> _useSuggestedEntry(EntrySuggestion s) async {
+  Future<void> _useSuggestedEntry(EntrySuggestion s) => _guard(() => _useSuggestedEntryNow(s));
+
+  Future<void> _useSuggestedEntryNow(EntrySuggestion s) async {
     if (!await _confirmReplaceLines()) return;
     final accounts = await ref.read(accountsProvider(widget.entity.id).future);
     if (!mounted) return;
-    setState(() {
-      _draft.lines
-        ..clear()
-        ..addAll([
-          for (final l in s.lines)
-            DraftLine(
-              accountId: l.accountId,
-              accountCode: l.accountCode,
-              accountLabel: l.accountLabel,
-              isCollective: accounts.where((a) => a.id == l.accountId).firstOrNull?.isCollective ?? l.thirdPartyId != null,
-              thirdPartyId: l.thirdPartyId,
-              thirdPartyCode: l.thirdPartyCode ?? '',
-              label: l.label ?? '',
-            ),
-        ])
-        ..add(DraftLine());
-    });
+    setState(() => EntryEditorLogic.useSuggestedEntry(_draft, s, accounts));
   }
 
   /// Ouvre le sélecteur de modèle avec le modèle proposé déjà choisi.
   Future<void> _useSuggestedTemplate(TemplateSuggestion s) => _applyTemplate(preselectedId: s.templateId);
 
   /// Place le compte habituel sur la première ligne sans compte (une ligne est ajoutée si besoin).
-  Future<void> _useSuggestedAccount(AccountSuggestion s) async {
+  Future<void> _useSuggestedAccount(AccountSuggestion s) => _guard(() => _useSuggestedAccountNow(s));
+
+  Future<void> _useSuggestedAccountNow(AccountSuggestion s) async {
     final accounts = await ref.read(accountsProvider(widget.entity.id).future);
     if (!mounted) return;
-    final account = accounts.where((a) => a.id == s.accountId).firstOrNull;
-    setState(() {
-      var line = _draft.lines.where((l) => l.accountId == null).firstOrNull;
-      if (line == null) {
-        line = DraftLine();
-        _draft.lines.add(line);
-      }
-      line
-        ..accountId = s.accountId
-        ..accountCode = s.accountCode
-        ..accountLabel = s.accountLabel
-        ..isCollective = account?.isCollective ?? false;
-    });
+    setState(() => EntryEditorLogic.useSuggestedAccount(_draft, s, accounts));
   }
 
-  bool get _hasContent => _draft.lines.any((l) => l.accountId != null || l.debit > 0 || l.credit > 0);
-
   Future<bool> _confirmReplaceLines() async {
-    if (!_hasContent) return true;
+    if (!EntryEditorLogic.hasContent(_draft)) return true;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AkDialog(
@@ -226,11 +211,7 @@ class _EditorState extends ConsumerState<_Editor> {
 
   /// Nouvelle ligne en fin de grille ; si l'écriture est déséquilibrée, la contrepartie est déjà proposée.
   void _appendLine() {
-    final line = DraftLine();
-    final gap = _draft.balance;
-    if (gap > 0) line.credit = gap;
-    if (gap < 0) line.debit = -gap;
-    setState(() => _draft.lines.add(line));
+    setState(() => EntryEditorLogic.appendLine(_draft));
     // Le focus passe au compte de la nouvelle ligne une fois celle-ci construite.
     WidgetsBinding.instance.addPostFrameCallback((_) => FocusManager.instance.primaryFocus?.nextFocus());
   }
@@ -240,6 +221,7 @@ class _EditorState extends ConsumerState<_Editor> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return const AkLoading();
+    if (_loadError != null) return AkErrorMessage(_loadError!, onRetry: _retryLoad);
     final journals = (ref.watch(journalsProvider(widget.entity.id)).value ?? const []).where((j) => j.isActive).toList();
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final canValidate = perms.has('entries.validate', entityId: widget.entity.id);

@@ -14,6 +14,7 @@ import '../../domain/inventory_models.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'inventory_widgets.dart';
+import '../../application/rules/account_selection.dart';
 
 class AssetsTab extends ConsumerWidget {
   const AssetsTab({super.key, required this.entity, required this.fy});
@@ -146,9 +147,7 @@ class _AssetDialogState extends ConsumerState<AssetDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final accounts = (ref.watch(accountsProvider(widget.entity.id)).value ?? const <Account>[])
-        .where((a) => a.classNo == 2 && a.allowPosting && a.isActive && !a.code.startsWith('28') && !a.code.startsWith('29'))
-        .toList();
+    final accounts = AccountSelection.fixedAssets(ref.watch(accountsProvider(widget.entity.id)).value ?? const <Account>[]);
     return AkDialog(
       title: widget.initial == null ? 'Nouvelle immobilisation' : 'Immobilisation ${widget.initial!.code}',
       size: AkDialogSize.m,
@@ -334,9 +333,7 @@ class _DisposalDialogState extends ConsumerState<DisposalDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final accounts = (ref.watch(accountsProvider(widget.entity.id)).value ?? const <Account>[])
-        .where((a) => a.allowPosting && a.isActive && (a.code.startsWith('485') || a.classNo == 5 || a.code.startsWith('411')))
-        .toList();
+    final accounts = AccountSelection.disposalCounterparts(ref.watch(accountsProvider(widget.entity.id)).value ?? const <Account>[]);
     return AkDialog(
       title: '${widget.scrap ? 'Mise au rebut' : 'Cession'} de ${widget.asset.code}',
       size: AkDialogSize.s,
