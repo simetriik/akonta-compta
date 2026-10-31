@@ -75,7 +75,7 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
                       icon: Icons.info_outline,
                       child: Text(
                         'Dossier SYCEBNL : bilan, compte de résultat, à-nouveaux et affectation du résultat suivent le référentiel des entités à but non lucratif. '
-                        'Exports PDF / Excel : à venir.',
+                        'Export Excel : à venir.',
                       ),
                     ),
                     const SizedBox(height: AkSpace.s3),
@@ -672,12 +672,20 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
                     ),
                   ),
                 const SizedBox(height: AkSpace.s3),
-                if (nonProfit)
+                if (nonProfit) ...[
+                  AkButton.secondary(
+                    'États financiers SYCEBNL PDF',
+                    key: const Key('export-sycebnl-pdf'),
+                    icon: Icons.picture_as_pdf_outlined,
+                    onPressed: () => _export(context, 'financial_statements', 'pdf'),
+                  ),
+                  const SizedBox(height: AkSpace.s2),
                   Text(
-                    'Bilan, compte de résultat, tableau des flux de trésorerie et notes annexes calculables SYCEBNL. Exports PDF / Excel : à venir.',
+                    'Un seul PDF : bilan, compte de résultat, tableau des flux de trésorerie et notes annexes calculables. Export Excel : à venir.',
                     key: const Key('sycebnl-statements-notice'),
                     style: AkText.caption.copyWith(color: t.textMuted),
-                  )
+                  ),
+                ]
                 else ...[
                   Wrap(
                     spacing: AkSpace.s2,
