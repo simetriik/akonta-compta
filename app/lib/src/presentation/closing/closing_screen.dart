@@ -14,6 +14,7 @@ import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import '../../domain/models.dart';
 import '../inventory/inventory_screen.dart';
+import 'statement_notes_section.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 
@@ -74,7 +75,7 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
                       icon: Icons.info_outline,
                       child: Text(
                         'Dossier SYCEBNL : bilan, compte de résultat, à-nouveaux et affectation du résultat suivent le référentiel des entités à but non lucratif. '
-                        'Notes annexes et exports PDF / Excel : à venir.',
+                        'Exports PDF / Excel : à venir.',
                       ),
                     ),
                     const SizedBox(height: AkSpace.s3),
@@ -673,7 +674,7 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
                 const SizedBox(height: AkSpace.s3),
                 if (nonProfit)
                   Text(
-                    'Bilan, compte de résultat et tableau des flux de trésorerie SYCEBNL. Notes annexes et exports PDF / Excel : à venir.',
+                    'Bilan, compte de résultat, tableau des flux de trésorerie et notes annexes calculables SYCEBNL. Exports PDF / Excel : à venir.',
                     key: const Key('sycebnl-statements-notice'),
                     style: AkText.caption.copyWith(color: t.textMuted),
                   )
@@ -712,6 +713,10 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
           if (fs.cashFlow.isNotEmpty) ...[
             const SizedBox(height: AkSpace.s3),
             _CashFlowTable(posts: fs.cashFlow, previous: fs.previous?['cash_flow']),
+          ],
+          if (fs.notes.isNotEmpty) ...[
+            const SizedBox(height: AkSpace.s3),
+            StatementNotesSection(notes: fs.notes),
           ],
         ],
       ],

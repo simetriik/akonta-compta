@@ -66,8 +66,37 @@ class StatementPost {
   factory StatementPost.fromJson(Map<String, dynamic> j) => StatementPost(code: j['post_code'] as String, label: j['post_label'] as String, columnRole: j['column_role'] as String, amount: (j['amount'] as num).toInt());
 }
 
+/// Ligne d'une note annexe : montants de N et de N-1 (null sans exercice précédent) ; `kind` vaut `line`, `subtotal` ou `total`.
+class NoteLine {
+  const NoteLine({required this.noteCode, required this.noteTitle, required this.lineCode, required this.label, required this.kind, required this.amount, this.previous});
+
+  final String noteCode;
+  final String noteTitle;
+  final String lineCode;
+  final String label;
+  final String kind;
+  final int amount;
+  final int? previous;
+
+  bool get isTotal => kind != 'line';
+  int? get variation => previous == null ? null : amount - previous!;
+
+  /// Variation en % de N-1 ; absente si N-1 est nul ou inconnu.
+  double? get variationPercent => previous == null || previous == 0 ? null : (amount - previous!) / previous!.abs() * 100;
+
+  factory NoteLine.fromJson(Map<String, dynamic> j) => NoteLine(
+        noteCode: j['note_code'] as String,
+        noteTitle: j['note_title'] as String,
+        lineCode: j['line_code'] as String,
+        label: j['label'] as String,
+        kind: j['kind'] as String,
+        amount: (j['amount'] as num).toInt(),
+        previous: (j['previous'] as num?)?.toInt(),
+      );
+}
+
 class FinancialStatements {
-  const FinancialStatements({required this.id, required this.generatedAt, required this.assets, required this.liabilities, required this.income, required this.previous, required this.checks, required this.isFinal, this.cashFlow = const []});
+  const FinancialStatements({required this.id, required this.generatedAt, required this.assets, required this.liabilities, required this.income, required this.previous, required this.checks, required this.isFinal, this.cashFlow = const [], this.notes = const []});
 
   final String id;
   final DateTime generatedAt;
@@ -77,6 +106,9 @@ class FinancialStatements {
 
   /// Tableau des flux de trésorerie (référentiel SYCEBNL seulement) ; vide pour le système normal.
   final List<StatementPost> cashFlow;
+
+  /// Notes annexes calculables (référentiel SYCEBNL seulement), dans l'ordre du catalogue.
+  final List<NoteLine> notes;
   final Map<String, List<StatementPost>>? previous;
   final List<Map<String, dynamic>> checks;
   final bool isFinal;
@@ -92,6 +124,7 @@ class FinancialStatements {
       liabilities: posts(data['liabilities']),
       income: posts(data['income']),
       cashFlow: posts(data['cash_flow']),
+      notes: [for (final n in (data['notes'] as List? ?? const [])) NoteLine.fromJson((n as Map).cast<String, dynamic>())],
       previous: prev == null ? null : {'assets': posts(prev['assets']), 'liabilities': posts(prev['liabilities']), 'income': posts(prev['income']), 'cash_flow': posts(prev['cash_flow'])},
       checks: ((j['checks'] as List?) ?? const []).map((c) => (c as Map).cast<String, dynamic>()).toList(),
       isFinal: (j['is_final'] as bool?) ?? false,
