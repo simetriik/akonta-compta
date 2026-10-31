@@ -9,6 +9,8 @@ import '../../data/entries_repository.dart';
 import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entry_models.dart';
+import '../../domain/suggestion_models.dart';
+import 'entry_suggestions_panel.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
 import '../widgets/require_entity.dart';
@@ -120,14 +122,14 @@ class _EditorState extends ConsumerState<_Editor> {
     if (mounted) context.go('/saisie');
   }
 
-  Future<void> _applyTemplate() async {
+  Future<void> _applyTemplate({String? preselectedId}) async {
     final templates = await ref.read(templatesProvider(widget.entity.id).future);
     final accounts = await ref.read(accountsProvider(widget.entity.id).future);
     final rates = await ref.read(taxRatesProvider.future);
     if (!mounted) return;
     final result = await showDialog<(EntryTemplate, int)>(
       context: context,
-      builder: (_) => _TemplatePicker(templates: templates),
+      builder: (_) => _TemplatePicker(templates: templates, initial: templates.where((t) => t.id == preselectedId).firstOrNull),
     );
     if (result == null) return;
     final (template, amount) = result;
@@ -145,6 +147,71 @@ class _EditorState extends ConsumerState<_Editor> {
         ..add(DraftLine());
       if (_label.text.isEmpty) _label.text = template.label;
     });
+  }
+
+  /// Reprend les comptes, tiers et sens d'une écriture passée (sans montants), après confirmation si la grille est déjà remplie.
+  Future<void> _useSuggestedEntry(EntrySuggestion s) async {
+    if (!await _confirmReplaceLines()) return;
+    final accounts = await ref.read(accountsProvider(widget.entity.id).future);
+    if (!mounted) return;
+    setState(() {
+      _draft.lines
+        ..clear()
+        ..addAll([
+          for (final l in s.lines)
+            DraftLine(
+              accountId: l.accountId,
+              accountCode: l.accountCode,
+              accountLabel: l.accountLabel,
+              isCollective: accounts.where((a) => a.id == l.accountId).firstOrNull?.isCollective ?? l.thirdPartyId != null,
+              thirdPartyId: l.thirdPartyId,
+              thirdPartyCode: l.thirdPartyCode ?? '',
+              label: l.label ?? '',
+            ),
+        ])
+        ..add(DraftLine());
+    });
+  }
+
+  /// Ouvre le sélecteur de modèle avec le modèle proposé déjà choisi.
+  Future<void> _useSuggestedTemplate(TemplateSuggestion s) => _applyTemplate(preselectedId: s.templateId);
+
+  /// Place le compte habituel sur la première ligne sans compte (une ligne est ajoutée si besoin).
+  Future<void> _useSuggestedAccount(AccountSuggestion s) async {
+    final accounts = await ref.read(accountsProvider(widget.entity.id).future);
+    if (!mounted) return;
+    final account = accounts.where((a) => a.id == s.accountId).firstOrNull;
+    setState(() {
+      var line = _draft.lines.where((l) => l.accountId == null).firstOrNull;
+      if (line == null) {
+        line = DraftLine();
+        _draft.lines.add(line);
+      }
+      line
+        ..accountId = s.accountId
+        ..accountCode = s.accountCode
+        ..accountLabel = s.accountLabel
+        ..isCollective = account?.isCollective ?? false;
+    });
+  }
+
+  bool get _hasContent => _draft.lines.any((l) => l.accountId != null || l.debit > 0 || l.credit > 0);
+
+  Future<bool> _confirmReplaceLines() async {
+    if (!_hasContent) return true;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AkDialog(
+        title: 'Remplacer les lignes ?',
+        size: AkDialogSize.s,
+        content: const Text('Les lignes déjà saisies seront remplacées par celles de l\'écriture proposée (sans montants).'),
+        actions: [
+          AkButton.secondary('Annuler', onPressed: () => Navigator.pop(ctx, false)),
+          AkButton.primary('Remplacer', onPressed: () => Navigator.pop(ctx, true)),
+        ],
+      ),
+    );
+    return ok ?? false;
   }
 
   /// Nouvelle ligne en fin de grille ; si l'écriture est déséquilibrée, la contrepartie est déjà proposée.
@@ -249,6 +316,16 @@ class _EditorState extends ConsumerState<_Editor> {
                                 ),
                               ],
                             ),
+                          ),
+                          EntrySuggestionsPanel(
+                            entityId: widget.entity.id,
+                            labelController: _label,
+                            referenceController: _reference,
+                            currentDraft: () => _draft,
+                            enabled: !_readOnly && !_loading,
+                            onUseEntry: _useSuggestedEntry,
+                            onUseTemplate: _useSuggestedTemplate,
+                            onUseAccount: _useSuggestedAccount,
                           ),
                           const SizedBox(height: AkSpace.s3),
                           AkCard(
@@ -748,16 +825,17 @@ class _LineRowState extends ConsumerState<_LineRow> {
 }
 
 class _TemplatePicker extends StatefulWidget {
-  const _TemplatePicker({required this.templates});
+  const _TemplatePicker({required this.templates, this.initial});
 
   final List<EntryTemplate> templates;
+  final EntryTemplate? initial;
 
   @override
   State<_TemplatePicker> createState() => _TemplatePickerState();
 }
 
 class _TemplatePickerState extends State<_TemplatePicker> {
-  EntryTemplate? _template;
+  late EntryTemplate? _template = widget.initial;
   final _amount = TextEditingController();
 
   @override
