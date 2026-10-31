@@ -14,9 +14,9 @@ import '../widgets/require_entity.dart';
 import '../../application/providers/entities_providers.dart';
 import '../../application/providers/inventory_providers.dart';
 import '../../application/providers/references_providers.dart';
-import '../../application/providers/repositories.dart';
 import '../../domain/inventory_models.dart';
 import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Marge latérale de page : 24 px sur desktop, 16 px sur mobile (< 600 px).
 EdgeInsets akPagePadding(BuildContext context) => EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? AkSpace.s4 : AkSpace.s6);
@@ -162,7 +162,7 @@ class AssetsTab extends ConsumerWidget {
                 'Générer les dotations',
                 icon: Icons.auto_awesome,
                 onPressed: () =>
-                    runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateDepreciation(entity.id, fy.id), 'Dotations ${fy.label}'),
+                    runGeneration(context, ref, () => ref.read(inventoryServiceProvider).generateDepreciation(entity.id, fy.id), 'Dotations ${fy.label}'),
               ),
               AkButton.secondary(
                 'Immobilisation',
@@ -381,7 +381,7 @@ class _AssetDialogState extends ConsumerState<AssetDialog> {
             }
             try {
               final cabinet = await ref.read(currentCabinetProvider.future);
-              await ref.read(inventoryRepositoryProvider).saveAsset(cabinet!.id, widget.entity.id, {
+              await ref.read(inventoryServiceProvider).saveAsset(cabinet!.id, widget.entity.id, {
                 if (widget.initial == null) 'code': _code.text.trim(),
                 'designation': _designation.text.trim(),
                 if (widget.initial == null) 'asset_account_id': _accountId,
@@ -417,7 +417,7 @@ class PlanDialog extends ConsumerWidget {
       title: 'Tableau d\'amortissement — ${asset.code}',
       size: AkDialogSize.m,
       content: FutureBuilder<List<PlanRow>>(
-        future: ref.read(inventoryRepositoryProvider).plan(asset.id),
+        future: ref.read(inventoryServiceProvider).plan(asset.id),
         builder: (_, snap) {
           if (snap.hasError) return AkErrorMessage('Erreur : ${snap.error}');
           if (!snap.hasData) return const SizedBox(height: 160, child: AkLoading());
@@ -502,7 +502,7 @@ class _DisposalDialogState extends ConsumerState<DisposalDialog> {
             if (d == null) return;
             try {
               await ref
-                  .read(inventoryRepositoryProvider)
+                  .read(inventoryServiceProvider)
                   .disposeAsset(widget.asset.id, date: d, price: Fmt.parseAmount(_price.text) ?? 0, counterpartAccountId: _counterpart, scrap: widget.scrap);
               ref.invalidate(fixedAssetsProvider(widget.entity.id));
               if (context.mounted) Navigator.pop(context);
@@ -542,7 +542,7 @@ class StocksTab extends ConsumerWidget {
                 'Générer les variations',
                 icon: Icons.auto_awesome,
                 onPressed: () =>
-                    runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateStockVariations(entity.id, fy.id), 'Variations de stocks'),
+                    runGeneration(context, ref, () => ref.read(inventoryServiceProvider).generateStockVariations(entity.id, fy.id), 'Variations de stocks'),
               ),
             ],
           ),
@@ -660,7 +660,7 @@ class _StockRowState extends ConsumerState<_StockRow> {
                 if (closing == null || _variation == null) return;
                 final cabinet = await ref.read(currentCabinetProvider.future);
                 await ref
-                    .read(inventoryRepositoryProvider)
+                    .read(inventoryServiceProvider)
                     .upsertStock(
                       cabinet!.id,
                       widget.entity.id,
@@ -712,7 +712,7 @@ class _ProvisionsTabState extends ConsumerState<ProvisionsTab> {
                 onPressed: () => runGeneration(
                   context,
                   ref,
-                  () => ref.read(inventoryRepositoryProvider).generateProvisionEntries(widget.entity.id, widget.fy.id),
+                  () => ref.read(inventoryServiceProvider).generateProvisionEntries(widget.entity.id, widget.fy.id),
                   'Provisions',
                 ),
               ),
@@ -742,7 +742,7 @@ class _ProvisionsTabState extends ConsumerState<ProvisionsTab> {
                   onPressed: () async {
                     try {
                       final n = await ref
-                          .read(inventoryRepositoryProvider)
+                          .read(inventoryServiceProvider)
                           .proposeReceivableProvisions(
                             widget.entity.id,
                             widget.fy.id,
@@ -805,7 +805,7 @@ class _ProvisionsTabState extends ConsumerState<ProvisionsTab> {
                           );
                           final n = v == null ? null : Fmt.parseAmount(v);
                           if (n == null) return;
-                          await ref.read(inventoryRepositoryProvider).updateProvisionAmount(p.id, n);
+                          await ref.read(inventoryServiceProvider).updateProvisionAmount(p.id, n);
                           ref.invalidate(provisionsProvider(widget.fy.id));
                         },
                       ),
@@ -841,14 +841,14 @@ class AccrualsTab extends ConsumerWidget {
                 'Générer au 31/12',
                 icon: Icons.auto_awesome,
                 onPressed: () =>
-                    runGeneration(context, ref, () => ref.read(inventoryRepositoryProvider).generateAccruals(entity.id, fy.id), 'Régularisations au 31/12'),
+                    runGeneration(context, ref, () => ref.read(inventoryServiceProvider).generateAccruals(entity.id, fy.id), 'Régularisations au 31/12'),
               ),
               AkButton.secondary(
                 'Extournes N+1',
                 icon: Icons.undo,
                 onPressed: () async {
                   try {
-                    final ids = await ref.read(inventoryRepositoryProvider).generateReversals(entity.id, fy.id);
+                    final ids = await ref.read(inventoryServiceProvider).generateReversals(entity.id, fy.id);
                     if (context.mounted) {
                       showAkToast(context, '${ids.length} extourne(s) générée(s) au 1er janvier N+1.');
                     }
@@ -895,7 +895,7 @@ class AccrualsTab extends ConsumerWidget {
                         tooltip: 'Supprimer',
                         dense: true,
                         onPressed: () async {
-                          await ref.read(inventoryRepositoryProvider).deleteAccrual(a.id);
+                          await ref.read(inventoryServiceProvider).deleteAccrual(a.id);
                           ref.invalidate(accrualsProvider(fy.id));
                         },
                       )
@@ -1016,7 +1016,7 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
             try {
               final cabinet = await ref.read(currentCabinetProvider.future);
               await ref
-                  .read(inventoryRepositoryProvider)
+                  .read(inventoryServiceProvider)
                   .addAccrual(
                     cabinet!.id,
                     widget.entity.id,
@@ -1102,7 +1102,7 @@ class _FxTabState extends ConsumerState<FxTab> {
                       final r = double.tryParse(_rate.text.replaceAll(',', '.'));
                       if (r == null || _currency.text.trim().length != 3) return;
                       final cabinet = await ref.read(currentCabinetProvider.future);
-                      await ref.read(inventoryRepositoryProvider).setClosingRate(cabinet!.id, _currency.text.trim().toUpperCase(), widget.fy.endDate, r);
+                      await ref.read(inventoryServiceProvider).setClosingRate(cabinet!.id, _currency.text.trim().toUpperCase(), widget.fy.endDate, r);
                       if (context.mounted) showAkToast(context, 'Cours enregistré.');
                     },
                   ),
@@ -1112,7 +1112,7 @@ class _FxTabState extends ConsumerState<FxTab> {
                     onPressed: () => runGeneration(
                       context,
                       ref,
-                      () => ref.read(inventoryRepositoryProvider).generateFxRevaluation(widget.entity.id, widget.fy.id),
+                      () => ref.read(inventoryServiceProvider).generateFxRevaluation(widget.entity.id, widget.fy.id),
                       'Écarts de conversion',
                     ),
                   ),

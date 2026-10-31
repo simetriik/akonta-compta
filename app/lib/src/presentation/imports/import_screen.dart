@@ -10,10 +10,10 @@ import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 import '../../application/providers/import_providers.dart';
 import '../../application/providers/references_providers.dart';
-import '../../application/providers/repositories.dart';
 import '../../core/text_decoding.dart';
 import '../../domain/import_models.dart';
 import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Import Perfecto (§10.10) : fichier texte tabulé (Windows-1252) analysé par la base, correspondances éditables,
 /// mode essai sans écriture, application en brouillard, rapport.
@@ -154,7 +154,7 @@ class _ImportBodyState extends ConsumerState<_ImportBody> {
       final file = picked.first;
       final text = decodePerfectoText(await file.readAsBytes());
       final cabinet = await ref.read(currentCabinetProvider.future);
-      final repo = ref.read(importRepositoryProvider);
+      final repo = ref.read(importServiceProvider);
       final batch = await repo.createBatch(
         cabinetId: cabinet!.id,
         entityId: widget.entity.id,
@@ -374,7 +374,7 @@ class _BatchPanelState extends ConsumerState<_BatchPanel> {
 
   Future<void> _update(String id, {String? accountCode, String? thirdPartyCode, String? thirdPartyName, bool? createThirdParty}) async {
     await ref
-        .read(importRepositoryProvider)
+        .read(importServiceProvider)
         .updateMapping(id, accountCode: accountCode, thirdPartyCode: thirdPartyCode, thirdPartyName: thirdPartyName, createThirdParty: createThirdParty);
     ref.invalidate(importMappingsProvider((widget.entity.id, widget.batch.id)));
   }
@@ -382,7 +382,7 @@ class _BatchPanelState extends ConsumerState<_BatchPanel> {
   Future<void> _apply({required bool dryRun}) async {
     setState(() => _busy = true);
     try {
-      final repo = ref.read(importRepositoryProvider);
+      final repo = ref.read(importServiceProvider);
       final report = await repo.apply(widget.batch.id, dryRun: dryRun);
       ref.invalidate(importBatchesProvider(widget.entity.id));
       ref.invalidate(entityDashboardProvider);

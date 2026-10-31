@@ -14,8 +14,8 @@ import '../widgets/require_entity.dart';
 import '../../application/providers/consultation_providers.dart';
 import '../../application/providers/entities_providers.dart';
 import '../../application/providers/references_providers.dart';
-import '../../application/providers/repositories.dart';
 import '../../domain/consultation_models.dart';
+import '../../application/providers/services.dart';
 
 /// Consultation du dossier courant : grand livre, balances, balance âgée, centralisateur ; période libre, comparaison N-1, exports (§10.6).
 class ConsultationScreen extends StatelessWidget {
@@ -221,7 +221,7 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
     final parts = choice.split(':');
     setState(() => _exporting = true);
     try {
-      final (name, bytes) = await ref.read(consultationRepositoryProvider).export(p: p, kind: parts[0], format: parts[1]);
+      final (name, bytes) = await ref.read(consultationServiceProvider).export(p: p, kind: parts[0], format: parts[1]);
       final uri = await FilePicker.saveFile(dialogTitle: 'Enregistrer l\'export', fileName: name, bytes: bytes);
       if (uri != null && uri.scheme == 'file') {
         final f = File(uri.toFilePath());

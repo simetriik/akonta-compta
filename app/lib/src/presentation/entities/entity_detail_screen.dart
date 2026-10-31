@@ -8,8 +8,8 @@ import '../../domain/entity_models.dart';
 import '../widgets/async_view.dart';
 import 'entity_form.dart';
 import '../../application/providers/entities_providers.dart';
-import '../../application/providers/repositories.dart';
 import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Dossier : fiche, dirigeants, exercices et périodes (verrouillage), historique.
 class EntityDetailScreen extends ConsumerWidget {
@@ -80,7 +80,7 @@ class _FicheTab extends ConsumerWidget {
       canEditAccountingParams: perms?.has('cabinet.settings') ?? false,
       accountLengthLocked: fys.isNotEmpty,
       onSubmit: (input) async {
-        await ref.read(entitiesRepositoryProvider).update(entity.id, input);
+        await ref.read(entitiesServiceProvider).update(entity.id, input);
         ref.invalidate(entityProvider(entity.id));
         ref.invalidate(entitiesListProvider);
         ref.invalidate(entityDashboardProvider);
@@ -139,7 +139,7 @@ class _DirectorsTab extends ConsumerWidget {
                       tooltip: 'Retirer',
                       dense: true,
                       onPressed: () async {
-                        await ref.read(entitiesRepositoryProvider).removeDirector(d.id);
+                        await ref.read(entitiesServiceProvider).removeDirector(d.id);
                         ref.invalidate(directorsProvider(entity.id));
                       },
                     ),
@@ -196,7 +196,7 @@ class _DirectorDialogState extends ConsumerState<DirectorDialog> {
           onPressed: () async {
             if (_name.text.trim().length < 2 || _position.text.trim().isEmpty) return;
             await ref
-                .read(entitiesRepositoryProvider)
+                .read(entitiesServiceProvider)
                 .addDirector(
                   widget.entity.cabinetId,
                   widget.entity.id,
@@ -344,7 +344,7 @@ class _FiscalYearCard extends ConsumerWidget {
   }
 
   Future<void> _toggle(BuildContext context, WidgetRef ref, Period p, bool lock) async {
-    final repo = ref.read(entitiesRepositoryProvider);
+    final repo = ref.read(entitiesServiceProvider);
     try {
       if (lock) {
         await repo.lockPeriod(p.id);
@@ -418,7 +418,7 @@ class _FiscalYearDialogState extends ConsumerState<FiscalYearDialog> {
     }
     try {
       final fy = await ref
-          .read(entitiesRepositoryProvider)
+          .read(entitiesServiceProvider)
           .createFiscalYear(
             widget.entity.cabinetId,
             widget.entity.id,

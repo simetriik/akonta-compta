@@ -9,7 +9,7 @@ import '../../core/errors/errors.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
 import '../../application/providers/admin_providers.dart';
-import '../../application/providers/repositories.dart';
+import '../../application/providers/services.dart';
 
 /// Utilisateurs et sécurité (administrateur technique) : invitation, import CSV eABC, désactivation (§10.1).
 class UsersScreen extends ConsumerWidget {
@@ -60,7 +60,7 @@ class UsersScreen extends ConsumerWidget {
                             danger: true,
                           );
                       if (!ok) return;
-                      await ref.read(adminRepositoryProvider).setActive(p.id, v);
+                      await ref.read(adminServiceProvider).setActive(p.id, v);
                       ref.invalidate(profilesProvider);
                     },
                   ),
@@ -80,7 +80,7 @@ class UsersScreen extends ConsumerWidget {
     final bytes = await picked.first.readAsBytes();
     if (!context.mounted) return;
     final csv = utf8.decode(bytes, allowMalformed: true);
-    final result = await ref.read(adminRepositoryProvider).invite(csv: csv);
+    final result = await ref.read(adminServiceProvider).invite(csv: csv);
     ref.invalidate(profilesProvider);
     if (!context.mounted) return;
     showDialog(
@@ -175,7 +175,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
     });
     try {
       final r = await ref
-          .read(adminRepositoryProvider)
+          .read(adminServiceProvider)
           .invite(email: _email.text.trim(), fullName: _name.text.trim(), jobTitle: _job.text.trim().isEmpty ? null : _job.text.trim());
       ref.invalidate(profilesProvider);
       if (!mounted) return;

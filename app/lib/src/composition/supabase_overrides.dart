@@ -15,6 +15,13 @@ import '../infrastructure/supabase/supabase_suggestions_repository.dart';
 import '../infrastructure/supabase/supabase_auth_repository.dart';
 import '../infrastructure/supabase/supabase_client_provider.dart';
 import '../infrastructure/supabase/supabase_session_repository.dart';
+import '../core/errors/error_mapper.dart';
+import '../infrastructure/supabase/supabase_error_classifier.dart';
+
+/// Enregistre le classement des erreurs de Supabase (base, authentification, fonctions serveur, stockage).
+void registerSupabaseErrorClassifier() {
+  ErrorClassifiers.register(classifier: classifySupabaseError, describer: describeSupabaseError);
+}
 
 /// Branche chaque port sur son adaptateur Supabase (production et recette).
 List<Override> supabaseOverrides() => [

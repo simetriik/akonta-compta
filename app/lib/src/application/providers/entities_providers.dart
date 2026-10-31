@@ -1,17 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entity_models.dart';
-import 'repositories.dart';
+import 'services.dart';
 
-final entitiesListProvider = FutureProvider<List<EntityDetail>>((ref) => ref.watch(entitiesRepositoryProvider).list());
+final entitiesListProvider = FutureProvider<List<EntityDetail>>((ref) => ref.watch(entitiesServiceProvider).list());
 
-final entityProvider = FutureProvider.family<EntityDetail, String>((ref, id) => ref.watch(entitiesRepositoryProvider).get(id));
+final entityProvider = FutureProvider.family<EntityDetail, String>((ref, id) => ref.watch(entitiesServiceProvider).get(id));
 
-final fiscalYearsProvider = FutureProvider.family<List<FiscalYear>, String>((ref, entityId) => ref.watch(entitiesRepositoryProvider).fiscalYears(entityId));
+final fiscalYearsProvider = FutureProvider.family<List<FiscalYear>, String>((ref, entityId) => ref.watch(entitiesServiceProvider).fiscalYears(entityId));
 
-final periodsProvider = FutureProvider.family<List<Period>, String>((ref, fyId) => ref.watch(entitiesRepositoryProvider).periods(fyId));
+final periodsProvider = FutureProvider.family<List<Period>, String>((ref, fyId) => ref.watch(entitiesServiceProvider).periods(fyId));
 
-final directorsProvider = FutureProvider.family<List<Director>, String>((ref, entityId) => ref.watch(entitiesRepositoryProvider).directors(entityId));
+final directorsProvider = FutureProvider.family<List<Director>, String>((ref, entityId) => ref.watch(entitiesServiceProvider).directors(entityId));
 
-final entityHistoryProvider = FutureProvider.family<List<EntityHistoryItem>, String>((ref, entityId) => ref.watch(entitiesRepositoryProvider).history(entityId));
+final entityHistoryProvider = FutureProvider.family<List<EntityHistoryItem>, String>((ref, entityId) => ref.watch(entitiesServiceProvider).history(entityId));
 
-final journalTemplatesProvider = FutureProvider<List<JournalTemplate>>((ref) => ref.watch(entitiesRepositoryProvider).journalTemplates());
+final journalTemplatesProvider = FutureProvider<List<JournalTemplate>>((ref) => ref.watch(entitiesServiceProvider).journalTemplates());

@@ -14,8 +14,8 @@ import '../../domain/reference_models.dart';
 import '../widgets/require_entity.dart';
 import '../../application/providers/entries_providers.dart';
 import '../../application/providers/references_providers.dart';
-import '../../application/providers/repositories.dart';
 import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Saisie d'une écriture (grille au clavier) : journal, date, référence, libellé ; lignes compte / tiers / libellé / débit / crédit ;
 /// autocomplétion, contrepartie automatique (Ctrl+B), modèles d'écritures, équilibre affiché, validation (§10.4).
@@ -58,7 +58,7 @@ class _EditorState extends ConsumerState<_Editor> {
 
   Future<void> _load() async {
     if (widget.entryId != null) {
-      final e = await ref.read(entriesRepositoryProvider).get(widget.entryId!);
+      final e = await ref.read(entriesServiceProvider).get(widget.entryId!);
       _loaded = e;
       _draft = EntryDraft.fromEntry(e);
       _date.text = Fmt.date(_draft.entryDate);
@@ -97,7 +97,7 @@ class _EditorState extends ConsumerState<_Editor> {
     });
     try {
       final cabinet = await ref.read(currentCabinetProvider.future);
-      final repo = ref.read(entriesRepositoryProvider);
+      final repo = ref.read(entriesServiceProvider);
       final id = await repo.saveDraft(cabinet!.id, widget.entity.id, _draft);
       _draft.id = id;
       if (validate) {
@@ -118,7 +118,7 @@ class _EditorState extends ConsumerState<_Editor> {
 
   Future<void> _delete() async {
     if (_draft.id == null) return;
-    await ref.read(entriesRepositoryProvider).deleteDraft(_draft.id!);
+    await ref.read(entriesServiceProvider).deleteDraft(_draft.id!);
     ref.invalidate(entriesListProvider(widget.entity.id));
     if (mounted) context.go('/saisie');
   }

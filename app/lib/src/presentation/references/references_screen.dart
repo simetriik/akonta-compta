@@ -10,9 +10,9 @@ import '../../domain/reference_models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 import '../../application/providers/references_providers.dart';
-import '../../application/providers/repositories.dart';
 import '../../application/providers/entities_providers.dart';
 import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Référentiels du dossier courant : plan de comptes, tiers, journaux, modèles d'écritures, taux (§10.3).
 class ReferencesScreen extends StatelessWidget {
@@ -308,7 +308,7 @@ class _AccountsTabState extends ConsumerState<AccountsTab> {
   }
 
   Future<void> _action(String action, Account a) async {
-    final repo = ref.read(referencesRepositoryProvider);
+    final repo = ref.read(referencesServiceProvider);
     try {
       switch (action) {
         case 'rename':
@@ -405,7 +405,7 @@ class _AccountDialogState extends ConsumerState<AccountDialog> {
             try {
               final cabinet = await ref.read(currentCabinetProvider.future);
               await ref
-                  .read(referencesRepositoryProvider)
+                  .read(referencesServiceProvider)
                   .createAccount(cabinet!.id, widget.entity.id, code: padded, label: _label.text.trim(), isCollective: _collective ? true : null);
               ref.invalidate(accountsProvider(widget.entity.id));
               if (context.mounted) Navigator.pop(context);
@@ -513,7 +513,7 @@ class _ThirdPartiesTabState extends ConsumerState<ThirdPartiesTab> {
                         AkSwitch(
                           value: p.isActive,
                           onChanged: (v) async {
-                            await ref.read(referencesRepositoryProvider).setThirdPartyActive(p.id, v);
+                            await ref.read(referencesServiceProvider).setThirdPartyActive(p.id, v);
                             ref.invalidate(thirdPartiesProvider(widget.entity.id));
                           },
                         ),
@@ -649,7 +649,7 @@ class _ThirdPartyDialogState extends ConsumerState<ThirdPartyDialog> {
             try {
               final cabinet = await ref.read(currentCabinetProvider.future);
               await ref
-                  .read(referencesRepositoryProvider)
+                  .read(referencesServiceProvider)
                   .saveThirdParty(
                     cabinet!.id,
                     widget.entity.id,
@@ -760,7 +760,7 @@ class JournalsTab extends ConsumerWidget {
                               AkSwitch(
                                 value: j.isActive,
                                 onChanged: (v) async {
-                                  await ref.read(referencesRepositoryProvider).setJournalActive(j.id, v);
+                                  await ref.read(referencesServiceProvider).setJournalActive(j.id, v);
                                   ref.invalidate(journalsProvider(entity.id));
                                 },
                               ),
@@ -867,7 +867,7 @@ class _JournalDialogState extends ConsumerState<JournalDialog> {
             try {
               final cabinet = await ref.read(currentCabinetProvider.future);
               await ref
-                  .read(referencesRepositoryProvider)
+                  .read(referencesServiceProvider)
                   .saveJournal(
                     cabinet!.id,
                     widget.entity.id,
@@ -1002,7 +1002,7 @@ class TemplatesTab extends ConsumerWidget {
                                     'Retirer ce modèle',
                                     dense: true,
                                     onPressed: () async {
-                                      await ref.read(referencesRepositoryProvider).deactivateTemplate(m.id);
+                                      await ref.read(referencesServiceProvider).deactivateTemplate(m.id);
                                       ref.invalidate(templatesProvider(entity.id));
                                     },
                                   ),
@@ -1188,7 +1188,7 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
     try {
       final cabinet = await ref.read(currentCabinetProvider.future);
       await ref
-          .read(referencesRepositoryProvider)
+          .read(referencesServiceProvider)
           .saveTemplate(cabinet!.id, widget.entity.id, code: _code.text, label: _label.text, journalType: _journalType, lines: lines);
       ref.invalidate(templatesProvider(widget.entity.id));
       if (mounted) Navigator.pop(context);
@@ -1323,7 +1323,7 @@ class _TaxRateDialogState extends ConsumerState<TaxRateDialog> {
             }
             try {
               final cabinet = await ref.read(currentCabinetProvider.future);
-              await ref.read(referencesRepositoryProvider).addTaxRate(cabinet!.id, code: _code.text, label: _label.text, rate: rate / 100, validFrom: from);
+              await ref.read(referencesServiceProvider).addTaxRate(cabinet!.id, code: _code.text, label: _label.text, rate: rate / 100, validFrom: from);
               ref.invalidate(taxRatesProvider);
               if (context.mounted) Navigator.pop(context);
             } catch (e) {

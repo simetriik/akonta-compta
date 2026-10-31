@@ -11,6 +11,7 @@ import 'src/core/errors/errors.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerSupabaseErrorClassifier();
   installErrorHooks();
   Intl.defaultLocale = 'fr_FR';
   await initializeDateFormatting('fr_FR');

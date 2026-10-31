@@ -9,9 +9,9 @@ import '../../domain/reference_models.dart';
 import '../inventory/inventory_screen.dart';
 import '../widgets/require_entity.dart';
 import '../../application/providers/references_providers.dart';
-import '../../application/providers/repositories.dart';
 import '../../domain/lettering_models.dart';
 import '../../application/providers/session_providers.dart';
+import '../../application/providers/services.dart';
 
 /// Lettrage par compte de tiers (§10.7) : débits et crédits non lettrés, sélection, écart, propositions, partiel, délettrage.
 class LetteringScreen extends StatelessWidget {
@@ -43,7 +43,7 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
     final a = _account;
     if (a == null) return;
     setState(() => _busy = true);
-    final repo = ref.read(letteringRepositoryProvider);
+    final repo = ref.read(letteringServiceProvider);
     final lines = await repo.unlettered(widget.entity.id, a.id, thirdPartyId: _thirdParty?.id);
     final proposals = await repo.proposals(widget.entity.id, a.id, thirdPartyId: _thirdParty?.id);
     final groups = await repo.groups(widget.entity.id, a.id, thirdPartyId: _thirdParty?.id);
@@ -359,7 +359,7 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
     }
     setState(() => _busy = true);
     try {
-      await ref.read(letteringRepositoryProvider).letter(ids, allowPartial: allowPartial);
+      await ref.read(letteringServiceProvider).letter(ids, allowPartial: allowPartial);
       if (mounted) showAkToast(context, 'Lignes lettrées.');
     } catch (e) {
       if (mounted) showErrorSnack(context, errorText(e));
@@ -382,7 +382,7 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
     );
     if (reason == null || reason.trim().isEmpty) return;
     try {
-      await ref.read(letteringRepositoryProvider).unletter(g.id, reason.trim());
+      await ref.read(letteringServiceProvider).unletter(g.id, reason.trim());
     } catch (e) {
       if (mounted) showErrorSnack(context, errorText(e));
     }
