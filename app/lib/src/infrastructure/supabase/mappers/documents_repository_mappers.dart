@@ -1,4 +1,4 @@
-import '../../../data/documents_repository.dart';
+import '../../../domain/documents_models.dart';
 
 // Convertisseurs entre le format PostgREST (JSON) et les entités du domaine.
 

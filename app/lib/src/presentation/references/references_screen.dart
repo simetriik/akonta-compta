@@ -5,12 +5,13 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
+import '../../application/providers/references_providers.dart';
+import '../../application/providers/repositories.dart';
 
 /// Référentiels du dossier courant : plan de comptes, tiers, journaux, modèles d'écritures, taux (§10.3).
 class ReferencesScreen extends StatelessWidget {

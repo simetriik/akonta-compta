@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'src/app.dart';
 import 'src/core/config.dart';
+import 'src/composition/supabase_overrides.dart';
 import 'src/core/errors/errors.dart';
 
 Future<void> main() async {
@@ -18,5 +19,5 @@ Future<void> main() async {
     publishableKey: AppConfig.supabasePublishableKey,
     authOptions: const FlutterAuthClientOptions(authFlowType: AuthFlowType.pkce),
   );
-  runApp(const ProviderScope(child: AkontaApp()));
+  runApp(ProviderScope(overrides: supabaseOverrides(), child: const AkontaApp()));
 }

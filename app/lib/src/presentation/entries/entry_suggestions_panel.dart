@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../data/suggestions_repository.dart';
 import '../../domain/entry_models.dart';
 import '../../domain/suggestion_models.dart';
+import '../../application/providers/repositories.dart';
 
 /// Suggestions de saisie sans modèle (palier 0) sous le libellé : écritures proches, modèles proches, comptes habituels
 /// du libellé et du tiers, alerte de doublon. Rien n'est appliqué sans un geste du collaborateur.

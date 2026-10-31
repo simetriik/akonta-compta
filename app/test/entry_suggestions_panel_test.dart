@@ -1,5 +1,4 @@
 import 'package:akonta/design/design.dart';
-import 'package:akonta/src/data/suggestions_repository.dart';
 import 'package:akonta/src/domain/entry_models.dart';
 import 'package:akonta/src/domain/suggestion_models.dart';
 import 'package:akonta/src/presentation/entries/entry_suggestions_panel.dart';
@@ -7,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:akonta/src/application/providers/repositories.dart';
+import 'package:akonta/src/domain/repositories/suggestions_repository.dart';
 
 class _FakeRepo implements SuggestionsRepository {
   _FakeRepo({this.fail = false});

@@ -8,12 +8,14 @@ import 'package:akonta/design/design.dart';
 
 import '../widgets/error_display.dart';
 import '../../core/formatting.dart';
-import '../../data/consultation_repository.dart';
-import '../../data/entities_repository.dart';
-import '../../data/references_repository.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
+import '../../application/providers/consultation_providers.dart';
+import '../../application/providers/entities_providers.dart';
+import '../../application/providers/references_providers.dart';
+import '../../application/providers/repositories.dart';
+import '../../domain/consultation_models.dart';
 
 /// Consultation du dossier courant : grand livre, balances, balance âgée, centralisateur ; période libre, comparaison N-1, exports (§10.6).
 class ConsultationScreen extends StatelessWidget {

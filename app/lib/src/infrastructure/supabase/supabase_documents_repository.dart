@@ -1,70 +1,34 @@
 import 'dart:typed_data';
-
-import 'package:crypto/crypto.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'supabase_providers.dart';
-import '../core/errors/errors.dart';
-import '../infrastructure/supabase/mappers/documents_repository_mappers.dart';
-
-class DocumentModel {
-  const DocumentModel({required this.id, required this.entityId, required this.storagePath, required this.fileName, required this.mimeType, required this.sizeBytes, required this.sha256, required this.capturedVia, required this.capturedAt, this.note, this.entryIds = const []});
-
-  final String id;
-  final String entityId;
-  final String storagePath;
-  final String fileName;
-  final String mimeType;
-  final int sizeBytes;
-  final String sha256;
-  final String capturedVia;
-  final DateTime capturedAt;
-  final String? note;
-  final List<String> entryIds;
-
-  bool get isInInbox => entryIds.isEmpty;
-  bool get isImage => mimeType.startsWith('image/');
-}
-
-/// Types admis (conception §10.5) déduits de l'extension.
-String? mimeTypeFor(String fileName) {
-  final ext = fileName.toLowerCase().split('.').last;
-  return switch (ext) {
-    'pdf' => 'application/pdf',
-    'jpg' || 'jpeg' => 'image/jpeg',
-    'png' => 'image/png',
-    'heic' => 'image/heic',
-    'heif' => 'image/heif',
-    _ => null,
-  };
-}
-
-const maxDocumentBytes = 20 * 1024 * 1024;
-
-/// Empreinte SHA-256 hexadécimale d'un fichier.
-String sha256Hex(Uint8List bytes) => sha256.convert(bytes).toString();
+import '../../domain/documents_models.dart';
+import '../../core/errors/app_error.dart';
+import 'mappers/documents_repository_mappers.dart';
+import '../../core/file_tools.dart';
+import '../../domain/repositories/documents_repository.dart';
 
 /// Module 5 : dépôt dans le Storage privé, enregistrement avec empreinte, boîte de réception, rattachement, visionneuse.
-class DocumentsRepository {
-  DocumentsRepository(this._client);
+class SupabaseDocumentsRepository implements DocumentsRepository {
+  SupabaseDocumentsRepository(this._client);
 
   final SupabaseClient _client;
 
   static const bucket = 'documents';
 
+  @override
   Future<List<DocumentModel>> list(String entityId, {bool inboxOnly = false}) async {
     final rows = await _client.from('documents').select('*, entry_documents(entry_id)').eq('entity_id', entityId).order('captured_at', ascending: false).limit(500);
     final docs = rows.map(documentModelFromJson).toList();
     return inboxOnly ? docs.where((d) => d.isInInbox).toList() : docs;
   }
 
+  @override
   Future<List<DocumentModel>> forEntry(String entryId) async {
     final rows = await _client.from('entry_documents').select('documents(*, entry_documents(entry_id))').eq('entry_id', entryId);
     return [for (final r in rows) documentModelFromJson(r['documents'] as Map<String, dynamic>)];
   }
 
   /// Dépose un fichier : contrôle du type et de la taille, envoi au Storage sous `cabinet/entité/uuid.ext`, enregistrement.
+  @override
   Future<DocumentModel> upload({required String cabinetId, required String entityId, required String fileName, required Uint8List bytes, required String capturedVia, String? note}) async {
     final mime = mimeTypeFor(fileName);
     if (mime == null) throw const AppError.business('Format non admis : PDF, JPEG, PNG ou HEIC uniquement.');
@@ -94,18 +58,23 @@ class DocumentsRepository {
     }
   }
 
+  @override
   Future<void> attach(String entryId, String documentId) => _client.from('entry_documents').insert({'entry_id': entryId, 'document_id': documentId});
 
+  @override
   Future<void> detach(String entryId, String documentId) => _client.from('entry_documents').delete().eq('entry_id', entryId).eq('document_id', documentId);
 
+  @override
   Future<void> delete(DocumentModel d) async {
     await _client.from('documents').delete().eq('id', d.id);
     await _client.storage.from(bucket).remove([d.storagePath]);
   }
 
   /// URL signée (compartiment privé), valable 10 minutes.
+  @override
   Future<String> signedUrl(DocumentModel d) => _client.storage.from(bucket).createSignedUrl(d.storagePath, 600);
 
+  @override
   Future<Uint8List> download(DocumentModel d) => _client.storage.from(bucket).download(d.storagePath);
 
   static String _uuid() {
@@ -117,7 +86,3 @@ class DocumentsRepository {
     return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
   }
 }
-
-final documentsRepositoryProvider = Provider<DocumentsRepository>((ref) => DocumentsRepository(ref.watch(supabaseClientProvider)));
-final documentsProvider = FutureProvider.family<List<DocumentModel>, String>((ref, entityId) => ref.watch(documentsRepositoryProvider).list(entityId));
-final entryDocumentsProvider = FutureProvider.family<List<DocumentModel>, String>((ref, entryId) => ref.watch(documentsRepositoryProvider).forEntry(entryId));

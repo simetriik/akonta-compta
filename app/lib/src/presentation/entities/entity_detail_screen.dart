@@ -4,11 +4,12 @@ import 'package:akonta/design/design.dart';
 
 import '../widgets/error_display.dart';
 import '../../core/formatting.dart';
-import '../../data/entities_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import '../widgets/async_view.dart';
 import 'entity_form.dart';
+import '../../application/providers/entities_providers.dart';
+import '../../application/providers/repositories.dart';
 
 /// Dossier : fiche, dirigeants, exercices et périodes (verrouillage), historique.
 class EntityDetailScreen extends ConsumerWidget {

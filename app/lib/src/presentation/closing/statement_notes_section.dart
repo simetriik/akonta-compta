@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../core/formatting.dart';
-import '../../data/closing_repository.dart';
+import '../../domain/closing_models.dart';
 
 /// Notes annexes calculables du SYCEBNL : choix de la note puis tableau « année N, année N-1, variation ».
 /// Le commentaire de chaque note (date des délibérations, justification des variations…) reste à rédiger hors de l'application.

@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:akonta/src/data/import_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:akonta/src/core/text_decoding.dart';
 
 void main() {
   test('décode un export Perfecto en Windows-1252 (accents, œ, euro)', () {

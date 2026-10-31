@@ -1,16 +1,15 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../domain/reference_models.dart';
-import 'supabase_providers.dart';
-import '../infrastructure/supabase/mappers/reference_models_mappers.dart';
+import '../../domain/repositories/references_repository.dart';
+import '../../domain/reference_models.dart';
+import 'mappers/reference_models_mappers.dart';
 
 /// Module 3 : plan de comptes de l'entité, tiers, journaux, modèles d'écritures, taux.
-class ReferencesRepository {
-  ReferencesRepository(this._client);
+class SupabaseReferencesRepository implements ReferencesRepository {
+  SupabaseReferencesRepository(this._client);
 
   final SupabaseClient _client;
 
+  @override
   Future<List<Account>> accounts(String entityId, {String? prefix, String? search, bool onlyActive = false}) async {
     var q = _client.from('accounts').select().eq('entity_id', entityId);
     if (prefix != null && prefix.isNotEmpty) q = q.like('code', '$prefix%');
@@ -20,6 +19,7 @@ class ReferencesRepository {
     return rows.map(accountFromJson).toList();
   }
 
+  @override
   Future<Account> createAccount(String cabinetId, String entityId, {required String code, required String label, bool? isCollective}) async {
     final row = await _client.from('accounts').insert({
       'cabinet_id': cabinetId,
@@ -34,12 +34,16 @@ class ReferencesRepository {
     return accountFromJson(row);
   }
 
+  @override
   Future<void> renameAccount(String id, String label) => _client.from('accounts').update({'label': label}).eq('id', id);
 
+  @override
   Future<void> setAccountActive(String id, bool active) => _client.from('accounts').update({'is_active': active}).eq('id', id);
 
+  @override
   Future<void> deleteAccount(String id) => _client.from('accounts').delete().eq('id', id);
 
+  @override
   Future<List<ThirdParty>> thirdParties(String entityId, {String? search}) async {
     var q = _client.from('third_parties').select('*, third_party_accounts(accounts(code))').eq('entity_id', entityId);
     if (search != null && search.isNotEmpty) q = q.or('code.ilike.%$search%,name.ilike.%$search%');
@@ -47,6 +51,7 @@ class ReferencesRepository {
     return rows.map(thirdPartyFromJson).toList();
   }
 
+  @override
   Future<ThirdParty> saveThirdParty(String cabinetId, String entityId,
       {String? id, required String code, required String name, required String type, String? taxId, String? address, String? phone, String? email, required List<String> collectiveAccountIds}) async {
     final values = {'cabinet_id': cabinetId, 'entity_id': entityId, 'code': code.trim().toUpperCase(), 'name': name.trim(), 'type': type,
@@ -62,13 +67,16 @@ class ReferencesRepository {
     return thirdPartyFromJson(row);
   }
 
+  @override
   Future<void> setThirdPartyActive(String id, bool active) => _client.from('third_parties').update({'is_active': active}).eq('id', id);
 
+  @override
   Future<List<Journal>> journals(String entityId) async {
     final rows = await _client.from('journals').select('*, accounts(code)').eq('entity_id', entityId).order('code', ascending: true);
     return rows.map(journalFromJson).toList();
   }
 
+  @override
   Future<void> saveJournal(String cabinetId, String entityId, {String? id, required String code, required String label, required String type, String? treasuryAccountId}) async {
     final values = {'cabinet_id': cabinetId, 'entity_id': entityId, 'code': code.trim().toUpperCase(), 'label': label.trim(), 'type': type, 'treasury_account_id': treasuryAccountId};
     if (id == null) {
@@ -78,6 +86,7 @@ class ReferencesRepository {
     }
   }
 
+  @override
   Future<void> setJournalActive(String id, bool active) => _client.from('journals').update({'is_active': active}).eq('id', id);
 
   /// Référentiel comptable de l'entité : ses modèles d'écritures utilisent les numéros de ce plan.
@@ -86,6 +95,7 @@ class ReferencesRepository {
     return row['accounting_system'] as String;
   }
 
+  @override
   Future<List<EntryTemplate>> templates(String entityId) async {
     final system = await _accountingSystem(entityId);
     final rows = await _client
@@ -98,6 +108,7 @@ class ReferencesRepository {
     return rows.map(entryTemplateFromJson).toList();
   }
 
+  @override
   Future<void> saveTemplate(String cabinetId, String? entityId, {required String code, required String label, String? journalType, String? description, required List<TemplateLine> lines}) async {
     final row = await _client.from('entry_templates').insert({
       'cabinet_id': cabinetId, 'entity_id': entityId, 'code': code.trim().toUpperCase(), 'label': label.trim(), 'journal_type': journalType, 'description': _n(description),
@@ -106,14 +117,17 @@ class ReferencesRepository {
     await _client.from('entry_template_lines').insert([for (final l in lines) {'template_id': row['id'], ...l.toJson()}]);
   }
 
+  @override
   Future<void> deactivateTemplate(String id) => _client.from('entry_templates').update({'is_active': false}).eq('id', id);
 
+  @override
   Future<List<TaxRate>> taxRates() async {
     final rows = await _client.from('tax_rates').select().order('code', ascending: true).order('valid_from', ascending: true);
     return rows.map(taxRateFromJson).toList();
   }
 
   /// Nouveau taux à partir d'une date : le taux précédent du même code est borné à la veille.
+  @override
   Future<void> addTaxRate(String cabinetId, {required String code, required String label, required double rate, required DateTime validFrom}) async {
     final previous = await _client.from('tax_rates').select('id').eq('cabinet_id', cabinetId).eq('code', code).isFilter('valid_to', null).lt('valid_from', validFrom.toIso8601String().substring(0, 10));
     for (final p in previous) {
@@ -124,10 +138,3 @@ class ReferencesRepository {
 
   static String? _n(String? s) => (s == null || s.trim().isEmpty) ? null : s.trim();
 }
-
-final referencesRepositoryProvider = Provider<ReferencesRepository>((ref) => ReferencesRepository(ref.watch(supabaseClientProvider)));
-final accountsProvider = FutureProvider.family<List<Account>, String>((ref, entityId) => ref.watch(referencesRepositoryProvider).accounts(entityId));
-final thirdPartiesProvider = FutureProvider.family<List<ThirdParty>, String>((ref, entityId) => ref.watch(referencesRepositoryProvider).thirdParties(entityId));
-final journalsProvider = FutureProvider.family<List<Journal>, String>((ref, entityId) => ref.watch(referencesRepositoryProvider).journals(entityId));
-final templatesProvider = FutureProvider.family<List<EntryTemplate>, String>((ref, entityId) => ref.watch(referencesRepositoryProvider).templates(entityId));
-final taxRatesProvider = FutureProvider<List<TaxRate>>((ref) => ref.watch(referencesRepositoryProvider).taxRates());

@@ -1,4 +1,4 @@
-import '../../../data/inventory_repository.dart';
+import '../../../domain/inventory_models.dart';
 
 // Convertisseurs entre le format PostgREST (JSON) et les entités du domaine.
 

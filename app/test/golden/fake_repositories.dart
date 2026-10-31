@@ -1,16 +1,12 @@
-import 'package:akonta/src/data/closing_repository.dart';
-import 'package:akonta/src/data/lettering_repository.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-/// Faux client : aucune des méthodes réseau n'est appelée par les faux dépôts.
-class _NoClient implements SupabaseClient {
-  @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnsupportedError('Aucun accès réseau dans les tests golden');
-}
+import 'package:akonta/src/domain/closing_models.dart';
+import 'package:akonta/src/domain/lettering_models.dart';
+import 'package:akonta/src/domain/repositories/closing_repository.dart';
+import 'package:akonta/src/domain/repositories/lettering_repository.dart';
 
 /// Dépôt de lettrage fictif : lignes d'un compte clients, une proposition et un lettrage en cours.
-class FakeLetteringRepository extends LetteringRepository {
-  FakeLetteringRepository() : super(_NoClient());
+class FakeLetteringRepository implements LetteringRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnsupportedError('Méthode non prévue dans les tests golden : ${invocation.memberName}');
 
   @override
   Future<List<UnletteredLine>> unlettered(String entityId, String accountId, {String? thirdPartyId}) async => [
@@ -84,8 +80,9 @@ class FakeLetteringRepository extends LetteringRepository {
 }
 
 /// Dépôt de clôture fictif : contrôles de clôture variés (conforme, bloquant, alerte, levé).
-class FakeClosingRepository extends ClosingRepository {
-  FakeClosingRepository() : super(_NoClient());
+class FakeClosingRepository implements ClosingRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnsupportedError('Méthode non prévue dans les tests golden : ${invocation.memberName}');
 
   @override
   Future<List<ClosingCheck>> runChecks(String entityId, String fyId) async => const [

@@ -223,3 +223,24 @@ List<DraftLine> applyTemplate(EntryTemplate template, {required int baseAmount, 
   }
   return result;
 }
+
+class EntryFilter {
+  const EntryFilter({this.journalId, this.month, this.status, this.reviewStatus, this.search, this.toReviewOnly = false});
+
+  final String? journalId;
+  final DateTime? month; // premier jour du mois
+  final String? status;
+  final String? reviewStatus;
+  final String? search;
+  final bool toReviewOnly;
+
+  EntryFilter copyWith({String? journalId, DateTime? month, String? status, String? reviewStatus, String? search, bool? toReviewOnly, bool clearJournal = false, bool clearMonth = false, bool clearStatus = false}) =>
+      EntryFilter(
+        journalId: clearJournal ? null : (journalId ?? this.journalId),
+        month: clearMonth ? null : (month ?? this.month),
+        status: clearStatus ? null : (status ?? this.status),
+        reviewStatus: reviewStatus ?? this.reviewStatus,
+        search: search ?? this.search,
+        toReviewOnly: toReviewOnly ?? this.toReviewOnly,
+      );
+}

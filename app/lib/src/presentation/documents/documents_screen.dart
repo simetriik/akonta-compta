@@ -8,13 +8,15 @@ import 'package:akonta/design/design.dart';
 
 import '../widgets/error_display.dart';
 import '../../core/formatting.dart';
-import '../../data/documents_repository.dart';
-import '../../data/entries_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 import 'launch_url.dart';
+import '../../application/providers/documents_providers.dart';
+import '../../application/providers/entries_providers.dart';
+import '../../application/providers/repositories.dart';
+import '../../domain/documents_models.dart';
 
 /// Pièces justificatives du dossier : dépôt (fichier ou photo sur mobile), boîte de réception, rattachement, visionneuse (§10.5).
 class DocumentsScreen extends StatelessWidget {

@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:akonta/src/data/import_repository.dart';
 import 'package:akonta/src/domain/bank_models.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:akonta/src/core/text_decoding.dart';
 
 /// Jeu de données de la recette interne (`recette/`, généré par `recette/generer-jeu.py`) : fichiers lisibles par l'application.
 void main() {

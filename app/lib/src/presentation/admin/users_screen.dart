@@ -6,9 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
-import '../../data/admin_repository.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
+import '../../application/providers/admin_providers.dart';
+import '../../application/providers/repositories.dart';
 
 /// Utilisateurs et sécurité (administrateur technique) : invitation, import CSV eABC, désactivation (§10.1).
 class UsersScreen extends ConsumerWidget {
