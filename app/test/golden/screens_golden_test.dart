@@ -4,6 +4,8 @@ import 'package:akonta/src/data/entities_repository.dart';
 import 'package:akonta/src/data/closing_repository.dart';
 import 'package:akonta/src/data/lettering_repository.dart';
 import 'package:akonta/src/data/references_repository.dart';
+import 'package:akonta/src/data/suggestions_repository.dart';
+import 'package:akonta/src/domain/suggestion_models.dart';
 import 'package:akonta/src/data/supabase_providers.dart';
 import 'package:akonta/src/domain/entity_models.dart';
 import 'package:akonta/src/domain/models.dart';
@@ -82,8 +84,24 @@ const _permissions = PermissionSet(
   roles: [],
 );
 
+/// Aucune suggestion de saisie : les captures de référence ne dépendent pas de l'historique.
+class _NoSuggestions implements SuggestionsRepository {
+  @override
+  Future<List<EntrySuggestion>> entries(String entityId, String label, {int limit = 3}) async => const [];
+
+  @override
+  Future<List<AccountSuggestion>> accounts(String entityId, String label, {String? thirdPartyId, int limit = 3}) async => const [];
+
+  @override
+  Future<List<TemplateSuggestion>> templates(String entityId, String label, {int limit = 2}) async => const [];
+
+  @override
+  Future<List<DuplicateEntry>> duplicates(String entityId, {required String reference, required int amount, String? thirdPartyId, String? excludeEntryId}) async => const [];
+}
+
 List<Override> _common() => [
   currentEntityProvider.overrideWith(_FixedEntity.new),
+  suggestionsRepositoryProvider.overrideWithValue(_NoSuggestions()),
   fiscalYearsProvider.overrideWith((ref, id) async => _fiscalYears),
   accountsProvider.overrideWith((ref, id) async => _accounts),
   thirdPartiesProvider.overrideWith((ref, id) async => _thirdParties),
