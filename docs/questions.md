@@ -90,6 +90,6 @@
 
 ## Q-021 — Notes annexes SYCEBNL : lignes à confirmer et notes non produites
 - **À faire valider par ABC** : les lignes des notes 18A, 20, 21, 22, 24 à 28, 31 et 32, construites à partir du plan faute d'avoir relu les pages officielles ; l'affectation des comptes aux lignes des notes 8 à 13, 16, 17A, 17B, 19, 23 et 29A (fiche `outputs/sycebnl-a-valider.md`, section 8).
-- **À décider** : produire ou non les notes à échéances (9, 10, 19), les mouvements d'immobilisations (5A à 5H), les notes d'information (1 à 4, 15, 29B, 33 à 35) ; où saisir le commentaire de chaque note (table liée à l'exercice) ; export PDF et Excel des états et notes.
+- **À décider** : produire ou non les notes à échéances (9, 10, 19), les mouvements d'immobilisations (5A à 5H), les notes d'information (1 à 4, 15, 29B, 33 à 35) ; où saisir le commentaire de chaque note (table liée à l'exercice) ; export Excel des états et notes (le PDF unique existe, D-029).
 - **Hypothèse appliquée** : 23 notes calculables affichées à l'écran ; le commentaire se rédige hors de l'application.
 

@@ -22,6 +22,8 @@ export interface HeaderInfo {
   entity_tax_id: string | null;
   fiscal_year_label: string;
   generated_by: string | null;
+  /** Référentiel de l'entité : détermine le modèle des états financiers (`normal` par défaut). */
+  accounting_system?: string;
 }
 
 const TITLES: Record<DocumentKind, string> = {
@@ -34,8 +36,8 @@ const TITLES: Record<DocumentKind, string> = {
   dgi: "Liasse DGI",
 };
 
-/** Routes du service Python et nom de fichier par type et format. */
-export function servicePath(kind: DocumentKind, format: DocumentFormat): { path: string; filename: string } | null {
+/** Routes du service Python et nom de fichier par type et format ; les états financiers d'une entité SYCEBNL ont leur propre modèle (PDF seulement). */
+export function servicePath(kind: DocumentKind, format: DocumentFormat, accountingSystem = "normal"): { path: string; filename: string } | null {
   const ext = format === "pdf" ? "pdf" : "xlsx";
   const prefix = format === "pdf" ? "/pdf" : "/excel";
   switch (kind) {
@@ -44,7 +46,11 @@ export function servicePath(kind: DocumentKind, format: DocumentFormat): { path:
     case "journal": return format === "pdf" ? { path: "/pdf/journal", filename: "journal.pdf" } : null;
     case "aged_balance": return format === "pdf" ? { path: "/pdf/aged-balance", filename: "balance-agee.pdf" } : null;
     case "reconciliation": return format === "pdf" ? { path: "/pdf/reconciliation", filename: "rapprochement.pdf" } : null;
-    case "financial_statements": return format === "pdf" ? { path: "/pdf/financial-statements", filename: "etats-financiers.pdf" } : null;
+    case "financial_statements":
+      if (format !== "pdf") return null;
+      return accountingSystem === "sycebnl"
+        ? { path: "/pdf/financial-statements-sycebnl", filename: "etats-financiers-sycebnl.pdf" }
+        : { path: "/pdf/financial-statements", filename: "etats-financiers.pdf" };
     case "dgi": return format === "xlsm" ? { path: "/excel/dgi", filename: "etats-financiers-dgi.xlsm" } : null;
   }
 }
@@ -68,7 +74,9 @@ export function buildPayload(r: ExportRequest, header: HeaderInfo, rows: Record<
       fiscal_year_label: header.fiscal_year_label,
       period_from: r.from,
       period_to: r.to,
-      title: TITLES[r.kind] + (r.kind === "aged_balance" ? (r.side === "credit" ? " fournisseurs" : " clients") : ""),
+      title: r.kind === "financial_statements" && header.accounting_system === "sycebnl"
+        ? "États financiers SYCEBNL"
+        : TITLES[r.kind] + (r.kind === "aged_balance" ? (r.side === "credit" ? " fournisseurs" : " clients") : ""),
       generated_by: header.generated_by,
     },
   };

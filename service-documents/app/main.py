@@ -3,9 +3,9 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
 
-from . import dgi, excel, pdf
+from . import dgi, excel, pdf, pdf_sycebnl
 from .config import Settings, get_settings
-from .models import AgedBalanceDocument, FinancialStatementsDocument, JournalDocument, LedgerDocument, ReconciliationDocument, TrialBalanceDocument
+from .models import AgedBalanceDocument, FinancialStatementsDocument, JournalDocument, LedgerDocument, ReconciliationDocument, SycebnlStatementsDocument, TrialBalanceDocument
 
 app = FastAPI(title="Akonta — service de documents", version="0.1.0")
 
@@ -91,3 +91,9 @@ def excel_dgi(doc: dgi.DgiDocument) -> Response:
 @app.post("/pdf/financial-statements", dependencies=[Depends(require_service_key)])
 def pdf_financial_statements(doc: FinancialStatementsDocument) -> Response:
     return _file(pdf.financial_statements_pdf(doc), PDF, f"etats-financiers-{doc.header.fiscal_year_label}.pdf")
+
+
+@app.post("/pdf/financial-statements-sycebnl", dependencies=[Depends(require_service_key)])
+def pdf_financial_statements_sycebnl(doc: SycebnlStatementsDocument, settings: Settings = Depends(get_settings)) -> Response:
+    _check_size(len(doc.notes), settings)
+    return _file(pdf_sycebnl.sycebnl_statements_pdf(doc), PDF, f"etats-financiers-sycebnl-{doc.header.fiscal_year_label}.pdf")

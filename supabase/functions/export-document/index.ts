@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   if (!user.user) return error("Non authentifié", 401);
 
   // En-tête du document
-  const { data: entity, error: entityError } = await caller.from("entities").select("name, tax_id, cabinets(name)").eq("id", r.entity_id).single();
+  const { data: entity, error: entityError } = await caller.from("entities").select("name, tax_id, accounting_system, cabinets(name)").eq("id", r.entity_id).single();
   if (entityError || !entity) return error("Dossier inaccessible", 403);
   const { data: fy } = await caller.from("fiscal_years").select("label").eq("entity_id", r.entity_id).lte("start_date", r.from).gte("end_date", r.from).maybeSingle();
   const { data: profile } = await caller.from("profiles").select("full_name").eq("id", user.user.id).maybeSingle();
@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
     entity_tax_id: (entity.tax_id as string | null) ?? null,
     fiscal_year_label: (fy?.label as string | undefined) ?? r.from.slice(0, 4),
     generated_by: (profile?.full_name as string | undefined) ?? null,
+    accounting_system: (entity.accounting_system as string | undefined) ?? "normal",
   };
 
   // Données (fonctions SQL, RLS et permission ledger.read au nom de l'appelant)
@@ -85,6 +86,10 @@ Deno.serve(async (req) => {
       const prev = (d.previous ?? {}) as Record<string, unknown>;
       extra = { assets: d.assets ?? [], liabilities: d.liabilities ?? [], income: d.income ?? [],
                 previous_assets: prev.assets ?? [], previous_liabilities: prev.liabilities ?? [], previous_income: prev.income ?? [] };
+      if (header.accounting_system === "sycebnl") {
+        // Modèle SYCEBNL : tableau des flux et notes annexes calculables, avec l'exercice précédent s'il existe
+        extra = { ...extra, cash_flow: d.cash_flow ?? [], previous_cash_flow: prev.cash_flow ?? [], notes: d.notes ?? [], has_previous: d.previous != null };
+      }
       break;
     }
     case "dgi": {
@@ -95,7 +100,8 @@ Deno.serve(async (req) => {
   }
   if (rpcError) return error(rpcError.message, rpcError.message.includes("Permission") ? 403 : 500);
 
-  const route = servicePath(r.kind, r.format)!;
+  const route = servicePath(r.kind, r.format, header.accounting_system);
+  if (!route) return error(`Format ${r.format} indisponible pour ce dossier`, 400);
   const upstream = await fetch(`${SERVICE_URL}${route.path}`, {
     method: "POST",
     headers: { "content-type": "application/json", "X-Akonta-Service-Key": SERVICE_KEY },
