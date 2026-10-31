@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
-import '../../data/auth_repository.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
+import '../../application/providers/repositories.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Gabarit commun : rail de navigation bleu nuit (étendu au bureau, réduit sur tablette, barre basse sur mobile)
 /// et barre supérieure avec le dossier courant toujours visible, ouvrable par Ctrl K (§12.3).

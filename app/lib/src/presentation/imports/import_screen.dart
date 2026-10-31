@@ -5,7 +5,6 @@ import 'package:akonta/design/design.dart';
 
 import '../widgets/error_display.dart';
 import '../../core/formatting.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
@@ -14,6 +13,7 @@ import '../../application/providers/references_providers.dart';
 import '../../application/providers/repositories.dart';
 import '../../core/text_decoding.dart';
 import '../../domain/import_models.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Import Perfecto (§10.10) : fichier texte tabulé (Windows-1252) analysé par la base, correspondances éditables,
 /// mode essai sans écriture, application en brouillard, rapport.

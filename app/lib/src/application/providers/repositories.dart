@@ -11,6 +11,8 @@ import '../../domain/repositories/lettering_repository.dart';
 import '../../domain/repositories/reconciliation_repository.dart';
 import '../../domain/repositories/references_repository.dart';
 import '../../domain/repositories/suggestions_repository.dart';
+import '../../domain/repositories/auth_repository.dart';
+import '../../domain/repositories/session_repository.dart';
 
 /// Points d'injection des dépôts : la composition (main.dart) les remplace par les adaptateurs d'infrastructure.
 final adminRepositoryProvider = Provider<AdminRepository>((ref) => throw UnimplementedError('adminRepositoryProvider doit être fourni par la composition'));
@@ -25,3 +27,5 @@ final letteringRepositoryProvider = Provider<LetteringRepository>((ref) => throw
 final reconciliationRepositoryProvider = Provider<ReconciliationRepository>((ref) => throw UnimplementedError('reconciliationRepositoryProvider doit être fourni par la composition'));
 final referencesRepositoryProvider = Provider<ReferencesRepository>((ref) => throw UnimplementedError('referencesRepositoryProvider doit être fourni par la composition'));
 final suggestionsRepositoryProvider = Provider<SuggestionsRepository>((ref) => throw UnimplementedError('suggestionsRepositoryProvider doit être fourni par la composition'));
+final authRepositoryProvider = Provider<AuthRepository>((ref) => throw UnimplementedError('authRepositoryProvider doit être fourni par la composition'));
+final sessionRepositoryProvider = Provider<SessionRepository>((ref) => throw UnimplementedError('sessionRepositoryProvider doit être fourni par la composition'));

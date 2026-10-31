@@ -8,7 +8,6 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import '../../domain/models.dart';
 import '../inventory/inventory_screen.dart';
@@ -19,6 +18,7 @@ import '../../application/providers/entities_providers.dart';
 import '../../application/providers/repositories.dart';
 import '../../domain/closing_models.dart';
 import '../../domain/consultation_models.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Assistant de clôture (§10.9) : contrôles → inventaire → fiscalité → états financiers → clôture provisoire → arrêté définitif → N+1.
 class ClosingScreen extends StatelessWidget {

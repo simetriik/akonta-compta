@@ -4,8 +4,8 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Tableau de bord des dossiers : chef de mission, dernier mois saisi, brouillards, écritures non revues (§10.2).
 class DashboardScreen extends ConsumerWidget {

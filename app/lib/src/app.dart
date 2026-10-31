@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
 import 'core/config.dart';
-import 'data/auth_repository.dart';
-import 'data/supabase_providers.dart';
 import 'presentation/auth/inactivity_watcher.dart';
 import 'presentation/router.dart';
+import 'application/providers/repositories.dart';
+import 'application/providers/session_providers.dart';
 
 /// Application Akonta : thème, français, routeur, déconnexion pour inactivité.
 class AkontaApp extends ConsumerWidget {

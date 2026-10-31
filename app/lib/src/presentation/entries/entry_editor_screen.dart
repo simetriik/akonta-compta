@@ -6,7 +6,6 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/entry_models.dart';
 import '../../domain/suggestion_models.dart';
 import 'entry_suggestions_panel.dart';
@@ -16,6 +15,7 @@ import '../widgets/require_entity.dart';
 import '../../application/providers/entries_providers.dart';
 import '../../application/providers/references_providers.dart';
 import '../../application/providers/repositories.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Saisie d'une écriture (grille au clavier) : journal, date, référence, libellé ; lignes compte / tiers / libellé / débit / crédit ;
 /// autocomplétion, contrepartie automatique (Ctrl+B), modèles d'écritures, équilibre affiché, validation (§10.4).

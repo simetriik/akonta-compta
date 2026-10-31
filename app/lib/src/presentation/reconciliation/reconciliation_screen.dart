@@ -7,7 +7,6 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/bank_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
@@ -18,6 +17,7 @@ import '../../application/providers/references_providers.dart';
 import '../../application/providers/repositories.dart';
 import '../../core/text_decoding.dart';
 import '../../domain/consultation_models.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Rapprochement bancaire (§10.7) : import du relevé selon un gabarit mémorisé, deux volets relevé / comptabilité,
 /// propositions, pointage 1-1 ou n-n, état mensuel, écriture depuis une ligne, état figé et archivé en PDF.

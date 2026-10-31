@@ -4,7 +4,7 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/config.dart';
-import '../../data/auth_repository.dart';
+import '../../application/providers/repositories.dart';
 
 /// Connexion e-mail + mot de passe (12 caractères minimum) et lien de réinitialisation.
 class LoginScreen extends ConsumerStatefulWidget {

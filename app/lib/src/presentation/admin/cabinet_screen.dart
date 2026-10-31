@@ -4,12 +4,12 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
 import '../../application/providers/admin_providers.dart';
 import '../../application/providers/repositories.dart';
 import '../../domain/admin_models.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Espace de l'associé : paramètres du cabinet, rôles et permissions, affectations, piste d'audit.
 class CabinetScreen extends StatelessWidget {

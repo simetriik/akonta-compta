@@ -5,7 +5,6 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/entry_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
@@ -14,6 +13,7 @@ import '../widgets/require_entity.dart';
 import '../../application/providers/entries_providers.dart';
 import '../../application/providers/references_providers.dart';
 import '../../application/providers/repositories.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Liste des écritures du dossier courant : filtres journal / mois / statut, recherche, validation par lot,
 /// file « à revoir » pour le chef de mission, contre-passation (§10.4).

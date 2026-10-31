@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/entry_models.dart';
 import 'repositories.dart';
+import 'session_providers.dart';
 
 final entryFilterProvider = NotifierProvider<EntryFilterNotifier, EntryFilter>(EntryFilterNotifier.new);
 

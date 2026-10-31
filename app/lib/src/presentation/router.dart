@@ -4,10 +4,7 @@ import 'package:akonta/design/catalog/catalog_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../data/auth_repository.dart';
-import '../data/supabase_providers.dart';
 import 'admin/cabinet_screen.dart';
 import 'admin/error_log_screen.dart';
 import 'admin/users_screen.dart';
@@ -28,13 +25,16 @@ import 'lettering/lettering_screen.dart';
 import 'reconciliation/reconciliation_screen.dart';
 import 'references/references_screen.dart';
 import 'shell/app_shell.dart';
+import '../application/providers/repositories.dart';
+import '../application/providers/session_providers.dart';
+import '../domain/auth_models.dart';
 
 /// Rafraîchit le routeur quand la session change de nature (connexion, déconnexion, TOTP vérifié),
 /// pas à chaque rafraîchissement de jeton.
 class _AuthListenable extends ChangeNotifier {
-  _AuthListenable(Stream<AuthState> stream) {
-    _sub = stream.listen((state) {
-      if (state.event != AuthChangeEvent.tokenRefreshed) notifyListeners();
+  _AuthListenable(Stream<AuthChange> stream) {
+    _sub = stream.listen((change) {
+      if (!change.isTokenRefresh) notifyListeners();
     });
   }
 
@@ -52,15 +52,15 @@ final bool _devCatalog = kDebugMode || const bool.fromEnvironment('AK_DEV');
 
 /// Routes : connexion → (défi ou enrôlement TOTP) → gabarit avec modules.
 final routerProvider = Provider<GoRouter>((ref) {
-  final client = ref.watch(supabaseClientProvider);
-  final listenable = _AuthListenable(client.auth.onAuthStateChange);
+  final auth = ref.watch(authRepositoryProvider);
+  final listenable = _AuthListenable(auth.changes());
   ref.onDispose(listenable.dispose);
 
   return GoRouter(
     initialLocation: '/',
     refreshListenable: listenable,
     redirect: (context, state) async {
-      final signedIn = client.auth.currentSession != null;
+      final signedIn = auth.currentSession != null;
       final onLogin = state.matchedLocation == '/connexion';
       if (_devCatalog && state.matchedLocation == '/catalogue') return null;
       if (!signedIn) return onLogin ? null : '/connexion';

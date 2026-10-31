@@ -6,7 +6,6 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
@@ -17,6 +16,7 @@ import '../../application/providers/inventory_providers.dart';
 import '../../application/providers/references_providers.dart';
 import '../../application/providers/repositories.dart';
 import '../../domain/inventory_models.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Marge latérale de page : 24 px sur desktop, 16 px sur mobile (< 600 px).
 EdgeInsets akPagePadding(BuildContext context) => EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? AkSpace.s4 : AkSpace.s6);

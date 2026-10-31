@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
-import '../../data/auth_repository.dart';
+import '../../application/providers/repositories.dart';
+import '../../application/providers/session_providers.dart';
+import '../../domain/auth_models.dart';
 
 /// Saisie du code TOTP à la connexion (facteur déjà enrôlé).
 class MfaChallengeScreen extends ConsumerStatefulWidget {
@@ -72,7 +73,7 @@ class MfaEnrollScreen extends ConsumerStatefulWidget {
 
 class _MfaEnrollScreenState extends ConsumerState<MfaEnrollScreen> {
   final _code = TextEditingController();
-  AuthMFAEnrollResponse? _enrollment;
+  TotpEnrollment? _enrollment;
   bool _busy = false;
   String? _error;
 
@@ -99,7 +100,7 @@ class _MfaEnrollScreenState extends ConsumerState<MfaEnrollScreen> {
       _error = null;
     });
     try {
-      await ref.read(authRepositoryProvider).verifyTotp(factorId: e.id, code: _code.text);
+      await ref.read(authRepositoryProvider).verifyTotp(factorId: e.factorId, code: _code.text);
       ref.invalidate(mfaStatusProvider);
       widget.onDone();
     } catch (ex) {
@@ -112,7 +113,7 @@ class _MfaEnrollScreenState extends ConsumerState<MfaEnrollScreen> {
   @override
   Widget build(BuildContext context) {
     final e = _enrollment;
-    final totp = e?.totp;
+    final totp = e;
     return MfaScaffold(
       title: 'Activer la vérification en deux étapes',
       children: [

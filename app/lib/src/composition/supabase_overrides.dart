@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
 import '../application/providers/repositories.dart';
-import '../data/supabase_providers.dart';
 import '../infrastructure/supabase/supabase_admin_repository.dart';
 import '../infrastructure/supabase/supabase_closing_repository.dart';
 import '../infrastructure/supabase/supabase_consultation_repository.dart';
@@ -13,6 +12,9 @@ import '../infrastructure/supabase/supabase_lettering_repository.dart';
 import '../infrastructure/supabase/supabase_reconciliation_repository.dart';
 import '../infrastructure/supabase/supabase_references_repository.dart';
 import '../infrastructure/supabase/supabase_suggestions_repository.dart';
+import '../infrastructure/supabase/supabase_auth_repository.dart';
+import '../infrastructure/supabase/supabase_client_provider.dart';
+import '../infrastructure/supabase/supabase_session_repository.dart';
 
 /// Branche chaque port sur son adaptateur Supabase (production et recette).
 List<Override> supabaseOverrides() => [
@@ -28,4 +30,6 @@ List<Override> supabaseOverrides() => [
   reconciliationRepositoryProvider.overrideWith((ref) => SupabaseReconciliationRepository(ref.watch(supabaseClientProvider))),
   referencesRepositoryProvider.overrideWith((ref) => SupabaseReferencesRepository(ref.watch(supabaseClientProvider))),
   suggestionsRepositoryProvider.overrideWith((ref) => SupabaseSuggestionsRepository(ref.watch(supabaseClientProvider))),
+  authRepositoryProvider.overrideWith((ref) => SupabaseAuthRepository(ref.watch(supabaseClientProvider))),
+  sessionRepositoryProvider.overrideWith((ref) => SupabaseSessionRepository(ref.watch(supabaseClientProvider))),
 ];

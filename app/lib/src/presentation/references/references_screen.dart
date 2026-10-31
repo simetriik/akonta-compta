@@ -5,13 +5,14 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 import '../../application/providers/references_providers.dart';
 import '../../application/providers/repositories.dart';
+import '../../application/providers/entities_providers.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Référentiels du dossier courant : plan de comptes, tiers, journaux, modèles d'écritures, taux (§10.3).
 class ReferencesScreen extends StatelessWidget {
@@ -360,8 +361,8 @@ class _AccountDialogState extends ConsumerState<AccountDialog> {
   @override
   void initState() {
     super.initState();
-    ref.read(supabaseClientProvider).from('entities').select('account_length').eq('id', widget.entity.id).single().then((r) {
-      if (mounted) setState(() => _length = (r['account_length'] as num).toInt());
+    ref.read(entityProvider(widget.entity.id).future).then((e) {
+      if (mounted) setState(() => _length = e.accountLength);
     });
   }
 

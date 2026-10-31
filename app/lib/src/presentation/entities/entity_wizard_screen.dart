@@ -4,12 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
-import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
 import 'entity_detail_screen.dart';
 import 'entity_form.dart';
 import '../../application/providers/entities_providers.dart';
 import '../../application/providers/repositories.dart';
+import '../../application/providers/session_providers.dart';
 
 /// Assistant d'ouverture en 5 étapes : fiche entité → exercice → plan de comptes → journaux → soldes d'ouverture (§10.2).
 class EntityWizardScreen extends ConsumerStatefulWidget {

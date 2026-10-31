@@ -1,6 +1,5 @@
 import 'package:akonta/design/design.dart';
 import 'package:akonta/src/core/errors/errors.dart';
-import 'package:akonta/src/data/supabase_providers.dart';
 import 'package:akonta/src/domain/models.dart';
 import 'package:akonta/src/presentation/admin/error_log_screen.dart';
 import 'package:akonta/src/presentation/widgets/async_view.dart';
@@ -11,6 +10,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
+import 'package:akonta/src/application/providers/session_providers.dart';
 
 AssignedRole role(String code) => AssignedRole(roleId: 'r', code: code, name: code, entityId: null, requiresMfa: false, grantsAllEntities: true, accountingAccess: code != 'tech_admin');
 
