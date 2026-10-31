@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/errors/errors.dart';
 import '../domain/entry_models.dart';
 import 'supabase_providers.dart';
 
@@ -85,7 +86,7 @@ class EntriesRepository {
     if (d.id == null) {
       // fiscal_year_id et period_id sont déduits de la date par le déclencheur ; valeurs de remplissage requises par NOT NULL
       final fy = await _client.from('fiscal_years').select('id, periods(id, start_date, end_date)').eq('entity_id', entityId).lte('start_date', _d(d.entryDate)).gte('end_date', _d(d.entryDate)).maybeSingle();
-      if (fy == null) throw Exception('Aucun exercice ne couvre la date ${_d(d.entryDate)}');
+      if (fy == null) throw AppError.business('Aucun exercice ne couvre la date ${_d(d.entryDate)}.');
       final period = (fy['periods'] as List).cast<Map<String, dynamic>>().firstWhere((p) => p['start_date'].compareTo(_d(d.entryDate)) <= 0 && p['end_date'].compareTo(_d(d.entryDate)) >= 0);
       final row = await _client.from('entries').insert({...header, 'fiscal_year_id': fy['id'], 'period_id': period['id']}).select('id').single();
       id = row['id'] as String;

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../data/entries_repository.dart';
 import '../../data/references_repository.dart';
@@ -263,7 +264,7 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
       if (context.mounted) showAkToast(context, '${_selected.length} écriture(s) validée(s).');
       setState(_selected.clear);
     } catch (e) {
-      if (context.mounted) showAkToast(context, frenchEntryError(e), kind: AkToastKind.danger);
+      if (context.mounted) showAkToast(context, errorText(e), kind: AkToastKind.danger);
     }
     ref.invalidate(entriesListProvider(widget.entity.id));
     ref.invalidate(entityDashboardProvider);
@@ -278,7 +279,7 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
     try {
       await ref.read(entriesRepositoryProvider).review(e.id, status: result.$1, comment: result.$2);
     } catch (err) {
-      if (context.mounted) showAkToast(context, frenchEntryError(err), kind: AkToastKind.danger);
+      if (context.mounted) showAkToast(context, errorText(err), kind: AkToastKind.danger);
     }
     ref.invalidate(entriesListProvider(widget.entity.id));
     ref.invalidate(entityDashboardProvider);
@@ -294,16 +295,10 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
       await ref.read(entriesRepositoryProvider).reverse(e.id, reason: result.$1, date: result.$2);
       if (context.mounted) showAkToast(context, 'Écriture contre-passée (écriture inverse validée).');
     } catch (err) {
-      if (context.mounted) showAkToast(context, frenchEntryError(err), kind: AkToastKind.danger);
+      if (context.mounted) showAkToast(context, errorText(err), kind: AkToastKind.danger);
     }
     ref.invalidate(entriesListProvider(widget.entity.id));
   }
-}
-
-String frenchEntryError(Object e) {
-  final m = e.toString();
-  final match = RegExp(r'message: ([^,}]+)').firstMatch(m);
-  return match?.group(1) ?? m;
 }
 
 class _EntryTile extends StatelessWidget {

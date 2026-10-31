@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../domain/entity_models.dart';
 
@@ -84,17 +85,10 @@ class _EntityFormState extends State<EntityForm> {
         ),
       );
     } catch (e) {
-      setState(() => _error = _frenchDbError(e));
+      setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  static String _frenchDbError(Object e) {
-    final m = e.toString();
-    if (m.contains('entities_tax_id_unique')) return 'Cet IFU existe déjà dans le cabinet.';
-    if (m.contains('entities_trade_register_unique')) return 'Ce RCCM existe déjà dans le cabinet.';
-    return 'Enregistrement impossible : $m';
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
@@ -16,7 +17,7 @@ class DashboardScreen extends ConsumerWidget {
     final pad = akPageMargin(context);
     return data.when(
       loading: () => const AkLoading(),
-      error: (e, _) => AkErrorMessage('Erreur de chargement : $e', onRetry: () => ref.invalidate(entityDashboardProvider)),
+      error: (e, _) => AkErrorMessage(errorText(e, action: 'Chargement impossible'), onRetry: () => ref.invalidate(entityDashboardProvider)),
       data: (entities) => RefreshIndicator(
         onRefresh: () async => ref.invalidate(entityDashboardProvider),
         child: entities.isEmpty

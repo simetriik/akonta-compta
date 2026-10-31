@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../data/admin_repository.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
@@ -184,7 +185,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
       Navigator.pop(context);
       showAkToast(context, 'Invitation envoyée à ${_email.text.trim()}');
     } catch (e) {
-      setState(() => _error = 'Invitation impossible : $e');
+      setState(() => _error = errorText(e, action: 'Invitation impossible'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

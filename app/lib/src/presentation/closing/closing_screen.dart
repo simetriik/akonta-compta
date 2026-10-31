@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../data/closing_repository.dart';
 import '../../data/consultation_repository.dart';
@@ -321,7 +322,7 @@ class _ChecksStepState extends ConsumerState<ChecksStep> {
     return FutureBuilder<List<ClosingCheck>>(
       future: _future,
       builder: (_, snap) {
-        if (snap.hasError) return AkErrorMessage(frenchRpcError(snap.error!));
+        if (snap.hasError) return AkErrorMessage(errorText(snap.error!));
         if (!snap.hasData) return const AkLoading();
         final checks = snap.data!;
         final blocking = checks.where((c) => c.status == 'failed' && c.severity == 'blocking').length;
@@ -409,7 +410,7 @@ class _ChecksStepState extends ConsumerState<ChecksStep> {
                 try {
                   await ref.read(closingRepositoryProvider).waive(widget.fy.id, c.code, comment.trim());
                 } catch (e) {
-                  if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                  if (context.mounted) showErrorSnack(context, errorText(e));
                 }
                 setState(() => _future = ref.read(closingRepositoryProvider).runChecks(widget.entity.id, widget.fy.id));
               },
@@ -532,7 +533,7 @@ class _TaxStepState extends ConsumerState<TaxStep> {
                     setState(() => _result = r);
                     ref.invalidate(entityDashboardProvider);
                   } catch (e) {
-                    if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                    if (context.mounted) showErrorSnack(context, errorText(e));
                   } finally {
                     if (mounted) setState(() => _busy = false);
                   }
@@ -604,7 +605,7 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
         if (!await f.exists() || await f.length() == 0) await f.writeAsBytes(bytes);
       }
     } catch (e) {
-      if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+      if (context.mounted) showErrorSnack(context, errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -637,7 +638,7 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
                   final v = await ref.read(closingRepositoryProvider).generateStatements(widget.entity.id, widget.fy.id);
                   setState(() => _fs = v);
                 } catch (e) {
-                  if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                  if (context.mounted) showErrorSnack(context, errorText(e));
                 } finally {
                   if (mounted) setState(() => _busy = false);
                 }
@@ -897,7 +898,7 @@ class ProvisionalStep extends ConsumerWidget {
                               onChanged();
                               if (context.mounted) showAkToast(context, 'Clôture provisoire prononcée.');
                             } catch (e) {
-                              if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                              if (context.mounted) showErrorSnack(context, errorText(e));
                             }
                           },
                   ),
@@ -913,7 +914,7 @@ class ProvisionalStep extends ConsumerWidget {
                               await repo.reopen(entity.id, fy.id, reason.trim());
                               onChanged();
                             } catch (e) {
-                              if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                              if (context.mounted) showErrorSnack(context, errorText(e));
                             }
                           },
                   ),
@@ -1022,7 +1023,7 @@ class _FinalStepState extends ConsumerState<FinalStep> {
                           widget.onChanged();
                           if (context.mounted) showAkToast(context, 'Exercice arrêté. Archive $archive.');
                         } catch (e) {
-                          if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                          if (context.mounted) showErrorSnack(context, errorText(e));
                         }
                       },
               ),

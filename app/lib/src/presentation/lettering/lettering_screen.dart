@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../data/lettering_repository.dart';
 import '../../data/references_repository.dart';
@@ -360,7 +361,7 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
       await ref.read(letteringRepositoryProvider).letter(ids, allowPartial: allowPartial);
       if (mounted) showAkToast(context, 'Lignes lettrées.');
     } catch (e) {
-      if (mounted) showErrorSnack(context, _french(e));
+      if (mounted) showErrorSnack(context, errorText(e));
     }
     await _load();
   }
@@ -382,10 +383,8 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
     try {
       await ref.read(letteringRepositoryProvider).unletter(g.id, reason.trim());
     } catch (e) {
-      if (mounted) showErrorSnack(context, _french(e));
+      if (mounted) showErrorSnack(context, errorText(e));
     }
     await _load();
   }
-
-  static String _french(Object e) => RegExp(r'message: ([^,}]+)').firstMatch(e.toString())?.group(1) ?? e.toString();
 }

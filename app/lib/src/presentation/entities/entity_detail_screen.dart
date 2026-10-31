@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
+import '../widgets/error_display.dart';
 import '../../core/formatting.dart';
 import '../../data/entities_repository.dart';
 import '../../data/supabase_providers.dart';
@@ -296,7 +297,7 @@ class _FiscalYearCard extends ConsumerWidget {
             const SizedBox(height: AkSpace.s3),
             periods.when(
               loading: () => const AkLoading(),
-              error: (e, _) => AkErrorMessage('Périodes : $e'),
+              error: (e, _) => AkErrorMessage(errorText(e, action: 'Périodes')),
               data: (list) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -352,7 +353,7 @@ class _FiscalYearCard extends ConsumerWidget {
         await repo.unlockPeriod(p.id, reason.trim());
       }
     } catch (e) {
-      if (context.mounted) showAkToast(context, 'Refusé : $e', kind: AkToastKind.danger);
+      if (context.mounted) showError(context, e, action: 'Refusé');
     }
     ref.invalidate(periodsProvider(fiscalYear.id));
   }
@@ -430,7 +431,7 @@ class _FiscalYearDialogState extends ConsumerState<FiscalYearDialog> {
       widget.onCreated?.call(fy);
       if (mounted) Navigator.pop(context, fy);
     } catch (e) {
-      setState(() => _error = 'Refusé : $e');
+      setState(() => _error = errorText(e, action: 'Refusé'));
     }
   }
 

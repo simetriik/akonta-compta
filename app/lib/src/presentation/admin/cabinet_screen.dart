@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../data/admin_repository.dart';
 import '../../data/supabase_providers.dart';
@@ -325,7 +326,7 @@ class _AssignmentDialogState extends ConsumerState<AssignmentDialog> {
               ref.invalidate(assignmentsProvider);
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
-              setState(() => _error = '$e');
+              setState(() => _error = errorText(e));
             }
           },
         ),

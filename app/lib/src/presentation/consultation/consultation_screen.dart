@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
+import '../widgets/error_display.dart';
 import '../../core/formatting.dart';
 import '../../data/consultation_repository.dart';
 import '../../data/entities_repository.dart';
@@ -228,7 +229,7 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
         showAkToast(context, 'Export enregistré : ${uri.scheme == 'file' ? uri.toFilePath() : uri}');
       }
     } catch (e) {
-      if (mounted) showAkToast(context, '$e', kind: AkToastKind.danger);
+      if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _exporting = false);
     }

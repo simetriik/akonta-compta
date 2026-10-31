@@ -44,6 +44,7 @@ Mis à jour le 31 oct. 2026. Ce fichier rassemble ce qui a été décidé, étud
 - `recette/definir-role-associe.sh` jamais exécuté (seulement `bash -n`) ; limite du modèle `SALAIRES` (la ligne d'IRPP reprend le montant de base).
 
 ## 4. Chantiers techniques ouverts
+- **Gestion des erreurs (D-030)** : à chaque nouvelle contrainte d'unicité de la base, ajouter son message dans `_constraintMessages` (`app/lib/src/core/errors/error_mapper.dart`) ; journal conservé en mémoire seulement (pas de persistance ni d'envoi à l'équipe) ; vérification visuelle sur mobile à faire.
 - **Dépôt `hsounton/akonta`** (vide, créé par erreur) : à supprimer par l'utilisateur après `! gh auth refresh -h github.com -s delete_repo`.
 - **Déploiement Dokploy par API** : non commencé. Il faut l'URL, un jeton fourni par variable d'environnement hors du dépôt (`DOKPLOY_URL`, `DOKPLOY_TOKEN`) et le choix du périmètre ; recommandation : commencer par un accès en lecture seule, puis la Supabase de recette complète.
 - **Erreurs d'inventaire connues** : l'écran Inventaire propose le compte de variation 603 pour les stocks 31 à 33 et 73 sinon ; pour le SYCEBNL le stock 34 (dons en nature) relève plutôt de 6035 (D-025).

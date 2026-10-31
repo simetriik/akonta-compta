@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/config.dart';
 import '../../data/auth_repository.dart';
 
@@ -48,23 +48,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref.read(authRepositoryProvider).signIn(email: _email.text, password: _password.text);
       widget.onSignedIn?.call();
-    } on AuthException catch (e) {
-      setState(() => _error = _frenchAuthError(e));
     } catch (e) {
-      setState(() => _error = 'Connexion impossible : $e');
+      setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  String _frenchAuthError(AuthException e) {
-    final m = e.message.toLowerCase();
-    if (m.contains('invalid login credentials')) return 'E-mail ou mot de passe incorrect.';
-    if (m.contains('too many requests') || m.contains('rate limit')) {
-      return 'Trop de tentatives : compte temporairement verrouillé, réessayez dans quelques minutes.';
-    }
-    if (m.contains('email not confirmed')) return 'Adresse e-mail non confirmée : utilisez le lien reçu par e-mail.';
-    return 'Connexion refusée : ${e.message}';
   }
 
   Future<void> _reset() async {

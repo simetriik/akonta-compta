@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'supabase_providers.dart';
+import '../core/errors/errors.dart';
 
 class DocumentModel {
   const DocumentModel({required this.id, required this.entityId, required this.storagePath, required this.fileName, required this.mimeType, required this.sizeBytes, required this.sha256, required this.capturedVia, required this.capturedAt, this.note, this.entryIds = const []});
@@ -79,9 +80,9 @@ class DocumentsRepository {
   /// Dépose un fichier : contrôle du type et de la taille, envoi au Storage sous `cabinet/entité/uuid.ext`, enregistrement.
   Future<DocumentModel> upload({required String cabinetId, required String entityId, required String fileName, required Uint8List bytes, required String capturedVia, String? note}) async {
     final mime = mimeTypeFor(fileName);
-    if (mime == null) throw Exception('Format non admis : PDF, JPEG, PNG ou HEIC uniquement');
-    if (bytes.length > maxDocumentBytes) throw Exception('Fichier trop volumineux (20 Mo maximum)');
-    if (bytes.isEmpty) throw Exception('Fichier vide');
+    if (mime == null) throw const AppError.business('Format non admis : PDF, JPEG, PNG ou HEIC uniquement.');
+    if (bytes.length > maxDocumentBytes) throw const AppError.business('Fichier trop volumineux (20 Mo maximum).');
+    if (bytes.isEmpty) throw const AppError.business('Le fichier est vide.');
     final id = _uuid();
     final ext = fileName.split('.').last.toLowerCase();
     final path = '$cabinetId/$entityId/$id.$ext';

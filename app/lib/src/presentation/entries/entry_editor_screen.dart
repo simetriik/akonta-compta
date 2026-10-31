@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../data/entries_repository.dart';
 import '../../data/references_repository.dart';
@@ -14,7 +15,6 @@ import 'entry_suggestions_panel.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
 import '../widgets/require_entity.dart';
-import 'entries_screen.dart';
 
 /// Saisie d'une écriture (grille au clavier) : journal, date, référence, libellé ; lignes compte / tiers / libellé / débit / crédit ;
 /// autocomplétion, contrepartie automatique (Ctrl+B), modèles d'écritures, équilibre affiché, validation (§10.4).
@@ -109,7 +109,7 @@ class _EditorState extends ConsumerState<_Editor> {
       ref.invalidate(entityDashboardProvider);
       if (mounted) context.go('/saisie');
     } catch (e) {
-      setState(() => _errors = [frenchEntryError(e)]);
+      setState(() => _errors = [errorText(e)]);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -407,7 +407,7 @@ class _EditorState extends ConsumerState<_Editor> {
                               padding: const EdgeInsets.only(top: AkSpace.s3),
                               child: AkBanner(
                                 kind: AkBannerKind.danger,
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final e in _errors) Text('• $e')]),
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final message in _errors) Text('• $message')]),
                               ),
                             ),
                           if (_loaded?.reviewComment != null)
