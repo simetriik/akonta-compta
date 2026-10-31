@@ -19,9 +19,27 @@ class ReconciliationService {
     return _repository.saveTemplate(cabinetId, t);
   }
 
-  Future<String> importStatement({required String journalId, required DateTime from, required DateTime to, required List<ParsedStatementLine> lines, int? opening, int? closing, String? templateId, String? fileName}) async {
+  Future<String> importStatement({
+    required String journalId,
+    required DateTime from,
+    required DateTime to,
+    required List<ParsedStatementLine> lines,
+    int? opening,
+    int? closing,
+    String? templateId,
+    String? fileName,
+  }) async {
     _online.require('Le rapprochement bancaire');
-    return _repository.importStatement(journalId: journalId, from: from, to: to, lines: lines, opening: opening, closing: closing, templateId: templateId, fileName: fileName);
+    return _repository.importStatement(
+      journalId: journalId,
+      from: from,
+      to: to,
+      lines: lines,
+      opening: opening,
+      closing: closing,
+      templateId: templateId,
+      fileName: fileName,
+    );
   }
 
   Future<List<StatementLine>> unmatchedStatementLines(String journalId, {DateTime? until}) async {
@@ -49,7 +67,7 @@ class ReconciliationService {
     return _repository.state(journalId, asOf);
   }
 
-/// Crée (et valide puis pointe) l'écriture d'une ligne de relevé ; [entryDate] permet de la dater
+  /// Crée (et valide puis pointe) l'écriture d'une ligne de relevé ; [entryDate] permet de la dater
   /// dans une période ouverte quand celle de l'opération est verrouillée.
   Future<String> entryFromLine(int lineId, {required String accountId, String? thirdPartyId, String? label, DateTime? entryDate, bool validate = true}) async {
     _online.require('Le rapprochement bancaire');

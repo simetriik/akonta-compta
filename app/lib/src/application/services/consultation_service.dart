@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+
 import '../connectivity/connectivity.dart';
 import '../../domain/repositories/consultation_repository.dart';
 import '../../domain/consultation_models.dart';
@@ -35,7 +36,7 @@ class ConsultationService {
     return _repository.centralization(p);
   }
 
-/// Export PDF / Excel : renvoie le nom du fichier et son contenu.
+  /// Export PDF / Excel : renvoie le nom du fichier et son contenu.
   Future<(String, Uint8List)> export({required ConsultationParams p, required String kind, required String format}) async {
     _online.require('L\'export');
     return _repository.export(p: p, kind: kind, format: format);

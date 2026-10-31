@@ -24,9 +24,16 @@ class DocumentsService {
     return _repository.forEntry(entryId);
   }
 
-/// Dépose un fichier : contrôle du type et de la taille, envoi au Storage sous `cabinet/entité/uuid.ext`, enregistrement.
+  /// Dépose un fichier : contrôle du type et de la taille, envoi au Storage sous `cabinet/entité/uuid.ext`, enregistrement.
   /// Dépose un fichier. Hors connexion, la pièce est conservée sur l'appareil et envoyée à la reconnexion : le résultat est alors null.
-  Future<DocumentModel?> upload({required String cabinetId, required String entityId, required String fileName, required Uint8List bytes, required String capturedVia, String? note}) async {
+  Future<DocumentModel?> upload({
+    required String cabinetId,
+    required String entityId,
+    required String fileName,
+    required Uint8List bytes,
+    required String capturedVia,
+    String? note,
+  }) async {
     if (_online.isOnline) {
       try {
         return await _repository.upload(cabinetId: cabinetId, entityId: entityId, fileName: fileName, bytes: bytes, capturedVia: capturedVia, note: note);
@@ -34,7 +41,10 @@ class DocumentsService {
         if (!isConnectivityFailure(e)) rethrow;
       }
     }
-    await _outbox.enqueue(OutboxKind.documentUpload, encodeDocumentUpload(cabinetId: cabinetId, entityId: entityId, fileName: fileName, bytes: bytes, capturedVia: capturedVia, note: note));
+    await _outbox.enqueue(
+      OutboxKind.documentUpload,
+      encodeDocumentUpload(cabinetId: cabinetId, entityId: entityId, fileName: fileName, bytes: bytes, capturedVia: capturedVia, note: note),
+    );
     return null;
   }
 
@@ -53,7 +63,7 @@ class DocumentsService {
     return _repository.delete(d);
   }
 
-/// URL signée (compartiment privé), valable 10 minutes.
+  /// URL signée (compartiment privé), valable 10 minutes.
   Future<String> signedUrl(DocumentModel d) async {
     _online.require('La gestion des pièces');
     return _repository.signedUrl(d);

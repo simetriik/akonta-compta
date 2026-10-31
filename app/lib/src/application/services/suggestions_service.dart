@@ -24,7 +24,13 @@ class SuggestionsService {
     return _repository.templates(entityId, label, limit: limit);
   }
 
-  Future<List<DuplicateEntry>> duplicates( String entityId, { required String reference, required int amount, String? thirdPartyId, String? excludeEntryId, }) async {
+  Future<List<DuplicateEntry>> duplicates(
+    String entityId, {
+    required String reference,
+    required int amount,
+    String? thirdPartyId,
+    String? excludeEntryId,
+  }) async {
     _online.require('Les suggestions de saisie');
     return _repository.duplicates(entityId, reference: reference, amount: amount, thirdPartyId: thirdPartyId, excludeEntryId: excludeEntryId);
   }

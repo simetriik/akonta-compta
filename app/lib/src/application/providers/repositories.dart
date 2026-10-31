@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../domain/repositories/admin_repository.dart';
 import '../../domain/repositories/closing_repository.dart';
 import '../../domain/repositories/consultation_repository.dart';
@@ -18,19 +19,41 @@ import '../offline/in_memory_outbox.dart';
 
 /// Points d'injection des dépôts : la composition (main.dart) les remplace par les adaptateurs d'infrastructure.
 final adminRepositoryProvider = Provider<AdminRepository>((ref) => throw UnimplementedError('adminRepositoryProvider doit être fourni par la composition'));
-final closingRepositoryProvider = Provider<ClosingRepository>((ref) => throw UnimplementedError('closingRepositoryProvider doit être fourni par la composition'));
-final consultationRepositoryProvider = Provider<ConsultationRepository>((ref) => throw UnimplementedError('consultationRepositoryProvider doit être fourni par la composition'));
-final documentsRepositoryProvider = Provider<DocumentsRepository>((ref) => throw UnimplementedError('documentsRepositoryProvider doit être fourni par la composition'));
-final entitiesRepositoryProvider = Provider<EntitiesRepository>((ref) => throw UnimplementedError('entitiesRepositoryProvider doit être fourni par la composition'));
-final entriesRepositoryProvider = Provider<EntriesRepository>((ref) => throw UnimplementedError('entriesRepositoryProvider doit être fourni par la composition'));
+final closingRepositoryProvider = Provider<ClosingRepository>(
+  (ref) => throw UnimplementedError('closingRepositoryProvider doit être fourni par la composition'),
+);
+final consultationRepositoryProvider = Provider<ConsultationRepository>(
+  (ref) => throw UnimplementedError('consultationRepositoryProvider doit être fourni par la composition'),
+);
+final documentsRepositoryProvider = Provider<DocumentsRepository>(
+  (ref) => throw UnimplementedError('documentsRepositoryProvider doit être fourni par la composition'),
+);
+final entitiesRepositoryProvider = Provider<EntitiesRepository>(
+  (ref) => throw UnimplementedError('entitiesRepositoryProvider doit être fourni par la composition'),
+);
+final entriesRepositoryProvider = Provider<EntriesRepository>(
+  (ref) => throw UnimplementedError('entriesRepositoryProvider doit être fourni par la composition'),
+);
 final importRepositoryProvider = Provider<ImportRepository>((ref) => throw UnimplementedError('importRepositoryProvider doit être fourni par la composition'));
-final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) => throw UnimplementedError('inventoryRepositoryProvider doit être fourni par la composition'));
-final letteringRepositoryProvider = Provider<LetteringRepository>((ref) => throw UnimplementedError('letteringRepositoryProvider doit être fourni par la composition'));
-final reconciliationRepositoryProvider = Provider<ReconciliationRepository>((ref) => throw UnimplementedError('reconciliationRepositoryProvider doit être fourni par la composition'));
-final referencesRepositoryProvider = Provider<ReferencesRepository>((ref) => throw UnimplementedError('referencesRepositoryProvider doit être fourni par la composition'));
-final suggestionsRepositoryProvider = Provider<SuggestionsRepository>((ref) => throw UnimplementedError('suggestionsRepositoryProvider doit être fourni par la composition'));
+final inventoryRepositoryProvider = Provider<InventoryRepository>(
+  (ref) => throw UnimplementedError('inventoryRepositoryProvider doit être fourni par la composition'),
+);
+final letteringRepositoryProvider = Provider<LetteringRepository>(
+  (ref) => throw UnimplementedError('letteringRepositoryProvider doit être fourni par la composition'),
+);
+final reconciliationRepositoryProvider = Provider<ReconciliationRepository>(
+  (ref) => throw UnimplementedError('reconciliationRepositoryProvider doit être fourni par la composition'),
+);
+final referencesRepositoryProvider = Provider<ReferencesRepository>(
+  (ref) => throw UnimplementedError('referencesRepositoryProvider doit être fourni par la composition'),
+);
+final suggestionsRepositoryProvider = Provider<SuggestionsRepository>(
+  (ref) => throw UnimplementedError('suggestionsRepositoryProvider doit être fourni par la composition'),
+);
 final authRepositoryProvider = Provider<AuthRepository>((ref) => throw UnimplementedError('authRepositoryProvider doit être fourni par la composition'));
-final sessionRepositoryProvider = Provider<SessionRepository>((ref) => throw UnimplementedError('sessionRepositoryProvider doit être fourni par la composition'));
+final sessionRepositoryProvider = Provider<SessionRepository>(
+  (ref) => throw UnimplementedError('sessionRepositoryProvider doit être fourni par la composition'),
+);
 
 /// File d'envoi : en mémoire par défaut (web, tests) ; la composition la remplace par la base locale chiffrée.
 final outboxRepositoryProvider = Provider<OutboxRepository>((ref) => InMemoryOutboxRepository());

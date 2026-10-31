@@ -37,7 +37,15 @@ class EntitiesService {
     return _repository.directors(entityId);
   }
 
-  Future<void> addDirector(String cabinetId, String entityId, {required String fullName, required String position, String? nationality, String? address, bool board = false}) async {
+  Future<void> addDirector(
+    String cabinetId,
+    String entityId, {
+    required String fullName,
+    required String position,
+    String? nationality,
+    String? address,
+    bool board = false,
+  }) async {
     _online.require('La gestion des dossiers');
     return _repository.addDirector(cabinetId, entityId, fullName: fullName, position: position, nationality: nationality, address: address, board: board);
   }
@@ -51,7 +59,15 @@ class EntitiesService {
     return _repository.fiscalYears(entityId);
   }
 
-  Future<FiscalYear> createFiscalYear(String cabinetId, String entityId, {required DateTime start, required DateTime end, String? label, int? capital, int? headcount}) async {
+  Future<FiscalYear> createFiscalYear(
+    String cabinetId,
+    String entityId, {
+    required DateTime start,
+    required DateTime end,
+    String? label,
+    int? capital,
+    int? headcount,
+  }) async {
     _online.require('La gestion des dossiers');
     return _repository.createFiscalYear(cabinetId, entityId, start: start, end: end, label: label, capital: capital, headcount: headcount);
   }
@@ -105,7 +121,14 @@ class EntitiesService {
     return _repository.createJournalsFromTemplate(entityId, codes);
   }
 
-  Future<void> createTreasuryJournal(String cabinetId, String entityId, {required String code, required String label, required String type, required String accountId}) async {
+  Future<void> createTreasuryJournal(
+    String cabinetId,
+    String entityId, {
+    required String code,
+    required String label,
+    required String type,
+    required String accountId,
+  }) async {
     _online.require('La gestion des dossiers');
     return _repository.createTreasuryJournal(cabinetId, entityId, code: code, label: label, type: type, accountId: accountId);
   }

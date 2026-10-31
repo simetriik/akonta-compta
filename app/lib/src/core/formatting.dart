@@ -29,6 +29,9 @@ abstract final class Fmt {
     return int.tryParse(cleaned);
   }
 
+  /// Analyse un nombre décimal saisi avec virgule ou point (« 2,5 » ou « 2.5 ») ; null si illisible.
+  static double? parseDecimal(String input) => double.tryParse(input.trim().replaceAll(',', '.'));
+
   /// Analyse une date jj/mm/aaaa ; null si invalide.
   static DateTime? parseDate(String input) {
     final m = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$').firstMatch(input.trim());

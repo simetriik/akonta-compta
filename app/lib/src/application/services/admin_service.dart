@@ -65,7 +65,7 @@ class AdminService {
     return _repository.removeAssignment(id);
   }
 
-/// Réaffectation en masse : tous les dossiers d'un collaborateur passent à un autre (même rôle).
+  /// Réaffectation en masse : tous les dossiers d'un collaborateur passent à un autre (même rôle).
   Future<int> reassignAll({required String cabinetId, required String fromUserId, required String toUserId}) async {
     _online.require('L\'administration');
     return _repository.reassignAll(cabinetId: cabinetId, fromUserId: fromUserId, toUserId: toUserId);
@@ -76,7 +76,7 @@ class AdminService {
     return _repository.auditLog(action: action, entityId: entityId, from: from, to: to, limit: limit);
   }
 
-/// Renvoie null si la chaîne est intègre, sinon l'identifiant du premier maillon rompu.
+  /// Renvoie null si la chaîne est intègre, sinon l'identifiant du premier maillon rompu.
   Future<int?> verifyChain(String cabinetId) async {
     _online.require('L\'administration');
     return _repository.verifyChain(cabinetId);
