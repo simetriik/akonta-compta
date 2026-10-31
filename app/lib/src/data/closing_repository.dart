@@ -126,7 +126,7 @@ class ClosingRepository {
   }
 
   Future<FinancialStatements> generateStatements(String entityId, String fyId) async {
-    final id = await _client.rpc('generate_financial_statements', params: {'p_entity': entityId, 'p_fiscal_year': fyId, 'p_version': 'SYSCOHADA-2017'}) as String;
+    final id = await _client.rpc('generate_financial_statements', params: {'p_entity': entityId, 'p_fiscal_year': fyId}) as String;
     return FinancialStatements.fromJson(await _client.from('financial_statements').select().eq('id', id).single());
   }
 

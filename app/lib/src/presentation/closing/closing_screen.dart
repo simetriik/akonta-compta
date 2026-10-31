@@ -73,8 +73,8 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
                       kind: AkBannerKind.warning,
                       icon: Icons.info_outline,
                       child: Text(
-                        'Dossier SYCEBNL : les états financiers, la fiscalité et la clôture de cet assistant suivent encore le SYSCOHADA. '
-                        'Ne pas les utiliser pour cette association tant que les états SYCEBNL ne sont pas livrés.',
+                        'Dossier SYCEBNL : bilan, compte de résultat, à-nouveaux et affectation du résultat suivent le référentiel des entités à but non lucratif. '
+                        'Tableau des flux, notes annexes et exports PDF / Excel : à venir.',
                       ),
                     ),
                     const SizedBox(height: AkSpace.s3),
@@ -131,6 +131,19 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
           ],
         );
       case 2:
+        if (ref.watch(entityProvider(widget.entity.id)).value?.accountingSystem == 'sycebnl') {
+          return ListView(
+            padding: _bodyPad(context),
+            children: const [
+              AkBanner(
+                key: Key('sycebnl-tax-notice'),
+                kind: AkBannerKind.info,
+                icon: Icons.info_outline,
+                child: Text('Impôt sur les sociétés : non applicable à une entité à but non lucratif. Passer à l\'étape suivante.'),
+              ),
+            ],
+          );
+        }
         return TaxStep(entity: widget.entity, fy: fy);
       case 3:
         return StatementsStep(entity: widget.entity, fy: fy);
@@ -600,6 +613,7 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
   Widget build(BuildContext context) {
     final t = context.ak;
     final fs = _fs;
+    final nonProfit = ref.watch(entityProvider(widget.entity.id)).value?.accountingSystem == 'sycebnl';
     return ListView(
       padding: _bodyPad(context),
       children: [
@@ -608,7 +622,10 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
           runSpacing: AkSpace.s2,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text('États financiers SYSCOHADA (système normal)', style: AkText.heading.copyWith(color: t.text)),
+            Text(
+              nonProfit ? 'États financiers SYCEBNL (entités à but non lucratif)' : 'États financiers SYSCOHADA (système normal)',
+              style: AkText.heading.copyWith(color: t.text),
+            ),
             AkButton.primary(
               'Générer les états',
               icon: Icons.auto_awesome,
@@ -654,27 +671,35 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
                     ),
                   ),
                 const SizedBox(height: AkSpace.s3),
-                Wrap(
-                  spacing: AkSpace.s2,
-                  runSpacing: AkSpace.s2,
-                  children: [
-                    AkButton.secondary(
-                      'États financiers PDF',
-                      icon: Icons.picture_as_pdf_outlined,
-                      onPressed: () => _export(context, 'financial_statements', 'pdf'),
-                    ),
-                    AkButton.secondary(
-                      'Liasse DGI (Excel, macros conservées)',
-                      icon: Icons.table_view_outlined,
-                      onPressed: () => _export(context, 'dgi', 'xlsm'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AkSpace.s2),
-                Text(
-                  'La liasse DGI reprend fiche R1/R2, bilan et compte de résultat (N et N-1) ; TFT et notes se complètent dans le classeur.',
-                  style: AkText.caption.copyWith(color: t.textMuted),
-                ),
+                if (nonProfit)
+                  Text(
+                    'Bilan et compte de résultat SYCEBNL. Tableau des flux de trésorerie, notes annexes et exports PDF / Excel : à venir.',
+                    key: const Key('sycebnl-statements-notice'),
+                    style: AkText.caption.copyWith(color: t.textMuted),
+                  )
+                else ...[
+                  Wrap(
+                    spacing: AkSpace.s2,
+                    runSpacing: AkSpace.s2,
+                    children: [
+                      AkButton.secondary(
+                        'États financiers PDF',
+                        icon: Icons.picture_as_pdf_outlined,
+                        onPressed: () => _export(context, 'financial_statements', 'pdf'),
+                      ),
+                      AkButton.secondary(
+                        'Liasse DGI (Excel, macros conservées)',
+                        icon: Icons.table_view_outlined,
+                        onPressed: () => _export(context, 'dgi', 'xlsm'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AkSpace.s2),
+                  Text(
+                    'La liasse DGI reprend fiche R1/R2, bilan et compte de résultat (N et N-1) ; TFT et notes se complètent dans le classeur.',
+                    style: AkText.caption.copyWith(color: t.textMuted),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1004,6 +1029,7 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
     final repo = ref.read(closingRepositoryProvider);
     final next = widget.next;
     final t = context.ak;
+    final nonProfit = ref.watch(entityProvider(widget.entity.id)).value?.accountingSystem == 'sycebnl';
     return ListView(
       padding: _bodyPad(context),
       children: [
@@ -1039,19 +1065,28 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
                   children: [
                     SizedBox(
                       width: 200,
-                      child: AkAmountField(controller: _legal, label: 'Réserve légale (111)', showCurrency: false),
+                      child: AkAmountField(
+                        controller: _legal,
+                        label: nonProfit ? 'Réserves statutaires ou contractuelles (112)' : 'Réserve légale (111)',
+                        showCurrency: false,
+                      ),
                     ),
                     SizedBox(
                       width: 200,
-                      child: AkAmountField(controller: _free, label: 'Réserves libres (118)', showCurrency: false),
+                      child: AkAmountField(controller: _free, label: nonProfit ? 'Autres réserves (118)' : 'Réserves libres (118)', showCurrency: false),
                     ),
+                    if (!nonProfit)
+                      SizedBox(
+                        width: 200,
+                        child: AkAmountField(controller: _div, label: 'Dividendes (465)', showCurrency: false),
+                      ),
                     SizedBox(
                       width: 200,
-                      child: AkAmountField(controller: _div, label: 'Dividendes (465)', showCurrency: false),
-                    ),
-                    SizedBox(
-                      width: 200,
-                      child: AkAmountField(controller: _carry, label: 'Report à nouveau (121)', showCurrency: false),
+                      child: AkAmountField(
+                        controller: _carry,
+                        label: nonProfit ? 'Report à nouveau des excédents (121)' : 'Report à nouveau (121)',
+                        showCurrency: false,
+                      ),
                     ),
                     SizedBox(
                       width: 160,
