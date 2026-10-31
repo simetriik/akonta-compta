@@ -67,13 +67,16 @@ class StatementPost {
 }
 
 class FinancialStatements {
-  const FinancialStatements({required this.id, required this.generatedAt, required this.assets, required this.liabilities, required this.income, required this.previous, required this.checks, required this.isFinal});
+  const FinancialStatements({required this.id, required this.generatedAt, required this.assets, required this.liabilities, required this.income, required this.previous, required this.checks, required this.isFinal, this.cashFlow = const []});
 
   final String id;
   final DateTime generatedAt;
   final List<StatementPost> assets;
   final List<StatementPost> liabilities;
   final List<StatementPost> income;
+
+  /// Tableau des flux de trésorerie (référentiel SYCEBNL seulement) ; vide pour le système normal.
+  final List<StatementPost> cashFlow;
   final Map<String, List<StatementPost>>? previous;
   final List<Map<String, dynamic>> checks;
   final bool isFinal;
@@ -88,7 +91,8 @@ class FinancialStatements {
       assets: posts(data['assets']),
       liabilities: posts(data['liabilities']),
       income: posts(data['income']),
-      previous: prev == null ? null : {'assets': posts(prev['assets']), 'liabilities': posts(prev['liabilities']), 'income': posts(prev['income'])},
+      cashFlow: posts(data['cash_flow']),
+      previous: prev == null ? null : {'assets': posts(prev['assets']), 'liabilities': posts(prev['liabilities']), 'income': posts(prev['income']), 'cash_flow': posts(prev['cash_flow'])},
       checks: ((j['checks'] as List?) ?? const []).map((c) => (c as Map).cast<String, dynamic>()).toList(),
       isFinal: (j['is_final'] as bool?) ?? false,
     );
