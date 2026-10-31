@@ -25,6 +25,11 @@ core/           noyau partagé : erreurs, formats, configuration (ne dépend de 
 | `infrastructure/local/` | Base chiffrée drift/SQLite3 Multiple Ciphers : cache des lectures, file d'envoi. |
 | `composition/` | `composeApp()` (choix des adaptateurs, initialisation) et `supabaseOverrides()`. |
 
+## Où va la logique d'un écran
+- Règles pures (contrôle d'un formulaire, comptes proposés, calculs) : `application/rules/` ou `application/<module>/`, testées sans interface.
+- État qui se charge, se sélectionne et appelle des services : un contrôleur Riverpod (`application/providers/reconciliation_controller.dart` en est le modèle) ou un `FutureProvider` (`closing_providers.dart`).
+- Le widget garde la mise en page, les dialogues, la navigation et l'affichage des erreurs (`errorText`). Un écran ne dépasse pas 600 lignes (test d'architecture).
+
 ## Ajouter une fonction
 1. Entité et règle pure dans `domain/` ; méthode sur le port du module (`domain/repositories/`).
 2. Implémentation dans `infrastructure/supabase/supabase_<module>_repository.dart` et conversion dans `mappers/`.
