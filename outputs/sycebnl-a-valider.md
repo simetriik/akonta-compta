@@ -387,3 +387,354 @@ Points à trancher : le classement des comptes 45 et 46 en fonds propres ; les c
 2. Leurs comptes sont-ils tenus dans Perfecto ? L'import Perfecto doit-il traiter un plan SYCEBNL ?
 3. Quels états produit le cabinet pour elles (bilan, compte de résultat, tableau des flux, notes annexes, tableau d'exécution budgétaire) ?
 4. Les 35 notes annexes sont-elles toutes nécessaires, et lesquelles en priorité ?
+
+## 8. Notes annexes calculables (23 sur 35)
+
+Les notes de type « libellé, année N, année N-1, variation » dont les lignes se calculent depuis le grand livre sont produites à l'écran avec l'état financier. Pour les notes **8 à 13, 16, 17A, 17B, 19, 23 et 29A**, les lignes sont celles de la page officielle (Journal officiel, pages 364 à 369, 372 à 374, 377, 381 et 387). Pour les notes **18A, 20, 21, 22, 24 à 28, 31 et 32**, les pages officielles n'ont pas été relues : les lignes sont les comptes à 3 chiffres du plan (avec leur libellé), regroupés comme le bilan et le compte de résultat.
+
+**Non produites** : notes 1 à 4 (informations générales), 5 (mouvements d'immobilisations), 6 et 7, 14 (écarts de conversion, saisie libre), 15 (membres et nationalité), 18B, 29B (effectifs), 30, 33 à 35 ; colonnes d'échéances des notes 9, 10 et 19 ; commentaires de chaque note.
+
+Signe : *débit* = solde débiteur positif ; *crédit* = solde créditeur positif. Colonne *Avis* à remplir.
+
+### Note 8 : Stocks et encours (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Biens et services liés à l'activité | 31 | Solde débiteur | |
+| Marchandises, matières premières | 32 | Solde débiteur | |
+| Autres approvisionnements | 33 | Solde débiteur | |
+| Dons en nature | 34 | Solde débiteur | |
+| Produits finis | 35-36 | Solde débiteur | |
+| Dons en nature HAO | 38 | Solde débiteur | |
+| Autres stocks HAO | 37 | Solde débiteur | |
+| **TOTAL STOCKS ET ENCOURS** | | Somme des lignes ci-dessus | |
+| Dépréciations des stocks | 39 | Solde créditeur | |
+| **TOTAL NET DE DÉPRÉCIATIONS** | | Somme des lignes ci-dessus | |
+
+### Note 9 : Adhérents, clients-usagers (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Adhérents | 411 | Solde débiteur | |
+| Clients-usagers | 412 | Solde débiteur | |
+| Adhérents, clients-usagers, chèques, effets et autres valeurs impayés | 413 | Solde débiteur | |
+| Adhérents, créances litigieuses ou douteuses | 416 | Solde débiteur | |
+| Adhérents, clients-usagers, produits à recevoir | 418 | Solde débiteur | |
+| **TOTAL BRUT ADHÉRENTS, CLIENTS-USAGERS** | | Somme des lignes ci-dessus | |
+| Dépréciations des comptes adhérents et clients-usagers | 491 | Solde créditeur | |
+| **TOTAL NET DE DÉPRÉCIATIONS** | | Somme des lignes ci-dessus | |
+| Adhérents, avances reçues | 4191 | Solde créditeur | |
+| Clients-usagers, avances et acomptes reçus | 4192 | Solde créditeur | |
+| Autres clients créditeurs | 4194 | Solde créditeur | |
+| Autres clients créditeurs | 4198 | Solde créditeur | |
+| **TOTAL CLIENTS CRÉDITEURS** | | Somme des lignes ci-dessus | |
+
+### Note 10 : Autres créances (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Personnel | 42 (solde débiteur) | Solde débiteur | |
+| Organismes sociaux | 43 (solde débiteur) | Solde débiteur | |
+| État et collectivités publiques | 44 (solde débiteur) | Solde débiteur | |
+| Fondateurs, apporteurs et comptes courants | 45 (solde débiteur) | Solde débiteur | |
+| Bailleurs, État et autres organismes, fonds d'administration | 46 (solde débiteur) | Solde débiteur | |
+| Débiteurs divers | 471 (solde débiteur) | Solde débiteur | |
+| Autres débiteurs divers | 472-477 (solde débiteur) | Solde débiteur | |
+| **TOTAL BRUT** | | Somme des lignes ci-dessus | |
+| Dépréciations des autres créances | 492-494 | Solde créditeur | |
+| Dépréciations des autres créances | 497 | Solde créditeur | |
+| **TOTAL NET DE DÉPRÉCIATIONS** | | Somme des lignes ci-dessus | |
+
+### Note 11 : Titres de placement (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Titres de trésor et bons de caisse à court terme | 501 | Solde débiteur | |
+| Actions | 502 | Solde débiteur | |
+| Obligations | 503 | Solde débiteur | |
+| Bons de souscription | 504 | Solde débiteur | |
+| Titres négociables hors région | 505 | Solde débiteur | |
+| Intérêts courus | 506 | Solde débiteur | |
+| Autres valeurs assimilées | 508 | Solde débiteur | |
+| **TOTAL BRUT** | | Somme des lignes ci-dessus | |
+| Dépréciations des titres de placement | 590 | Solde créditeur | |
+| **TOTAL NET DE DÉPRÉCIATIONS** | | Somme des lignes ci-dessus | |
+
+### Note 12 : Valeurs à encaisser (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Chèques à encaisser | 513 | Solde débiteur | |
+| Chèques à l'encaissement | 514 | Solde débiteur | |
+| Cartes de crédit à encaisser | 515 | Solde débiteur | |
+| Autres valeurs à encaisser | 518 | Solde débiteur | |
+| **TOTAL BRUT** | | Somme des lignes ci-dessus | |
+| Dépréciations des valeurs à encaisser | 591 | Solde créditeur | |
+| **TOTAL NET DE DÉPRÉCIATIONS** | | Somme des lignes ci-dessus | |
+
+### Note 13 : Disponibilités (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Banques locales | 521 (solde débiteur) | Solde débiteur | |
+| Banques autres États région | 522 (solde débiteur) | Solde débiteur | |
+| Banques, dépôt à terme | 525 (solde débiteur) | Solde débiteur | |
+| Autres banques | 523-524 (solde débiteur) | Solde débiteur | |
+| Banques, intérêts courus | 526 (solde débiteur) | Solde débiteur | |
+| Banques postales | 531 (solde débiteur) | Solde débiteur | |
+| Autres établissements financiers | 532-533 (solde débiteur) | Solde débiteur | |
+| Autres établissements financiers | 538 (solde débiteur) | Solde débiteur | |
+| Établissements financiers, intérêts courus | 536 (solde débiteur) | Solde débiteur | |
+| Instruments de monnaie électronique | 55 (solde débiteur) | Solde débiteur | |
+| Caisse | 57 (solde débiteur) | Solde débiteur | |
+| **TOTAL BRUT** | | Somme des lignes ci-dessus | |
+| Dépréciations | 592-593 | Solde créditeur | |
+| Dépréciations | 595 | Solde créditeur | |
+| **TOTAL NET DE DÉPRÉCIATIONS** | | Somme des lignes ci-dessus | |
+
+### Note 16 : Réserves (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Réserves statutaires ou contractuelles | 112 | Solde créditeur | |
+| Autres réserves | 118 | Solde créditeur | |
+| **TOTAL RÉSERVES** | | Somme des lignes ci-dessus | |
+| Report à nouveau | 12 | Solde créditeur | |
+
+### Note 17A : Subventions et provisions réglementées (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| État | 1411 | Solde créditeur | |
+| Région | 1412 | Solde créditeur | |
+| Département | 1413 | Solde créditeur | |
+| Communes et collectivités publiques décentralisées | 1414 | Solde créditeur | |
+| Entités publiques ou mixtes | 1415 | Solde créditeur | |
+| Entités et organismes privés | 1416 | Solde créditeur | |
+| Organismes internationaux | 1417 | Solde créditeur | |
+| Autres subventions d'investissements | 1418 | Solde créditeur | |
+| Autres subventions d'investissements | 148 | Solde créditeur | |
+| **TOTAL SUBVENTIONS** | | Somme des lignes ci-dessus | |
+| PROVISIONS RÉGLEMENTÉES | 15 | Solde créditeur | |
+| **TOTAL SUBVENTIONS ET PROVISIONS RÉGLEMENTÉES** | | Somme des lignes ci-dessus | |
+
+### Note 17B : Fonds affectés et reportés (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Fonds affectés aux investissements | 162-164 | Solde créditeur | |
+| Fonds non consommés en fin d'exercice destinés à un projet spécifique | 165 | Solde créditeur | |
+| Fonds provenant des dons et legs d'immobilisations | 167 | Solde créditeur | |
+| Autres fonds affectés | 161 | Solde créditeur | |
+| Autres fonds affectés | 168-169 | Solde créditeur | |
+| **TOTAL FONDS AFFECTÉS** | | Somme des lignes ci-dessus | |
+| Donations et legs non encore reçus d'immobilisations destinés à la vente | 172 | Solde créditeur | |
+| Donation temporaire d'usufruit | 171 | Solde créditeur | |
+| Autres fonds reportés | 178 | Solde créditeur | |
+| **TOTAL FONDS REPORTÉS** | | Somme des lignes ci-dessus | |
+| **TOTAL FONDS AFFECTÉS ET REPORTÉS** | | Somme des lignes ci-dessus | |
+
+### Note 18A : Dettes financières et ressources assimilées (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Emprunts obligataires | 181 | Solde créditeur | |
+| Emprunts et dettes auprès des établissements de crédit | 182 | Solde créditeur | |
+| Avances reçues de l’État | 183 | Solde créditeur | |
+| Dépôts et cautionnements reçus | 185 | Solde créditeur | |
+| Intérêts courus | 186 | Solde créditeur | |
+| Autres emprunts et dettes | 188 | Solde créditeur | |
+| Dettes de location-acquisition | 187 | Solde créditeur | |
+| Provisions pour risques et charges | 19 | Solde créditeur | |
+| **TOTAL DETTES FINANCIÈRES ET RESSOURCES ASSIMILÉES** | | Somme des lignes ci-dessus | |
+
+### Note 19 : Fournisseurs d'exploitation (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Fournisseurs, dettes en compte | 4011-4012 | Solde créditeur | |
+| Fournisseurs, dettes en compte | 4014-4015 | Solde créditeur | |
+| Fournisseurs, dettes en compte | 4018-4019 | Solde créditeur | |
+| Fournisseurs, réserve de propriété | 4016 | Solde créditeur | |
+| Fournisseurs, retenue de garantie | 4017 | Solde créditeur | |
+| Fournisseurs sous-traitants | 4013 | Solde créditeur | |
+| Fournisseurs effets à payer | 402 | Solde créditeur | |
+| Fournisseurs factures non parvenues | 408 | Solde créditeur | |
+| **TOTAL FOURNISSEURS** | | Somme des lignes ci-dessus | |
+| Fournisseurs, avances et acomptes | 4091-4092 | Solde débiteur | |
+| Fournisseurs sous-traitants, avances et acomptes | 4093 | Solde débiteur | |
+| Autres fournisseurs débiteurs | 4094-4099 | Solde débiteur | |
+| **TOTAL FOURNISSEURS DÉBITEURS** | | Somme des lignes ci-dessus | |
+
+### Note 20 : Dettes fiscales et sociales (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Personnel | 42 (solde créditeur) | Solde créditeur | |
+| Organismes sociaux | 43 (solde créditeur) | Solde créditeur | |
+| État et collectivités publiques | 44 (solde créditeur) | Solde créditeur | |
+| **TOTAL DETTES FISCALES ET SOCIALES** | | Somme des lignes ci-dessus | |
+
+### Note 21 : Autres dettes et provisions à court terme (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Fondateurs, apporteurs et comptes courants | 45 (solde créditeur) | Solde créditeur | |
+| Bailleurs, fonds d'administration | 46 (solde créditeur) | Solde créditeur | |
+| Créditeurs divers | 470-477 (solde créditeur) | Solde créditeur | |
+| Provisions pour risques à court terme | 4990-4997 (solde créditeur) | Solde créditeur | |
+| Provisions pour risques à court terme | 4999 (solde créditeur) | Solde créditeur | |
+| Provisions pour risques à court terme | 599 (solde créditeur) | Solde créditeur | |
+| **TOTAL AUTRES DETTES ET PROVISIONS À COURT TERME** | | Somme des lignes ci-dessus | |
+
+### Note 22 : Banques et crédits de trésorerie (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Banques, soldes créditeurs | 52 (solde créditeur) | Solde créditeur | |
+| Établissements financiers, soldes créditeurs | 53 (solde créditeur) | Solde créditeur | |
+| Crédits de trésorerie | 561 | Solde créditeur | |
+| Escompte de crédits ordinaires | 565 | Solde créditeur | |
+| Banques, crédits de trésorerie, intérêts courus | 566 | Solde créditeur | |
+| **TOTAL BANQUES ET CRÉDITS DE TRÉSORERIE** | | Somme des lignes ci-dessus | |
+
+### Note 23 : Revenus et autres produits (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Cotisations des adhérents | 701 | Solde créditeur | |
+| Quote-part de dotation consomptible transférée | 703 | Solde créditeur | |
+| Revenus liés à la générosité | 704 | Solde créditeur | |
+| Ventes de marchandises, services et produits finis | 705 | Solde créditeur | |
+| Revenus des manifestations | 706 | Solde créditeur | |
+| Autres revenus | 702 | Solde créditeur | |
+| Autres revenus | 707-708 | Solde créditeur | |
+| **TOTAL : REVENUS** | | Somme des lignes ci-dessus | |
+| Subventions d'exploitation | 71 | Solde créditeur | |
+| Autres produits et transferts de charges d'exploitation | 72-73 | Solde créditeur | |
+| Autres produits et transferts de charges d'exploitation | 75 | Solde créditeur | |
+| Autres produits et transferts de charges d'exploitation | 78 | Solde créditeur | |
+| **TOTAL : SUBVENTIONS D'EXPLOITATION ET AUTRES PRODUITS** | | Somme des lignes ci-dessus | |
+| **TOTAL** | | Somme des lignes ci-dessus | |
+
+### Note 24 : Achats (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Achats de biens et services liés à l’activité | 601 | Solde débiteur | |
+| Achats de marchandises, de matières premières et fournitures liées | 602 | Solde débiteur | |
+| Achats stockés de matières et fournitures consommables | 604 | Solde débiteur | |
+| Autres achats | 605 | Solde débiteur | |
+| Achats autres activités | 606 | Solde débiteur | |
+| Achats d'emballages | 608 | Solde débiteur | |
+| **TOTAL** | | Somme des lignes ci-dessus | |
+
+### Note 25 : Transports (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Transports sur ventes | 612 | Solde débiteur | |
+| Transports pour le compte de tiers | 613 | Solde débiteur | |
+| Transports du personnel | 614 | Solde débiteur | |
+| Transports de plis | 616 | Solde débiteur | |
+| Autres frais de transport | 618 | Solde débiteur | |
+| Rabais, Remises et Ristournes Obtenus (non ventilés) | 619 | Solde débiteur | |
+| **TOTAL** | | Somme des lignes ci-dessus | |
+
+### Note 26 : Services extérieurs (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Sous-traitance générale | 621 | Solde débiteur | |
+| Locations, charges locatives | 622 | Solde débiteur | |
+| Redevances de location-acquisition | 623 | Solde débiteur | |
+| Entretien, réparation, remise en état et maintenance | 624 | Solde débiteur | |
+| Primes d’assurance | 625 | Solde débiteur | |
+| Études, recherches et documentation | 626 | Solde débiteur | |
+| Publicité, publications, relations publiques | 627 | Solde débiteur | |
+| Frais de télécommunications | 628 | Solde débiteur | |
+| Frais bancaires | 631 | Solde débiteur | |
+| Rémunérations d’intermédiaires et de conseils | 632 | Solde débiteur | |
+| Frais de formation | 633 | Solde débiteur | |
+| Redevances pour brevets, licences, logiciels, sites internet, concessions et droits et valeurs similaires | 634 | Solde débiteur | |
+| Cotisations | 635 | Solde débiteur | |
+| Frais de recherche de fonds | 636 | Solde débiteur | |
+| Rémunérations de personnel extérieur à l’entité | 637 | Solde débiteur | |
+| Autres charges externes | 638 | Solde débiteur | |
+| **TOTAL** | | Somme des lignes ci-dessus | |
+
+### Note 27 : Impôts et taxes (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Impôts et taxes directs | 641 | Solde débiteur | |
+| Impôts et taxes indirects | 645 | Solde débiteur | |
+| Droits d’enregistrement | 646 | Solde débiteur | |
+| Pénalités, amendes fiscales | 647 | Solde débiteur | |
+| Autres impôts et taxes | 648 | Solde débiteur | |
+| Dégrèvements et annulations des impôts et taxes | 649 | Solde débiteur | |
+| **TOTAL** | | Somme des lignes ci-dessus | |
+
+### Note 28 : Autres charges (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Pertes sur créances adhérents, clients et autres débiteurs | 651 | Solde débiteur | |
+| Subventions accordées par l’entité | 652 | Solde débiteur | |
+| Dons en nature courants à distribuer | 654 | Solde débiteur | |
+| Pénalités et amendes pénales | 657 | Solde débiteur | |
+| Charges diverses | 658 | Solde débiteur | |
+| **TOTAL** | | Somme des lignes ci-dessus | |
+
+### Note 29A : Charges de personnel (page officielle)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Rémunérations directes versées au personnel national | 661 | Solde débiteur | |
+| Rémunérations directes versées au personnel non national | 662 | Solde débiteur | |
+| Indemnités forfaitaires versées au personnel | 663 | Solde débiteur | |
+| Charges sociales | 664 | Solde débiteur | |
+| Habillement et équipement du personnel | 665 | Solde débiteur | |
+| Rémunération transférée de personnel extérieur | 667 | Solde débiteur | |
+| Autres charges sociales | 668 | Solde débiteur | |
+| Dégrèvements et annulations des charges sociales | 669 | Solde débiteur | |
+| **TOTAL** | | Somme des lignes ci-dessus | |
+
+### Note 31 : Charges et revenus financiers (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Intérêts des emprunts | 671 | Solde débiteur | |
+| Intérêts dans loyers de location-acquisition | 672 | Solde débiteur | |
+| Escomptes accordés | 673 | Solde débiteur | |
+| Autres intérêts | 674 | Solde débiteur | |
+| Pertes de change financières | 676 | Solde débiteur | |
+| Pertes sur titres de placement | 677 | Solde débiteur | |
+| Pertes et charges sur risques financiers | 678 | Solde débiteur | |
+| Charges pour dépréciations et provisions pour risques à court terme financières | 679 | Solde débiteur | |
+| **TOTAL FRAIS FINANCIERS ET CHARGES ASSIMILÉES** | | Somme des lignes ci-dessus | |
+| Intérêts de prêts et créances diverses | 771 | Solde créditeur | |
+| Revenus de participations et autres titres immobilisés | 772 | Solde créditeur | |
+| Escomptes obtenus | 773 | Solde créditeur | |
+| Revenus de placement | 774 | Solde créditeur | |
+| Gains de change financiers | 776 | Solde créditeur | |
+| Gains sur cessions de titres de placement | 777 | Solde créditeur | |
+| Gains sur risques financiers | 778 | Solde créditeur | |
+| Reprises de charges pour dépréciations et provisions pour risques à court terme financières | 779 | Solde créditeur | |
+| **TOTAL REVENUS FINANCIERS ET PRODUITS ASSIMILÉS** | | Somme des lignes ci-dessus | |
+
+### Note 32 : Autres charges et produits HAO (comptes du plan)
+
+| Ligne | Comptes | Montant | Avis |
+|---|---|---|---|
+| Revenus hors activites ordinaires | 84 | Solde créditeur | |
+| Reprises d'amortissements, provisions et depreciations hao. | 86 | Solde créditeur | |
+| Produits des cessions d’immobilisations | 82 | Solde créditeur | |
+| Subventions d'équilibre | 88 | Solde créditeur | |
+| **TOTAL PRODUITS HAO** | | Somme des lignes ci-dessus | |
+| Valeurs comptables des cessions d’immobilisations | 81 | Solde débiteur | |
+| Charges hors activites ordinaires | 83 | Solde débiteur | |
+| Dotations hors activites ordinaires | 85 | Solde débiteur | |
+| Variations de stocks de dons en nature hao | 87 | Solde débiteur | |
+| **TOTAL CHARGES HAO** | | Somme des lignes ci-dessus | |
+
