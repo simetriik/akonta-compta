@@ -1,7 +1,7 @@
 """Formats français : montants FCFA entiers avec séparateur de milliers insécable, dates jj/mm/aaaa."""
 from datetime import date
 
-NBSP = " "  # espace fine insécable
+NBSP = "\u00a0"  # espace insécable ; l'espace fine U+202F est absente de la police Helvetica des PDF (carré noir)
 
 
 def fcfa(amount: int | None) -> str:

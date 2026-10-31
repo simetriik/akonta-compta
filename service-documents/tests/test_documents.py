@@ -17,8 +17,8 @@ def test_service_key_required(client, header):
 
 
 def test_fcfa_formatting():
-    assert fcfa(1180000) == "1 180 000"
-    assert fcfa(-2500) == "-2 500"
+    assert fcfa(1180000) == "1\u00a0180\u00a0000"
+    assert fcfa(-2500) == "-2\u00a0500"
     assert fcfa(0) == ""
     assert fcfa_total(0) == "0"
 

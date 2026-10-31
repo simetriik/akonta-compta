@@ -37,3 +37,22 @@ Deno.test("liasse DGI : xlsm uniquement, charge utile = cellules", () => {
     [{ sheet: "BILAN", cell: "F12", value: 10 }]) as { cells: unknown[] };
   assertEquals(p.cells.length, 1);
 });
+
+Deno.test("états financiers : modèle SYSCOHADA ou SYCEBNL selon le référentiel, PDF seulement", () => {
+  assertEquals(servicePath("financial_statements", "pdf"), { path: "/pdf/financial-statements", filename: "etats-financiers.pdf" });
+  assertEquals(servicePath("financial_statements", "pdf", "normal"), { path: "/pdf/financial-statements", filename: "etats-financiers.pdf" });
+  assertEquals(servicePath("financial_statements", "pdf", "sycebnl"), { path: "/pdf/financial-statements-sycebnl", filename: "etats-financiers-sycebnl.pdf" });
+  assertEquals(servicePath("financial_statements", "xlsx", "sycebnl"), null);
+  assertEquals(servicePath("trial_balance", "pdf", "sycebnl"), { path: "/pdf/trial-balance", filename: "balance.pdf" });
+});
+
+Deno.test("charge utile des états financiers : titre selon le référentiel", () => {
+  const request = { entity_id: "e", kind: "financial_statements" as const, format: "pdf" as const, from: "2026-01-01", to: "2026-12-31" };
+  const base = { cabinet_name: "ABC", entity_name: "Association Espoir", entity_tax_id: null, fiscal_year_label: "2026", generated_by: "Awa" };
+  const sycebnl = buildPayload(request, { ...base, accounting_system: "sycebnl" }, [], { notes: [], has_previous: false }) as { header: { title: string }; has_previous: boolean };
+  assertEquals(sycebnl.header.title, "États financiers SYCEBNL");
+  assertEquals(sycebnl.has_previous, false);
+  const normal = buildPayload(request, base, [], {}) as { header: { title: string } };
+  assertEquals(normal.header.title, "États financiers SYSCOHADA");
+});
+

@@ -126,3 +126,30 @@ class FinancialStatementsDocument(BaseModel):
     previous_assets: list[StatementPostRow] = Field(default_factory=list)
     previous_liabilities: list[StatementPostRow] = Field(default_factory=list)
     previous_income: list[StatementPostRow] = Field(default_factory=list)
+
+
+class NoteRow(BaseModel):
+    """Ligne d'une note annexe : montants de N et de N-1 (absent sans exercice précédent)."""
+    note_code: str
+    note_title: str
+    line_code: str
+    label: str
+    kind: Literal["line", "subtotal", "total"] = "line"
+    amount: int = 0
+    previous: int | None = None
+    sort_order: int = 0
+
+
+class SycebnlStatementsDocument(BaseModel):
+    """États financiers SYCEBNL : bilan, compte de résultat, tableau des flux de trésorerie et notes annexes calculables."""
+    header: DocumentHeader
+    assets: list[StatementPostRow] = Field(default_factory=list)
+    liabilities: list[StatementPostRow] = Field(default_factory=list)
+    income: list[StatementPostRow] = Field(default_factory=list)
+    cash_flow: list[StatementPostRow] = Field(default_factory=list)
+    previous_assets: list[StatementPostRow] = Field(default_factory=list)
+    previous_liabilities: list[StatementPostRow] = Field(default_factory=list)
+    previous_income: list[StatementPostRow] = Field(default_factory=list)
+    previous_cash_flow: list[StatementPostRow] = Field(default_factory=list)
+    notes: list[NoteRow] = Field(default_factory=list)
+    has_previous: bool = False
