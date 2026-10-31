@@ -11,6 +11,7 @@ import '../../application/providers/inventory_providers.dart';
 import '../../domain/inventory_models.dart';
 import '../../application/providers/services.dart';
 import 'inventory_widgets.dart';
+import '../../application/rules/inventory_forms.dart';
 
 class ProvisionsTab extends ConsumerStatefulWidget {
   const ProvisionsTab({super.key, required this.entity, required this.fy});
@@ -72,14 +73,19 @@ class _ProvisionsTabState extends ConsumerState<ProvisionsTab> {
                 AkButton.secondary(
                   'Proposer',
                   onPressed: () async {
+                    final form = InventoryForms.provisionRates(r91: _r91.text, r180: _r180.text);
+                    if (form.error != null) {
+                      showErrorSnack(context, form.error!);
+                      return;
+                    }
                     try {
                       final n = await ref
                           .read(inventoryServiceProvider)
                           .proposeReceivableProvisions(
                             widget.entity.id,
                             widget.fy.id,
-                            rate91to180: (double.tryParse(_r91.text) ?? 0) / 100,
-                            rateOver180: (double.tryParse(_r180.text) ?? 0) / 100,
+                            rate91to180: form.value!.rate91to180,
+                            rateOver180: form.value!.rateOver180,
                           );
                       ref.invalidate(provisionsProvider(widget.fy.id));
                       if (context.mounted) showAkToast(context, '$n provision(s) proposée(s).');

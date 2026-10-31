@@ -14,6 +14,8 @@ import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'inventory_widgets.dart';
 import '../../application/rules/account_selection.dart';
+import '../../application/rules/inventory_forms.dart';
+import '../../core/errors/error_mapper.dart';
 
 class StocksTab extends ConsumerWidget {
   const StocksTab({super.key, required this.entity, required this.fy});
@@ -154,20 +156,27 @@ class _StockRowState extends ConsumerState<_StockRow> {
             AkButton.secondary(
               'Enregistrer',
               onPressed: () async {
-                final closing = Fmt.parseAmount(_closing.text);
-                if (closing == null || _variation == null) return;
-                final cabinet = await ref.read(currentCabinetProvider.future);
-                await ref
-                    .read(inventoryServiceProvider)
-                    .upsertStock(
-                      cabinet!.id,
-                      widget.entity.id,
-                      widget.fy.id,
-                      stockAccountId: widget.account.id,
-                      variationAccountId: _variation!,
-                      closingValue: closing,
-                    );
-                ref.invalidate(stocksProvider(widget.fy.id));
+                final form = InventoryForms.stockValue(closing: _closing.text, variationAccountId: _variation);
+                if (form.error != null) {
+                  showErrorSnack(context, form.error!);
+                  return;
+                }
+                try {
+                  final cabinet = await ref.read(currentCabinetProvider.future);
+                  await ref
+                      .read(inventoryServiceProvider)
+                      .upsertStock(
+                        cabinet!.id,
+                        widget.entity.id,
+                        widget.fy.id,
+                        stockAccountId: widget.account.id,
+                        variationAccountId: _variation!,
+                        closingValue: form.value!,
+                      );
+                  ref.invalidate(stocksProvider(widget.fy.id));
+                } catch (e) {
+                  if (context.mounted) showErrorSnack(context, errorText(e));
+                }
               },
             ),
           ],

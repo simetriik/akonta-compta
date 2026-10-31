@@ -74,8 +74,24 @@ class ClosingService {
     return _repository.generateOpeningBalances(entityId, fyId);
   }
 
-  Future<String?> allocateResult(String entityId, String nextFyId, DateTime date, {required int legalReserve, required int freeReserve, required int dividends, required int carryForward}) async {
+  Future<String?> allocateResult(
+    String entityId,
+    String nextFyId,
+    DateTime date, {
+    required int legalReserve,
+    required int freeReserve,
+    required int dividends,
+    required int carryForward,
+  }) async {
     _online.require('La clôture');
-    return _repository.allocateResult(entityId, nextFyId, date, legalReserve: legalReserve, freeReserve: freeReserve, dividends: dividends, carryForward: carryForward);
+    return _repository.allocateResult(
+      entityId,
+      nextFyId,
+      date,
+      legalReserve: legalReserve,
+      freeReserve: freeReserve,
+      dividends: dividends,
+      carryForward: carryForward,
+    );
   }
 }

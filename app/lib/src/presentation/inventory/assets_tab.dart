@@ -15,6 +15,8 @@ import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'inventory_widgets.dart';
 import '../../application/rules/account_selection.dart';
+import '../../application/rules/asset_form.dart';
+import '../../application/rules/inventory_forms.dart';
 
 class AssetsTab extends ConsumerWidget {
   const AssetsTab({super.key, required this.entity, required this.fy});
@@ -237,37 +239,29 @@ class _AssetDialogState extends ConsumerState<AssetDialog> {
         AkButton.primary(
           'Enregistrer',
           onPressed: () async {
-            final acq = Fmt.parseDate(_acq.text),
-                svc = Fmt.parseDate(_service.text),
-                gross = Fmt.parseAmount(_gross.text),
-                months = int.tryParse(_months.text.trim());
-            if (_code.text.trim().isEmpty ||
-                _designation.text.trim().isEmpty ||
-                acq == null ||
-                svc == null ||
-                gross == null ||
-                gross <= 0 ||
-                months == null ||
-                months <= 0 ||
-                (widget.initial == null && _accountId == null)) {
-              setState(() => _error = 'Code, désignation, compte, dates, valeur brute et durée requis');
+            final built = AssetForm.build(
+              AssetInput(
+                code: _code.text,
+                designation: _designation.text,
+                accountId: _accountId,
+                acquisition: _acq.text,
+                service: _service.text,
+                gross: _gross.text,
+                salvage: _salvage.text,
+                months: _months.text,
+                method: _method,
+                coefficient: _coef.text,
+                prior: _prior.text,
+                isNew: widget.initial == null,
+              ),
+            );
+            if (built.error != null) {
+              setState(() => _error = built.error);
               return;
             }
             try {
               final cabinet = await ref.read(currentCabinetProvider.future);
-              await ref.read(inventoryServiceProvider).saveAsset(cabinet!.id, widget.entity.id, {
-                if (widget.initial == null) 'code': _code.text.trim(),
-                'designation': _designation.text.trim(),
-                if (widget.initial == null) 'asset_account_id': _accountId,
-                'acquisition_date': acq.toIso8601String().substring(0, 10),
-                'service_date': svc.toIso8601String().substring(0, 10),
-                'gross_value': gross,
-                'salvage_value': Fmt.parseAmount(_salvage.text) ?? 0,
-                'duration_months': months,
-                'method': _method,
-                'declining_coefficient': _method == 'declining' ? double.tryParse(_coef.text.replaceAll(',', '.')) ?? 1.5 : null,
-                'prior_depreciation': Fmt.parseAmount(_prior.text) ?? 0,
-              }, id: widget.initial?.id);
+              await ref.read(inventoryServiceProvider).saveAsset(cabinet!.id, widget.entity.id, built.fields!, id: widget.initial?.id);
               ref.invalidate(fixedAssetsProvider(widget.entity.id));
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
@@ -293,7 +287,7 @@ class PlanDialog extends ConsumerWidget {
       content: FutureBuilder<List<PlanRow>>(
         future: ref.read(inventoryServiceProvider).plan(asset.id),
         builder: (_, snap) {
-          if (snap.hasError) return AkErrorMessage('Erreur : ${snap.error}');
+          if (snap.hasError) return AkErrorMessage(errorText(snap.error!));
           if (!snap.hasData) return const SizedBox(height: 160, child: AkLoading());
           return AkTable<PlanRow>(
             rows: snap.data!,
@@ -370,12 +364,15 @@ class _DisposalDialogState extends ConsumerState<DisposalDialog> {
         AkButton.primary(
           widget.scrap ? 'Mettre au rebut' : 'Céder',
           onPressed: () async {
-            final d = Fmt.parseDate(_date.text);
-            if (d == null) return;
+            final form = InventoryForms.disposal(date: _date.text, price: _price.text);
+            if (form.error != null) {
+              setState(() => _error = form.error);
+              return;
+            }
             try {
               await ref
                   .read(inventoryServiceProvider)
-                  .disposeAsset(widget.asset.id, date: d, price: Fmt.parseAmount(_price.text) ?? 0, counterpartAccountId: _counterpart, scrap: widget.scrap);
+                  .disposeAsset(widget.asset.id, date: form.value!.date, price: form.value!.price, counterpartAccountId: _counterpart, scrap: widget.scrap);
               ref.invalidate(fixedAssetsProvider(widget.entity.id));
               if (context.mounted) Navigator.pop(context);
             } catch (e) {

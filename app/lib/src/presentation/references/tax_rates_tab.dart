@@ -107,7 +107,7 @@ class _TaxRateDialogState extends ConsumerState<TaxRateDialog> {
         AkButton.primary(
           'Enregistrer',
           onPressed: () async {
-            final rate = double.tryParse(_rate.text.replaceAll(',', '.'));
+            final rate = Fmt.parseDecimal(_rate.text);
             final from = Fmt.parseDate(_from.text);
             if (!RegExp(r'^[A-Z0-9_]{2,20}$').hasMatch(_code.text.trim().toUpperCase()) ||
                 _label.text.trim().isEmpty ||

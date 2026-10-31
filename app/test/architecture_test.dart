@@ -82,4 +82,22 @@ void main() {
   test('l\'ancienne couche data n\'existe plus', () {
     expect(Directory('lib/src/data').existsSync(), isFalse);
   });
+
+  test('les écrans lisent les nombres et dates par Fmt, pas par des analyses ad hoc', () {
+    // « 2,5 » lu par double.tryParse donne null : le taux devenait 0 sans avertissement (corrigé en D-032).
+    final violations = <String>[];
+    for (final f in files.where((f) => layerOf(f.path) == 'presentation')) {
+      if (RegExp(r'double\.(?:try)?[pP]arse\(').hasMatch(f.readAsStringSync())) violations.add(f.path);
+    }
+    expect(violations, isEmpty, reason: 'Utiliser Fmt.parseDecimal :\n${violations.join('\n')}');
+  });
+
+  test('aucun écran ne dépasse 600 lignes', () {
+    final tooLong = <String>[];
+    for (final f in files.where((f) => layerOf(f.path) == 'presentation')) {
+      final n = f.readAsLinesSync().length;
+      if (n > 600) tooLong.add('${f.path} : $n lignes');
+    }
+    expect(tooLong, isEmpty, reason: 'Découper en widgets et contrôleurs :\n${tooLong.join('\n')}');
+  });
 }

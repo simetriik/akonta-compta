@@ -10,6 +10,7 @@ import '../../application/providers/references_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'references_widgets.dart';
+import '../../application/rules/template_builder.dart';
 
 class TemplatesTab extends ConsumerWidget {
   const TemplatesTab({super.key, required this.entity});
@@ -278,32 +279,28 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
   }
 
   Future<void> _save() async {
-    if (_code.text.trim().isEmpty || _label.text.trim().isEmpty) {
-      setState(() => _error = 'Code et libellé requis');
+    final built = TemplateBuilder.build(
+      code: _code.text,
+      label: _label.text,
+      inputs: [
+        for (final l in _lines)
+          TemplateLineInput(
+            account: l.account.text,
+            thirdParty: l.thirdParty,
+            side: l.side,
+            formula: l.formula,
+            refLine: l.refLine.text,
+            percent: l.percent.text,
+            rateCode: l.rateCode,
+            label: l.label.text,
+          ),
+      ],
+    );
+    if (built.error != null) {
+      setState(() => _error = built.error);
       return;
     }
-    final lines = <TemplateLine>[];
-    for (var i = 0; i < _lines.length; i++) {
-      final l = _lines[i];
-      if (!RegExp(r'^[1-9][0-9]*$').hasMatch(l.account.text.trim())) {
-        setState(() => _error = 'Ligne ${i + 1} : compte numérique requis');
-        return;
-      }
-      final pct = l.percent.text.trim().isEmpty ? null : double.tryParse(l.percent.text.replaceAll(',', '.'));
-      lines.add(
-        TemplateLine(
-          lineNo: i + 1,
-          accountCode: l.account.text.trim(),
-          usesThirdParty: l.thirdParty,
-          side: l.side,
-          formula: l.formula,
-          refLineNo: l.formula == 'percent_of' ? int.tryParse(l.refLine.text.trim()) : null,
-          percent: l.formula == 'percent_of' && l.rateCode == null && pct != null ? pct / 100 : null,
-          taxRateCode: l.formula == 'percent_of' ? l.rateCode : null,
-          label: l.label.text.trim().isEmpty ? null : l.label.text.trim(),
-        ),
-      );
-    }
+    final lines = built.lines!;
     try {
       final cabinet = await ref.read(currentCabinetProvider.future);
       await ref

@@ -8,6 +8,8 @@ import '../../domain/models.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'inventory_widgets.dart';
+import '../../application/rules/inventory_forms.dart';
+import '../../core/errors/error_mapper.dart';
 
 class FxTab extends ConsumerStatefulWidget {
   const FxTab({super.key, required this.entity, required this.fy});
@@ -66,11 +68,18 @@ class _FxTabState extends ConsumerState<FxTab> {
                   AkButton.secondary(
                     'Enregistrer le cours',
                     onPressed: () async {
-                      final r = double.tryParse(_rate.text.replaceAll(',', '.'));
-                      if (r == null || _currency.text.trim().length != 3) return;
-                      final cabinet = await ref.read(currentCabinetProvider.future);
-                      await ref.read(inventoryServiceProvider).setClosingRate(cabinet!.id, _currency.text.trim().toUpperCase(), widget.fy.endDate, r);
-                      if (context.mounted) showAkToast(context, 'Cours enregistré.');
+                      final form = InventoryForms.fxRate(currency: _currency.text, rate: _rate.text);
+                      if (form.error != null) {
+                        showErrorSnack(context, form.error!);
+                        return;
+                      }
+                      try {
+                        final cabinet = await ref.read(currentCabinetProvider.future);
+                        await ref.read(inventoryServiceProvider).setClosingRate(cabinet!.id, form.value!.currency, widget.fy.endDate, form.value!.rate);
+                        if (context.mounted) showAkToast(context, 'Cours enregistré.');
+                      } catch (e) {
+                        if (context.mounted) showErrorSnack(context, errorText(e));
+                      }
                     },
                   ),
                   AkButton.primary(

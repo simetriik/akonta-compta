@@ -8,7 +8,9 @@ import 'services.dart';
 typedef ClosingKey = ({String entityId, String fyId});
 
 /// Contrôles de clôture ; `ref.invalidate` les relance.
-final closingChecksProvider = FutureProvider.autoDispose.family<List<ClosingCheck>, ClosingKey>((ref, k) => ref.watch(closingServiceProvider).runChecks(k.entityId, k.fyId));
+final closingChecksProvider = FutureProvider.autoDispose.family<List<ClosingCheck>, ClosingKey>(
+  (ref, k) => ref.watch(closingServiceProvider).runChecks(k.entityId, k.fyId),
+);
 
 /// Tableau de passage du résultat comptable au résultat fiscal, chargé d'un bloc (une erreur sur l'une des trois lectures l'annonce à l'écran).
 final taxWorksheetProvider = FutureProvider.autoDispose.family<TaxWorksheet, ClosingKey>((ref, k) async {
@@ -20,4 +22,6 @@ final taxWorksheetProvider = FutureProvider.autoDispose.family<TaxWorksheet, Clo
 });
 
 /// Derniers états financiers générés d'un exercice, ou `null` s'il n'y en a pas.
-final latestStatementsProvider = FutureProvider.autoDispose.family<FinancialStatements?, String>((ref, fyId) => ref.watch(closingServiceProvider).latestStatements(fyId));
+final latestStatementsProvider = FutureProvider.autoDispose.family<FinancialStatements?, String>(
+  (ref, fyId) => ref.watch(closingServiceProvider).latestStatements(fyId),
+);

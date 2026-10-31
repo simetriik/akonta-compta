@@ -142,7 +142,9 @@ class ReconciliationController extends Notifier<ReconciliationView> {
   /// Crée et valide l'écriture d'une ligne de relevé.
   Future<void> createEntryFromLine(int lineId, {required String accountId, String? thirdPartyId, String? label, DateTime? entryDate}) async {
     try {
-      await ref.read(reconciliationServiceProvider).entryFromLine(lineId, accountId: accountId, thirdPartyId: thirdPartyId, label: label, entryDate: entryDate, validate: true);
+      await ref
+          .read(reconciliationServiceProvider)
+          .entryFromLine(lineId, accountId: accountId, thirdPartyId: thirdPartyId, label: label, entryDate: entryDate, validate: true);
     } finally {
       await reload();
     }
@@ -175,7 +177,16 @@ class ReconciliationController extends Notifier<ReconciliationView> {
         templateId = (await service.saveTemplate(cabinetId, template)).id;
         ref.invalidate(statementTemplatesProvider);
       }
-      await service.importStatement(journalId: state.journal!.id, from: from, to: to, lines: lines, opening: opening, closing: closing, templateId: templateId, fileName: fileName);
+      await service.importStatement(
+        journalId: state.journal!.id,
+        from: from,
+        to: to,
+        lines: lines,
+        opening: opening,
+        closing: closing,
+        templateId: templateId,
+        fileName: fileName,
+      );
     } finally {
       await reload();
     }

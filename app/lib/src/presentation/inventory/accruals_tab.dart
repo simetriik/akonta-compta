@@ -15,6 +15,7 @@ import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'inventory_widgets.dart';
 import '../../application/rules/account_selection.dart';
+import '../../application/rules/inventory_forms.dart';
 
 class AccrualsTab extends ConsumerWidget {
   const AccrualsTab({super.key, required this.entity, required this.fy});
@@ -146,11 +147,7 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
           const SizedBox(height: AkSpace.s2),
           AkTextField(controller: _desc, label: 'Description'),
           const SizedBox(height: AkSpace.s2),
-          AkAccountField(
-            label: 'Compte de charge ou de produit',
-            accounts: AccountSelection.accrualResults(accounts),
-            onSelected: (a) => _account = a.id,
-          ),
+          AkAccountField(label: 'Compte de charge ou de produit', accounts: AccountSelection.accrualResults(accounts), onSelected: (a) => _account = a.id),
           const SizedBox(height: AkSpace.s2),
           AkAccountField(
             label: 'Compte de régularisation (défaut $defaultCounterpart)',
@@ -192,19 +189,20 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
         AkButton.primary(
           'Ajouter',
           onPressed: () async {
-            final total = Fmt.parseAmount(_total.text), from = Fmt.parseDate(_from.text), to = Fmt.parseDate(_to.text);
             final counterpart = _counterpart ?? accounts.where((a) => a.code.startsWith(defaultCounterpart)).firstOrNull?.id;
-            if (_desc.text.trim().isEmpty ||
-                _account == null ||
-                counterpart == null ||
-                total == null ||
-                total <= 0 ||
-                from == null ||
-                to == null ||
-                to.isBefore(from)) {
-              setState(() => _error = 'Description, comptes, montant et période requis');
+            final form = InventoryForms.accrual(
+              description: _desc.text,
+              accountId: _account,
+              counterpartAccountId: counterpart,
+              total: _total.text,
+              from: _from.text,
+              to: _to.text,
+            );
+            if (form.error != null) {
+              setState(() => _error = form.error);
               return;
             }
+            final v = form.value!;
             try {
               final cabinet = await ref.read(currentCabinetProvider.future);
               await ref
@@ -214,12 +212,12 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
                     widget.entity.id,
                     widget.fy.id,
                     kind: _kind,
-                    description: _desc.text.trim(),
+                    description: v.description,
                     accountId: _account!,
-                    counterpartAccountId: counterpart,
-                    totalAmount: total,
-                    from: from,
-                    to: to,
+                    counterpartAccountId: v.counterpartAccountId,
+                    totalAmount: v.totalAmount,
+                    from: v.from,
+                    to: v.to,
                   );
               ref.invalidate(accrualsProvider(widget.fy.id));
               if (context.mounted) Navigator.pop(context);

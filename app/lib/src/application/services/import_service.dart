@@ -14,7 +14,13 @@ class ImportService {
     return _repository.batches(entityId);
   }
 
-  Future<ImportBatch> createBatch({required String cabinetId, required String entityId, required String kind, required String fileName, String? targetJournalId}) async {
+  Future<ImportBatch> createBatch({
+    required String cabinetId,
+    required String entityId,
+    required String kind,
+    required String fileName,
+    String? targetJournalId,
+  }) async {
     _online.require('L\'import');
     return _repository.createBatch(cabinetId: cabinetId, entityId: entityId, kind: kind, fileName: fileName, targetJournalId: targetJournalId);
   }
@@ -41,7 +47,13 @@ class ImportService {
 
   Future<void> updateMapping(String id, {String? accountCode, String? thirdPartyCode, String? thirdPartyName, bool? createThirdParty}) async {
     _online.require('L\'import');
-    return _repository.updateMapping(id, accountCode: accountCode, thirdPartyCode: thirdPartyCode, thirdPartyName: thirdPartyName, createThirdParty: createThirdParty);
+    return _repository.updateMapping(
+      id,
+      accountCode: accountCode,
+      thirdPartyCode: thirdPartyCode,
+      thirdPartyName: thirdPartyName,
+      createThirdParty: createThirdParty,
+    );
   }
 
   Future<Map<String, dynamic>> apply(String batchId, {required bool dryRun}) async {
