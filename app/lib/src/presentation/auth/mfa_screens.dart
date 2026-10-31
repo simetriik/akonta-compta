@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../data/auth_repository.dart';
 
 /// Saisie du code TOTP à la connexion (facteur déjà enrôlé).
@@ -29,12 +30,12 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
     try {
       final repo = ref.read(authRepositoryProvider);
       final factorId = await repo.firstVerifiedTotpFactorId();
-      if (factorId == null) throw const AuthException('Aucun facteur TOTP enrôlé');
+      if (factorId == null) throw const AppError.business('Aucune vérification en deux étapes n\'est activée pour ce compte.');
       await repo.verifyTotp(factorId: factorId, code: _code.text);
       ref.invalidate(mfaStatusProvider);
       widget.onVerified();
-    } on AuthException catch (e) {
-      setState(() => _error = e.message.toLowerCase().contains('invalid') ? 'Code incorrect ou expiré.' : e.message);
+    } catch (e) {
+      setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -85,8 +86,8 @@ class _MfaEnrollScreenState extends ConsumerState<MfaEnrollScreen> {
     try {
       final r = await ref.read(authRepositoryProvider).enrollTotp();
       if (mounted) setState(() => _enrollment = r);
-    } on AuthException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _error = errorText(e));
     }
   }
 
@@ -101,8 +102,8 @@ class _MfaEnrollScreenState extends ConsumerState<MfaEnrollScreen> {
       await ref.read(authRepositoryProvider).verifyTotp(factorId: e.id, code: _code.text);
       ref.invalidate(mfaStatusProvider);
       widget.onDone();
-    } on AuthException catch (ex) {
-      setState(() => _error = ex.message.toLowerCase().contains('invalid') ? 'Code incorrect : vérifiez l\'heure de votre téléphone.' : ex.message);
+    } catch (ex) {
+      setState(() => _error = errorText(ex));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../data/entities_repository.dart';
 import '../../data/inventory_repository.dart';
@@ -14,8 +15,6 @@ import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
-
-String frenchRpcError(Object e) => RegExp(r'message: ([^,}]+)').firstMatch(e.toString())?.group(1) ?? e.toString();
 
 /// Marge latérale de page : 24 px sur desktop, 16 px sur mobile (< 600 px).
 EdgeInsets akPagePadding(BuildContext context) => EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? AkSpace.s4 : AkSpace.s6);
@@ -134,7 +133,7 @@ Future<void> runGeneration(BuildContext context, WidgetRef ref, Future<String?> 
       onAction: id == null ? null : () => context.go('/saisie/$id'),
     );
   } catch (e) {
-    if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+    if (context.mounted) showErrorSnack(context, errorText(e));
   }
 }
 
@@ -396,7 +395,7 @@ class _AssetDialogState extends ConsumerState<AssetDialog> {
               ref.invalidate(fixedAssetsProvider(widget.entity.id));
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
-              setState(() => _error = frenchRpcError(e));
+              setState(() => _error = errorText(e));
             }
           },
         ),
@@ -506,7 +505,7 @@ class _DisposalDialogState extends ConsumerState<DisposalDialog> {
               ref.invalidate(fixedAssetsProvider(widget.entity.id));
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
-              setState(() => _error = frenchRpcError(e));
+              setState(() => _error = errorText(e));
             }
           },
         ),
@@ -751,7 +750,7 @@ class _ProvisionsTabState extends ConsumerState<ProvisionsTab> {
                       ref.invalidate(provisionsProvider(widget.fy.id));
                       if (context.mounted) showAkToast(context, '$n provision(s) proposée(s).');
                     } catch (e) {
-                      if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                      if (context.mounted) showErrorSnack(context, errorText(e));
                     }
                   },
                 ),
@@ -852,7 +851,7 @@ class AccrualsTab extends ConsumerWidget {
                       showAkToast(context, '${ids.length} extourne(s) générée(s) au 1er janvier N+1.');
                     }
                   } catch (e) {
-                    if (context.mounted) showErrorSnack(context, frenchRpcError(e));
+                    if (context.mounted) showErrorSnack(context, errorText(e));
                   }
                 },
               ),
@@ -1031,7 +1030,7 @@ class _AccrualDialogState extends ConsumerState<AccrualDialog> {
               ref.invalidate(accrualsProvider(widget.fy.id));
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
-              setState(() => _error = frenchRpcError(e));
+              setState(() => _error = errorText(e));
             }
           },
         ),

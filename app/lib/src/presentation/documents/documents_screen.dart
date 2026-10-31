@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:akonta/design/design.dart';
 
+import '../widgets/error_display.dart';
 import '../../core/formatting.dart';
 import '../../data/documents_repository.dart';
 import '../../data/entries_repository.dart';
@@ -163,7 +164,7 @@ class _DocumentsBodyState extends ConsumerState<_DocumentsBody> {
       ref.invalidate(documentsProvider(widget.entity.id));
       ref.invalidate(entityDashboardProvider);
     } catch (e) {
-      if (mounted) showAkToast(context, 'Dépôt refusé : $e', kind: AkToastKind.danger);
+      if (mounted) showError(context, e, action: 'Dépôt refusé');
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../data/entities_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/entity_models.dart';
@@ -76,7 +77,7 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
         return EntityForm(
           submitLabel: 'Créer le dossier et continuer',
           onSubmit: (input) async {
-            if (cabinetId == null) throw Exception('Cabinet inconnu');
+            if (cabinetId == null) throw const AppError.business('Cabinet inconnu : reconnectez-vous.');
             final e = await ref.read(entitiesRepositoryProvider).create(cabinetId, input);
             final count = await ref.read(entitiesRepositoryProvider).accountCount(e.id);
             ref.invalidate(entitiesListProvider);
@@ -198,7 +199,7 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
                     await repo.createJournalsFromTemplate(_entity!.id, plain);
                     for (final t in templates.where((t) => _journalCodes.contains(t.code) && t.isTreasury)) {
                       final acc = _treasuryAccounts[t.code];
-                      if (acc == null) throw Exception('Choisissez le compte de trésorerie du journal ${t.code}');
+                      if (acc == null) throw AppError.business('Choisissez le compte de trésorerie du journal ${t.code}.');
                       await repo.createTreasuryJournal(_entity!.cabinetId, _entity!.id, code: t.code, label: t.label, type: t.type, accountId: acc);
                     }
                     setState(() {
@@ -206,7 +207,7 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
                       _step = 4;
                     });
                   } catch (e) {
-                    setState(() => _error = '$e');
+                    setState(() => _error = errorText(e));
                   }
                 },
               ),

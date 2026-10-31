@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
+import '../widgets/error_display.dart';
 import '../../core/formatting.dart';
 import '../../data/import_repository.dart';
 import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
-import '../inventory/inventory_screen.dart' show showErrorSnack;
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 
@@ -173,7 +173,7 @@ class _ImportBodyState extends ConsumerState<_ImportBody> {
         _report = report;
       });
     } catch (e) {
-      if (mounted) showErrorSnack(context, 'Analyse impossible : $e');
+      if (mounted) showError(context, e, action: 'Analyse impossible');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -386,7 +386,7 @@ class _BatchPanelState extends ConsumerState<_BatchPanel> {
       final refreshed = (await repo.batches(widget.entity.id)).firstWhere((x) => x.id == widget.batch.id);
       widget.onChanged(refreshed, report);
     } catch (e) {
-      if (mounted) showErrorSnack(context, '$e');
+      if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

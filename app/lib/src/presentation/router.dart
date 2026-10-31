@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/auth_repository.dart';
 import '../data/supabase_providers.dart';
 import 'admin/cabinet_screen.dart';
+import 'admin/error_log_screen.dart';
 import 'admin/users_screen.dart';
 import 'auth/login_screen.dart';
 import 'auth/mfa_screens.dart';
@@ -103,6 +104,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/import', builder: (_, _) => const ImportScreen()),
           GoRoute(path: '/cabinet', builder: (_, _) => const CabinetScreen()),
           GoRoute(path: '/utilisateurs', builder: (_, _) => const UsersScreen()),
+          GoRoute(path: '/journal-erreurs', builder: (_, _) => const ErrorLogScreen()),
         ],
       ),
     ],

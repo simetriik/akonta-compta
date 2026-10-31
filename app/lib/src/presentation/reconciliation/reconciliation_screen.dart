@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../data/consultation_repository.dart';
 import '../../data/import_repository.dart';
@@ -68,7 +69,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
         _selBook.clear();
       });
     } catch (e) {
-      if (mounted) showErrorSnack(context, _french(e));
+      if (mounted) showErrorSnack(context, errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -323,7 +324,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
     try {
       await ref.read(reconciliationRepositoryProvider).match(_journal!.id, _selBank.toList(), _selBook.toList());
     } catch (e) {
-      if (mounted) showErrorSnack(context, _french(e));
+      if (mounted) showErrorSnack(context, errorText(e));
     }
     await _load();
   }
@@ -344,7 +345,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
           .entryFromLine(l.id, accountId: result.$1.id, thirdPartyId: result.$2?.id, label: result.$3, entryDate: result.$4, validate: true);
       ref.invalidate(entityDashboardProvider);
     } catch (e) {
-      if (mounted) showErrorSnack(context, _french(e));
+      if (mounted) showErrorSnack(context, errorText(e));
     }
     await _load();
   }
@@ -394,7 +395,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
           );
       if (mounted) showAkToast(context, '${parsed.lines.length} lignes de relevé importées.');
     } catch (e) {
-      if (mounted) showErrorSnack(context, _french(e));
+      if (mounted) showErrorSnack(context, errorText(e));
     }
     await _load();
   }
@@ -404,7 +405,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
       await ref.read(reconciliationRepositoryProvider).finalize(_journal!.id, _until);
       if (mounted) showAkToast(context, 'État de rapprochement figé. Exportez le PDF pour l\'archiver.');
     } catch (e) {
-      if (mounted) showErrorSnack(context, _french(e));
+      if (mounted) showErrorSnack(context, errorText(e));
     }
     await _load();
   }
@@ -420,13 +421,11 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
         if (!await f.exists() || await f.length() == 0) await f.writeAsBytes(bytes);
       }
     } catch (e) {
-      if (mounted) showErrorSnack(context, _french(e));
+      if (mounted) showErrorSnack(context, errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
-
-  static String _french(Object e) => RegExp(r'message: ([^,}]+)').firstMatch(e.toString())?.group(1) ?? e.toString();
 }
 
 class _StateBar extends StatelessWidget {

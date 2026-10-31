@@ -29,7 +29,11 @@ class AppShell extends ConsumerWidget {
     (route: '/import', icon: Icons.upload_file_outlined, label: 'Import Perfecto', perm: 'import.perfecto', admin: false),
     (route: '/cabinet', icon: Icons.apartment_outlined, label: 'Cabinet', perm: 'cabinet.settings', admin: true),
     (route: '/utilisateurs', icon: Icons.manage_accounts_outlined, label: 'Utilisateurs', perm: 'users.manage', admin: true),
+    (route: '/journal-erreurs', icon: Icons.bug_report_outlined, label: 'Journal des erreurs', perm: techAdminOnly, admin: true),
   ];
+
+  /// Pseudo-permission : l'entrée n'apparaît que pour l'administrateur technique (rôle `tech_admin`).
+  static const techAdminOnly = 'tech.errors';
 
   /// Entrées de la barre basse mobile (libellés courts pour tenir sur 360 px).
   static const _mobileBar = [('/pieces', 'Pièces'), ('/', 'Accueil'), ('/saisie', 'Saisie'), ('/consultation', 'Consulter')];
@@ -50,6 +54,7 @@ class AppShell extends ConsumerWidget {
     final visible = destinations.where((d) {
       final p = d.perm;
       if (p == null) return true;
+      if (p == techAdminOnly) return perms.roles.any((r) => r.code == 'tech_admin');
       if (perms.cabinetWide.contains(p)) return true;
       return perms.byEntity.values.any((set) => set.contains(p));
     }).toList();

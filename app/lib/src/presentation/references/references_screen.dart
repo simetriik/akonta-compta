@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
@@ -317,19 +318,10 @@ class _AccountsTabState extends ConsumerState<AccountsTab> {
           await repo.deleteAccount(a.id);
       }
     } catch (e) {
-      if (mounted) showAkToast(context, _frenchError(e), kind: AkToastKind.danger);
+      if (mounted) showAkToast(context, errorText(e), kind: AkToastKind.danger);
     }
     ref.invalidate(accountsProvider(widget.entity.id));
   }
-}
-
-String _frenchError(Object e) {
-  final m = e.toString();
-  if (m.contains('subdivisions')) return 'Ce compte a des subdivisions : désactivez-le plutôt.';
-  if (m.contains('mouvements')) return 'Ce compte a des mouvements : désactivez-le plutôt.';
-  if (m.contains('duplicate key')) return 'Ce code existe déjà.';
-  if (m.contains('42501') || m.contains('row-level security')) return 'Action non autorisée pour votre rôle.';
-  return m;
 }
 
 Future<String?> _prompt(BuildContext context, String title, [String initial = '']) {
@@ -416,7 +408,7 @@ class _AccountDialogState extends ConsumerState<AccountDialog> {
               ref.invalidate(accountsProvider(widget.entity.id));
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
-              setState(() => _error = _frenchError(e));
+              setState(() => _error = errorText(e));
             }
           },
         ),
@@ -672,7 +664,7 @@ class _ThirdPartyDialogState extends ConsumerState<ThirdPartyDialog> {
               ref.invalidate(thirdPartiesProvider(widget.entity.id));
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
-              setState(() => _error = _frenchError(e));
+              setState(() => _error = errorText(e));
             }
           },
         ),
@@ -886,7 +878,7 @@ class _JournalDialogState extends ConsumerState<JournalDialog> {
               ref.invalidate(journalsProvider(widget.entity.id));
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
-              setState(() => _error = _frenchError(e));
+              setState(() => _error = errorText(e));
             }
           },
         ),
@@ -1199,7 +1191,7 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
       ref.invalidate(templatesProvider(widget.entity.id));
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      setState(() => _error = _frenchError(e));
+      setState(() => _error = errorText(e));
     }
   }
 }
@@ -1333,7 +1325,7 @@ class _TaxRateDialogState extends ConsumerState<TaxRateDialog> {
               ref.invalidate(taxRatesProvider);
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
-              setState(() => _error = _frenchError(e));
+              setState(() => _error = errorText(e));
             }
           },
         ),
