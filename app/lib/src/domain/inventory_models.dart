@@ -1,3 +1,4 @@
+
 class FixedAsset {
   const FixedAsset({required this.id, required this.code, required this.designation, required this.assetAccountCode, required this.acquisitionDate, required this.serviceDate, required this.grossValue, required this.salvageValue, required this.method, required this.durationMonths, this.decliningCoefficient, required this.priorDepreciation, required this.status, this.disposalDate, this.disposalPrice});
 

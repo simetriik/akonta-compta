@@ -16,6 +16,7 @@ import '../../application/providers/entries_providers.dart';
 import '../../application/providers/references_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
+import '../../application/offline/outbox_codec.dart';
 
 /// Saisie d'une écriture (grille au clavier) : journal, date, référence, libellé ; lignes compte / tiers / libellé / débit / crédit ;
 /// autocomplétion, contrepartie automatique (Ctrl+B), modèles d'écritures, équilibre affiché, validation (§10.4).
@@ -104,7 +105,7 @@ class _EditorState extends ConsumerState<_Editor> {
         final n = await repo.validate(id);
         if (mounted) showAkToast(context, 'Écriture validée : n° $n');
       } else if (mounted) {
-        showAkToast(context, 'Brouillard enregistré.');
+        showAkToast(context, isLocalDraftId(id) ? 'Hors connexion : brouillard conservé sur cet appareil, il sera envoyé à la reconnexion.' : 'Brouillard enregistré.', kind: isLocalDraftId(id) ? AkToastKind.info : AkToastKind.success);
       }
       ref.invalidate(entriesListProvider(widget.entity.id));
       ref.invalidate(entityDashboardProvider);

@@ -78,6 +78,14 @@ AppError humanizeError(Object error, [StackTrace? stack]) {
   return app;
 }
 
+/// Vrai si l'exception vient d'un défaut de connexion (réseau, délai, service injoignable, fonction hors ligne) : l'action peut être
+/// remise à plus tard. Ne journalise rien.
+bool isConnectivityFailure(Object error) {
+  if (error is AppError) return error.kind == AppErrorKind.network || error.kind == AppErrorKind.offline || error.kind == AppErrorKind.timeout || error.kind == AppErrorKind.unavailable;
+  final kind = _classify(error).kind;
+  return kind == AppErrorKind.network || kind == AppErrorKind.offline || kind == AppErrorKind.timeout || kind == AppErrorKind.unavailable;
+}
+
 /// Texte à afficher pour une erreur, précédé s'il y a lieu de l'action tentée (« Invitation impossible : … »).
 String errorText(Object error, {String? action}) {
   final text = humanizeError(error).display;

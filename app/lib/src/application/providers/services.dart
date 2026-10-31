@@ -30,9 +30,9 @@ final isOnlineProvider = StreamProvider<bool>((ref) async* {
 final adminServiceProvider = Provider<AdminService>((ref) => AdminService(ref.watch(adminRepositoryProvider), ref.watch(onlinePolicyProvider)));
 final closingServiceProvider = Provider<ClosingService>((ref) => ClosingService(ref.watch(closingRepositoryProvider), ref.watch(onlinePolicyProvider)));
 final consultationServiceProvider = Provider<ConsultationService>((ref) => ConsultationService(ref.watch(consultationRepositoryProvider), ref.watch(onlinePolicyProvider)));
-final documentsServiceProvider = Provider<DocumentsService>((ref) => DocumentsService(ref.watch(documentsRepositoryProvider), ref.watch(onlinePolicyProvider)));
+final documentsServiceProvider = Provider<DocumentsService>((ref) => DocumentsService(ref.watch(documentsRepositoryProvider), ref.watch(onlinePolicyProvider), ref.watch(outboxRepositoryProvider)));
 final entitiesServiceProvider = Provider<EntitiesService>((ref) => EntitiesService(ref.watch(entitiesRepositoryProvider), ref.watch(onlinePolicyProvider)));
-final entriesServiceProvider = Provider<EntriesService>((ref) => EntriesService(ref.watch(entriesRepositoryProvider), ref.watch(onlinePolicyProvider)));
+final entriesServiceProvider = Provider<EntriesService>((ref) => EntriesService(ref.watch(entriesRepositoryProvider), ref.watch(onlinePolicyProvider), ref.watch(outboxRepositoryProvider)));
 final importServiceProvider = Provider<ImportService>((ref) => ImportService(ref.watch(importRepositoryProvider), ref.watch(onlinePolicyProvider)));
 final inventoryServiceProvider = Provider<InventoryService>((ref) => InventoryService(ref.watch(inventoryRepositoryProvider), ref.watch(onlinePolicyProvider)));
 final letteringServiceProvider = Provider<LetteringService>((ref) => LetteringService(ref.watch(letteringRepositoryProvider), ref.watch(onlinePolicyProvider)));

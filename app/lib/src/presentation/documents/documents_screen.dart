@@ -162,7 +162,8 @@ class _DocumentsBodyState extends ConsumerState<_DocumentsBody> {
     setState(() => _busy = true);
     try {
       final cabinet = await ref.read(currentCabinetProvider.future);
-      await ref.read(documentsServiceProvider).upload(cabinetId: cabinet!.id, entityId: widget.entity.id, fileName: name, bytes: bytes, capturedVia: via);
+      final sent = await ref.read(documentsServiceProvider).upload(cabinetId: cabinet!.id, entityId: widget.entity.id, fileName: name, bytes: bytes, capturedVia: via);
+      if (sent == null && mounted) showAkToast(context, 'Hors connexion : la pièce est conservée sur cet appareil et sera envoyée à la reconnexion.', kind: AkToastKind.info);
       ref.invalidate(documentsProvider(widget.entity.id));
       ref.invalidate(entityDashboardProvider);
     } catch (e) {

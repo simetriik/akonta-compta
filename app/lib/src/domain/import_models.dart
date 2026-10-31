@@ -1,3 +1,4 @@
+
 class ImportBatch {
   const ImportBatch({required this.id, required this.kind, required this.status, this.sourceFileName, this.sourceJournal, this.periodFrom, this.periodTo, this.targetJournalId, required this.report, required this.createdAt});
 

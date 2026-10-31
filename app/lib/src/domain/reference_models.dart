@@ -1,3 +1,4 @@
+
 /// Modèles du module 3 : comptes, tiers, journaux, modèles d'écritures, taux.
 library;
 

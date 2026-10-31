@@ -1,3 +1,4 @@
+
 /// Modèles du module 2 : entité (fiche R1-R3 + paramètres), dirigeants, exercices, associés, périodes.
 library;
 
