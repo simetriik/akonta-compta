@@ -6,12 +6,12 @@ import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
-import '../inventory/inventory_screen.dart';
 import '../widgets/require_entity.dart';
 import '../../application/providers/references_providers.dart';
 import '../../domain/lettering_models.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
+import '../inventory/inventory_widgets.dart';
 
 /// Lettrage par compte de tiers (§10.7) : débits et crédits non lettrés, sélection, écart, propositions, partiel, délettrage.
 class LetteringScreen extends StatelessWidget {
