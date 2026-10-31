@@ -44,6 +44,8 @@ class _EntityFormState extends State<EntityForm> {
   late String? _controlOrigin = widget.initial?.controlOrigin;
   late bool _monthlyLock = widget.initial?.monthlyLockEnabled ?? false;
   late String _country = widget.initial?.countryCode ?? 'BJ';
+  late String _system = widget.initial?.accountingSystem ?? 'normal';
+  bool _systemTouched = false;
   bool _busy = false;
   String? _error;
 
@@ -76,6 +78,7 @@ class _EntityFormState extends State<EntityForm> {
           mainActivity: _mainActivity.text,
           secondaryActivities: _secondary.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
           activityCode: _activityCode.text,
+          accountingSystem: widget.initial == null ? _system : null,
           accountLength: widget.canEditAccountingParams && !widget.accountLengthLocked ? int.tryParse(_accountLength.text.trim()) : null,
           monthlyLockEnabled: widget.canEditAccountingParams ? _monthlyLock : null,
         ),
@@ -110,7 +113,15 @@ class _EntityFormState extends State<EntityForm> {
               _FieldRow(
                 children: [
                   AkTextField(controller: _acronym, label: 'Sigle'),
-                  AkTextField(controller: _legalForm, label: 'Forme juridique'),
+                  AkTextField(
+                    key: const Key('entity-legal-form'),
+                    controller: _legalForm,
+                    label: 'Forme juridique',
+                    onChanged: (v) {
+                      final suggested = EntityInput.suggestAccountingSystem(v);
+                      if (widget.initial == null && !_systemTouched && suggested != null && suggested != _system) setState(() => _system = suggested);
+                    },
+                  ),
                 ],
               ),
               AkTextField(controller: _address, label: 'Adresse du siège'),
@@ -177,6 +188,22 @@ class _EntityFormState extends State<EntityForm> {
           _Section(
             title: 'Paramètres comptables',
             children: [
+              AkDropdown<String>(
+                key: const Key('entity-accounting-system'),
+                label: 'Référentiel comptable',
+                value: _system,
+                items: const [
+                  AkOption('normal', 'Système normal SYSCOHADA (entreprises)'),
+                  AkOption('sycebnl', 'SYCEBNL (associations et entités à but non lucratif)'),
+                ],
+                helper: widget.initial == null ? 'Choix définitif : détermine le plan de comptes et les modèles' : 'Figé à la création',
+                onChanged: widget.initial != null
+                    ? null
+                    : (v) => setState(() {
+                          _system = v ?? 'normal';
+                          _systemTouched = true;
+                        }),
+              ),
               _FieldRow(
                 children: [
                   AkTextField(
@@ -199,7 +226,7 @@ class _EntityFormState extends State<EntityForm> {
                         onChanged: widget.canEditAccountingParams ? (v) => setState(() => _monthlyLock = v) : null,
                         label: 'Verrouillage mensuel par le chef de mission',
                       ),
-                      Text('Système normal SYSCOHADA · FCFA', style: AkText.caption.copyWith(color: t.textMuted)),
+                      Text(_system == 'sycebnl' ? 'SYCEBNL · FCFA' : 'Système normal SYSCOHADA · FCFA', style: AkText.caption.copyWith(color: t.textMuted)),
                     ],
                   ),
                 ],

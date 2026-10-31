@@ -79,14 +79,28 @@ class ReferencesRepository {
 
   Future<void> setJournalActive(String id, bool active) => _client.from('journals').update({'is_active': active}).eq('id', id);
 
+  /// Référentiel comptable de l'entité : ses modèles d'écritures utilisent les numéros de ce plan.
+  Future<String> _accountingSystem(String entityId) async {
+    final row = await _client.from('entities').select('accounting_system').eq('id', entityId).single();
+    return row['accounting_system'] as String;
+  }
+
   Future<List<EntryTemplate>> templates(String entityId) async {
-    final rows = await _client.from('entry_templates').select('*, entry_template_lines(*)').or('entity_id.is.null,entity_id.eq.$entityId').eq('is_active', true).order('code', ascending: true);
+    final system = await _accountingSystem(entityId);
+    final rows = await _client
+        .from('entry_templates')
+        .select('*, entry_template_lines(*)')
+        .or('entity_id.is.null,entity_id.eq.$entityId')
+        .eq('accounting_system', system)
+        .eq('is_active', true)
+        .order('code', ascending: true);
     return rows.map(EntryTemplate.fromJson).toList();
   }
 
   Future<void> saveTemplate(String cabinetId, String? entityId, {required String code, required String label, String? journalType, String? description, required List<TemplateLine> lines}) async {
     final row = await _client.from('entry_templates').insert({
       'cabinet_id': cabinetId, 'entity_id': entityId, 'code': code.trim().toUpperCase(), 'label': label.trim(), 'journal_type': journalType, 'description': _n(description),
+      if (entityId != null) 'accounting_system': await _accountingSystem(entityId),
     }).select().single();
     await _client.from('entry_template_lines').insert([for (final l in lines) {'template_id': row['id'], ...l.toJson()}]);
   }
