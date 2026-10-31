@@ -1,7 +1,7 @@
 -- Référentiel SYCEBNL (D-022) : plan de référence, copie à la création de l'entité, sens des comptes, immutabilité
 -- du référentiel, modèles d'écritures par référentiel.
 begin;
-select plan(24);
+select plan(28);
 
 select tests.create_cabinet('Cabinet A') as id \gset a_
 
@@ -73,6 +73,17 @@ select is((select count(*) from public.entry_templates t
                    or not exists (select 1 from public.entry_template_lines l where l.template_id = t.id and l.side = 'credit'))),
           0::bigint, 'chaque modèle SYCEBNL a une seule ligne solde, un débit et un crédit');
 select is((select count(*) from public.seed_sycebnl_template_library(:'a_id') ), 1::bigint, 'le chargement des modèles est rejouable');
+
+-- Correction des plans déjà créés (Q-018) ---------------------------------------------------------------------------
+alter table public.accounts disable trigger accounts_validate;
+update public.accounts set normal_side = 'debit' where entity_id = :'no_id' and code = '2800000';
+update public.accounts set normal_side = 'credit' where entity_id = :'sy_id' and code = '1390000';
+alter table public.accounts enable trigger accounts_validate;
+select is((select normal_side::text from public.accounts where entity_id = :'no_id' and code = '2800000'), 'debit', 'état de départ : sens faussé');
+select is(public.fix_reference_account_sides(), 2, 'la correction rétablit les deux comptes faussés');
+select is((select string_agg(normal_side::text, ',' order by code) from public.accounts where code in ('2800000', '1390000') and entity_id in (:'no_id', :'sy_id')),
+          'debit,debit,credit,credit', 'les sens de référence sont rétablis');
+select is(public.fix_reference_account_sides(), 0, 'la correction est rejouable');
 
 select * from finish();
 rollback;
