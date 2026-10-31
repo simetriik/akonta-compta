@@ -74,7 +74,7 @@ class _ClosingBodyState extends ConsumerState<_ClosingBody> {
                       icon: Icons.info_outline,
                       child: Text(
                         'Dossier SYCEBNL : bilan, compte de résultat, à-nouveaux et affectation du résultat suivent le référentiel des entités à but non lucratif. '
-                        'Tableau des flux, notes annexes et exports PDF / Excel : à venir.',
+                        'Notes annexes et exports PDF / Excel : à venir.',
                       ),
                     ),
                     const SizedBox(height: AkSpace.s3),
@@ -673,7 +673,7 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
                 const SizedBox(height: AkSpace.s3),
                 if (nonProfit)
                   Text(
-                    'Bilan et compte de résultat SYCEBNL. Tableau des flux de trésorerie, notes annexes et exports PDF / Excel : à venir.',
+                    'Bilan, compte de résultat et tableau des flux de trésorerie SYCEBNL. Notes annexes et exports PDF / Excel : à venir.',
                     key: const Key('sycebnl-statements-notice'),
                     style: AkText.caption.copyWith(color: t.textMuted),
                   )
@@ -709,6 +709,10 @@ class _StatementsStepState extends ConsumerState<StatementsStep> {
           _PostsTable(title: 'Bilan — Passif', posts: fs.liabilities, previous: fs.previous?['liabilities']),
           const SizedBox(height: AkSpace.s3),
           _PostsTable(title: 'Compte de résultat', posts: fs.income, previous: fs.previous?['income']),
+          if (fs.cashFlow.isNotEmpty) ...[
+            const SizedBox(height: AkSpace.s3),
+            _CashFlowTable(posts: fs.cashFlow, previous: fs.previous?['cash_flow']),
+          ],
         ],
       ],
     );
@@ -780,6 +784,54 @@ class _PostsTable extends StatelessWidget {
             ] else
               amountColumn('Montant', (e) => net(e.value), bold: true, showZero: true, footer: netTotal),
             if (hasPrevious) amountColumn('Exercice précédent', (e) => prev['${e.key}/${hasGross ? 'gross' : 'amount'}'] ?? 0, muted: true),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Tableau des flux de trésorerie : montants signés (encaissement +, décaissement -), totaux en gras, sans total de pied.
+class _CashFlowTable extends StatelessWidget {
+  const _CashFlowTable({required this.posts, this.previous});
+
+  final List<StatementPost> posts;
+  final List<StatementPost>? previous;
+
+  bool _isTotal(StatementPost p) => p.code.startsWith('Z');
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    final prev = {for (final p in previous ?? const <StatementPost>[]) p.code: p.amount};
+    return Column(
+      key: const Key('cash-flow-table'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AkSectionTitle('Tableau des flux de trésorerie'),
+        const SizedBox(height: AkSpace.s2),
+        AkTable<StatementPost>(
+          minWidth: 560,
+          rows: posts,
+          columns: [
+            AkColumn.text(label: 'Code', width: 56, text: (p) => p.code),
+            AkColumn(
+              label: 'Libellé',
+              cell: (_, p) => Text(p.label, style: (_isTotal(p) ? AkText.bodyStrong : AkText.table).copyWith(color: t.text)),
+            ),
+            AkColumn(
+              label: 'Exercice',
+              width: 130,
+              numeric: true,
+              cell: (_, p) => AkAmountText(Fmt.fcfa(p.amount, showZero: _isTotal(p)), bold: _isTotal(p)),
+            ),
+            if (previous != null)
+              AkColumn(
+                label: 'Exercice précédent',
+                width: 130,
+                numeric: true,
+                cell: (_, p) => AkAmountText(Fmt.fcfa(prev[p.code] ?? 0, showZero: _isTotal(p)), color: t.textMuted),
+              ),
           ],
         ),
       ],
