@@ -1,8 +1,9 @@
 import 'package:akonta/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_mapper.dart';
 
-import 'error_display.dart';
 
 /// Affichage uniforme d'une valeur asynchrone : chargement, erreur avec relance, contenu.
 class AsyncView<T> extends StatelessWidget {

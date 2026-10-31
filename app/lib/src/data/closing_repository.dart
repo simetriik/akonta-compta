@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'supabase_providers.dart';
+import '../infrastructure/supabase/mappers/closing_repository_mappers.dart';
 
 class ClosingCheck {
   const ClosingCheck({required this.code, required this.label, required this.severity, required this.status, required this.details});
@@ -11,14 +12,6 @@ class ClosingCheck {
   final String severity;
   final String status;
   final Map<String, dynamic> details;
-
-  factory ClosingCheck.fromJson(Map<String, dynamic> j) => ClosingCheck(
-        code: j['code'] as String,
-        label: j['label'] as String,
-        severity: j['severity'] as String,
-        status: j['status'] as String,
-        details: (j['details'] as Map?)?.cast<String, dynamic>() ?? const {},
-      );
 }
 
 class TaxAdjustment {
@@ -28,10 +21,6 @@ class TaxAdjustment {
   final String label;
   final String kind;
   int amount;
-
-  factory TaxAdjustment.fromJson(Map<String, dynamic> j) => TaxAdjustment(code: j['code'] as String, label: j['label'] as String, kind: j['kind'] as String, amount: (j['amount'] as num).toInt());
-
-  Map<String, dynamic> toJson() => {'code': code, 'label': label, 'kind': kind, 'amount': amount};
 }
 
 class TaxComputation {
@@ -40,19 +29,6 @@ class TaxComputation {
   final int accountingResult, taxableResult, revenue, computedTax, minimumTax, taxDue, prepayments, balanceDue;
   final double isRate;
   final String? entryId;
-
-  factory TaxComputation.fromJson(Map<String, dynamic> j) => TaxComputation(
-        accountingResult: (j['accounting_result'] as num).toInt(),
-        taxableResult: (j['taxable_result'] as num).toInt(),
-        revenue: (j['revenue'] as num).toInt(),
-        isRate: double.parse('${j['is_rate']}'),
-        computedTax: (j['computed_tax'] as num).toInt(),
-        minimumTax: (j['minimum_tax'] as num).toInt(),
-        taxDue: (j['tax_due'] as num).toInt(),
-        prepayments: (j['prepayments'] as num).toInt(),
-        balanceDue: (j['balance_due'] as num).toInt(),
-        entryId: j['entry_id'] as String?,
-      );
 }
 
 class StatementPost {
@@ -62,8 +38,6 @@ class StatementPost {
   final String label;
   final String columnRole;
   final int amount;
-
-  factory StatementPost.fromJson(Map<String, dynamic> j) => StatementPost(code: j['post_code'] as String, label: j['post_label'] as String, columnRole: j['column_role'] as String, amount: (j['amount'] as num).toInt());
 }
 
 /// Ligne d'une note annexe : montants de N et de N-1 (null sans exercice précédent) ; `kind` vaut `line`, `subtotal` ou `total`.
@@ -83,16 +57,6 @@ class NoteLine {
 
   /// Variation en % de N-1 ; absente si N-1 est nul ou inconnu.
   double? get variationPercent => previous == null || previous == 0 ? null : (amount - previous!) / previous!.abs() * 100;
-
-  factory NoteLine.fromJson(Map<String, dynamic> j) => NoteLine(
-        noteCode: j['note_code'] as String,
-        noteTitle: j['note_title'] as String,
-        lineCode: j['line_code'] as String,
-        label: j['label'] as String,
-        kind: j['kind'] as String,
-        amount: (j['amount'] as num).toInt(),
-        previous: (j['previous'] as num?)?.toInt(),
-      );
 }
 
 class FinancialStatements {
@@ -112,24 +76,6 @@ class FinancialStatements {
   final Map<String, List<StatementPost>>? previous;
   final List<Map<String, dynamic>> checks;
   final bool isFinal;
-
-  factory FinancialStatements.fromJson(Map<String, dynamic> j) {
-    final data = (j['data'] as Map).cast<String, dynamic>();
-    List<StatementPost> posts(dynamic l) => [for (final p in (l as List? ?? const [])) StatementPost.fromJson((p as Map).cast<String, dynamic>())];
-    final prev = data['previous'] as Map?;
-    return FinancialStatements(
-      id: j['id'] as String,
-      generatedAt: DateTime.parse(j['generated_at'] as String).toLocal(),
-      assets: posts(data['assets']),
-      liabilities: posts(data['liabilities']),
-      income: posts(data['income']),
-      cashFlow: posts(data['cash_flow']),
-      notes: [for (final n in (data['notes'] as List? ?? const [])) NoteLine.fromJson((n as Map).cast<String, dynamic>())],
-      previous: prev == null ? null : {'assets': posts(prev['assets']), 'liabilities': posts(prev['liabilities']), 'income': posts(prev['income']), 'cash_flow': posts(prev['cash_flow'])},
-      checks: ((j['checks'] as List?) ?? const []).map((c) => (c as Map).cast<String, dynamic>()).toList(),
-      isFinal: (j['is_final'] as bool?) ?? false,
-    );
-  }
 }
 
 /// Module 9 : assistant de clôture — contrôles, fiscalité, états, clôture provisoire, arrêté, N+1.
@@ -140,7 +86,7 @@ class ClosingRepository {
 
   Future<List<ClosingCheck>> runChecks(String entityId, String fyId) async {
     final rows = await _client.rpc('run_closing_checks', params: {'p_entity': entityId, 'p_fiscal_year': fyId}) as List;
-    return rows.map((j) => ClosingCheck.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => closingCheckFromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<void> waive(String fyId, String code, String comment) => _client.rpc('waive_closing_check', params: {'p_fiscal_year': fyId, 'p_code': code, 'p_comment': comment});
@@ -149,27 +95,27 @@ class ClosingRepository {
 
   Future<List<TaxAdjustment>> proposeAdjustments(String entityId, String fyId) async {
     final rows = await _client.rpc('propose_tax_adjustments', params: {'p_entity': entityId, 'p_fiscal_year': fyId, 'p_version': '2026'}) as List;
-    return rows.map((j) => TaxAdjustment.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => taxAdjustmentFromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<TaxComputation> computeTax(String entityId, String fyId, List<TaxAdjustment> adjustments) async {
     final id = await _client.rpc('compute_income_tax', params: {'p_entity': entityId, 'p_fiscal_year': fyId, 'p_adjustments': [for (final a in adjustments) a.toJson()], 'p_rules_version': '2026', 'p_minimum_floor': 250000}) as String;
-    return TaxComputation.fromJson(await _client.from('tax_computations').select().eq('id', id).single());
+    return taxComputationFromJson(await _client.from('tax_computations').select().eq('id', id).single());
   }
 
   Future<TaxComputation?> taxComputation(String fyId) async {
     final row = await _client.from('tax_computations').select().eq('fiscal_year_id', fyId).maybeSingle();
-    return row == null ? null : TaxComputation.fromJson(row);
+    return row == null ? null : taxComputationFromJson(row);
   }
 
   Future<FinancialStatements> generateStatements(String entityId, String fyId) async {
     final id = await _client.rpc('generate_financial_statements', params: {'p_entity': entityId, 'p_fiscal_year': fyId}) as String;
-    return FinancialStatements.fromJson(await _client.from('financial_statements').select().eq('id', id).single());
+    return financialStatementsFromJson(await _client.from('financial_statements').select().eq('id', id).single());
   }
 
   Future<FinancialStatements?> latestStatements(String fyId) async {
     final row = await _client.from('financial_statements').select().eq('fiscal_year_id', fyId).order('generated_at', ascending: false).limit(1).maybeSingle();
-    return row == null ? null : FinancialStatements.fromJson(row);
+    return row == null ? null : financialStatementsFromJson(row);
   }
 
   Future<String?> generateResultEntry(String entityId, String fyId) async => (await _client.rpc('generate_result_entry', params: {'p_entity': entityId, 'p_fiscal_year': fyId})) as String?;

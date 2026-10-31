@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'supabase_providers.dart';
+import '../infrastructure/supabase/mappers/import_repository_mappers.dart';
 
 class ImportBatch {
   const ImportBatch({required this.id, required this.kind, required this.status, this.sourceFileName, this.sourceJournal, this.periodFrom, this.periodTo, this.targetJournalId, required this.report, required this.createdAt});
@@ -19,19 +20,6 @@ class ImportBatch {
   final String? targetJournalId;
   final Map<String, dynamic> report;
   final DateTime createdAt;
-
-  factory ImportBatch.fromJson(Map<String, dynamic> j) => ImportBatch(
-        id: j['id'] as String,
-        kind: j['kind'] as String,
-        status: j['status'] as String,
-        sourceFileName: j['source_file_name'] as String?,
-        sourceJournal: j['source_journal'] as String?,
-        periodFrom: j['period_from'] == null ? null : DateTime.parse(j['period_from'] as String),
-        periodTo: j['period_to'] == null ? null : DateTime.parse(j['period_to'] as String),
-        targetJournalId: j['target_journal_id'] as String?,
-        report: (j['report'] as Map?)?.cast<String, dynamic>() ?? const {},
-        createdAt: DateTime.parse(j['created_at'] as String).toLocal(),
-      );
 
   String get statusLabel => switch (status) {
         'created' => 'Créé',
@@ -54,16 +42,6 @@ class AccountMapping {
   final String? thirdPartyName;
   final bool createThirdParty;
   final String? note;
-
-  factory AccountMapping.fromJson(Map<String, dynamic> j) => AccountMapping(
-        id: j['id'] as String,
-        rawAccount: j['raw_account'] as String,
-        accountCode: j['account_code'] as String?,
-        thirdPartyCode: j['third_party_code'] as String?,
-        thirdPartyName: j['third_party_name'] as String?,
-        createThirdParty: j['create_third_party'] as bool,
-        note: j['note'] as String?,
-      );
 }
 
 /// Décode un export Perfecto (Windows-1252) en texte Unicode. Les 32 caractères 0x80-0x9F suivent la table 1252.
@@ -100,12 +78,12 @@ class ImportRepository {
 
   Future<List<ImportBatch>> batches(String entityId) async {
     final rows = await _client.from('import_batches').select().eq('entity_id', entityId).order('created_at', ascending: false);
-    return rows.map(ImportBatch.fromJson).toList();
+    return rows.map(importBatchFromJson).toList();
   }
 
   Future<ImportBatch> createBatch({required String cabinetId, required String entityId, required String kind, required String fileName, String? targetJournalId}) async {
     final row = await _client.from('import_batches').insert({'cabinet_id': cabinetId, 'entity_id': entityId, 'kind': kind, 'source_file_name': fileName, 'target_journal_id': targetJournalId}).select().single();
-    return ImportBatch.fromJson(row);
+    return importBatchFromJson(row);
   }
 
   Future<Map<String, dynamic>> parseJournalText(String batchId, String text) async =>
@@ -121,7 +99,7 @@ class ImportRepository {
     final raw = await _client.from('import_lines').select('raw_account').eq('batch_id', batchId);
     final used = {for (final r in raw) r['raw_account'] as String};
     final rows = await _client.from('import_account_mappings').select().eq('entity_id', entityId).inFilter('raw_account', used.toList()).order('raw_account', ascending: true);
-    return rows.map(AccountMapping.fromJson).toList();
+    return rows.map(accountMappingFromJson).toList();
   }
 
   Future<void> updateMapping(String id, {String? accountCode, String? thirdPartyCode, String? thirdPartyName, bool? createThirdParty}) =>

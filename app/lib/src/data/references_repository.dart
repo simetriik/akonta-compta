@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/reference_models.dart';
 import 'supabase_providers.dart';
+import '../infrastructure/supabase/mappers/reference_models_mappers.dart';
 
 /// Module 3 : plan de comptes de l'entité, tiers, journaux, modèles d'écritures, taux.
 class ReferencesRepository {
@@ -16,7 +17,7 @@ class ReferencesRepository {
     if (search != null && search.isNotEmpty) q = q.or('code.like.$search%,label.ilike.%$search%');
     if (onlyActive) q = q.eq('is_active', true);
     final rows = await q.order('code', ascending: true).limit(2000);
-    return rows.map(Account.fromJson).toList();
+    return rows.map(accountFromJson).toList();
   }
 
   Future<Account> createAccount(String cabinetId, String entityId, {required String code, required String label, bool? isCollective}) async {
@@ -30,7 +31,7 @@ class ReferencesRepository {
       'normal_side': 'debit',
       'is_collective': ?isCollective,
     }).select().single();
-    return Account.fromJson(row);
+    return accountFromJson(row);
   }
 
   Future<void> renameAccount(String id, String label) => _client.from('accounts').update({'label': label}).eq('id', id);
@@ -43,7 +44,7 @@ class ReferencesRepository {
     var q = _client.from('third_parties').select('*, third_party_accounts(accounts(code))').eq('entity_id', entityId);
     if (search != null && search.isNotEmpty) q = q.or('code.ilike.%$search%,name.ilike.%$search%');
     final rows = await q.order('code', ascending: true);
-    return rows.map(ThirdParty.fromJson).toList();
+    return rows.map(thirdPartyFromJson).toList();
   }
 
   Future<ThirdParty> saveThirdParty(String cabinetId, String entityId,
@@ -58,14 +59,14 @@ class ReferencesRepository {
     if (collectiveAccountIds.isNotEmpty) {
       await _client.from('third_party_accounts').insert([for (final a in collectiveAccountIds) {'third_party_id': tpId, 'account_id': a}]);
     }
-    return ThirdParty.fromJson(row);
+    return thirdPartyFromJson(row);
   }
 
   Future<void> setThirdPartyActive(String id, bool active) => _client.from('third_parties').update({'is_active': active}).eq('id', id);
 
   Future<List<Journal>> journals(String entityId) async {
     final rows = await _client.from('journals').select('*, accounts(code)').eq('entity_id', entityId).order('code', ascending: true);
-    return rows.map(Journal.fromJson).toList();
+    return rows.map(journalFromJson).toList();
   }
 
   Future<void> saveJournal(String cabinetId, String entityId, {String? id, required String code, required String label, required String type, String? treasuryAccountId}) async {
@@ -94,7 +95,7 @@ class ReferencesRepository {
         .eq('accounting_system', system)
         .eq('is_active', true)
         .order('code', ascending: true);
-    return rows.map(EntryTemplate.fromJson).toList();
+    return rows.map(entryTemplateFromJson).toList();
   }
 
   Future<void> saveTemplate(String cabinetId, String? entityId, {required String code, required String label, String? journalType, String? description, required List<TemplateLine> lines}) async {
@@ -109,7 +110,7 @@ class ReferencesRepository {
 
   Future<List<TaxRate>> taxRates() async {
     final rows = await _client.from('tax_rates').select().order('code', ascending: true).order('valid_from', ascending: true);
-    return rows.map(TaxRate.fromJson).toList();
+    return rows.map(taxRateFromJson).toList();
   }
 
   /// Nouveau taux à partir d'une date : le taux précédent du même code est borné à la veille.

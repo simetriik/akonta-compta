@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/entity_models.dart';
 import 'supabase_providers.dart';
+import '../infrastructure/supabase/mappers/entity_models_mappers.dart';
 
 /// Module 2 : entités, dirigeants, exercices, associés, périodes, journaux d'ouverture.
 class EntitiesRepository {
@@ -12,14 +13,14 @@ class EntitiesRepository {
 
   Future<List<EntityDetail>> list() async {
     final rows = await _client.from('entities').select().order('name', ascending: true);
-    return rows.map(EntityDetail.fromJson).toList();
+    return rows.map(entityDetailFromJson).toList();
   }
 
-  Future<EntityDetail> get(String id) async => EntityDetail.fromJson(await _client.from('entities').select().eq('id', id).single());
+  Future<EntityDetail> get(String id) async => entityDetailFromJson(await _client.from('entities').select().eq('id', id).single());
 
   Future<EntityDetail> create(String cabinetId, EntityInput input) async {
     final row = await _client.from('entities').insert({'cabinet_id': cabinetId, ...input.toJson()}).select().single();
-    return EntityDetail.fromJson(row);
+    return entityDetailFromJson(row);
   }
 
   Future<void> update(String id, EntityInput input) => _client.from('entities').update(input.toJson()).eq('id', id);
@@ -28,7 +29,7 @@ class EntitiesRepository {
 
   Future<List<Director>> directors(String entityId) async {
     final rows = await _client.from('entity_directors').select().eq('entity_id', entityId).order('sort_order', ascending: true);
-    return rows.map(Director.fromJson).toList();
+    return rows.map(directorFromJson).toList();
   }
 
   Future<void> addDirector(String cabinetId, String entityId, {required String fullName, required String position, String? nationality, String? address, bool board = false}) =>
@@ -38,7 +39,7 @@ class EntitiesRepository {
 
   Future<List<FiscalYear>> fiscalYears(String entityId) async {
     final rows = await _client.from('fiscal_years').select().eq('entity_id', entityId).order('start_date', ascending: true);
-    return rows.map(FiscalYear.fromJson).toList();
+    return rows.map(fiscalYearFromJson).toList();
   }
 
   Future<FiscalYear> createFiscalYear(String cabinetId, String entityId, {required DateTime start, required DateTime end, String? label, int? capital, int? headcount}) async {
@@ -51,7 +52,7 @@ class EntitiesRepository {
       'capital': capital,
       'headcount': headcount,
     }).select().single();
-    return FiscalYear.fromJson(row);
+    return fiscalYearFromJson(row);
   }
 
   Future<void> updateFiscalYear(String id, {int? capital, int? headcount}) =>
@@ -59,7 +60,7 @@ class EntitiesRepository {
 
   Future<List<FiscalYearPartner>> partners(String fiscalYearId) async {
     final rows = await _client.from('fiscal_year_partners').select().eq('fiscal_year_id', fiscalYearId).order('created_at', ascending: true);
-    return rows.map(FiscalYearPartner.fromJson).toList();
+    return rows.map(fiscalYearPartnerFromJson).toList();
   }
 
   Future<void> addPartner(String cabinetId, String fiscalYearId, {required String name, required double sharePercent}) =>
@@ -69,7 +70,7 @@ class EntitiesRepository {
 
   Future<List<Period>> periods(String fiscalYearId) async {
     final rows = await _client.from('periods').select().eq('fiscal_year_id', fiscalYearId).order('period_no', ascending: true);
-    return rows.map(Period.fromJson).toList();
+    return rows.map(periodFromJson).toList();
   }
 
   Future<void> lockPeriod(String id) => _client.from('periods').update({'is_locked': true}).eq('id', id);
@@ -78,12 +79,12 @@ class EntitiesRepository {
 
   Future<List<EntityHistoryItem>> history(String entityId) async {
     final rows = await _client.from('entity_history').select().eq('entity_id', entityId).order('changed_at', ascending: false).limit(100);
-    return rows.map(EntityHistoryItem.fromJson).toList();
+    return rows.map(entityHistoryItemFromJson).toList();
   }
 
   Future<List<JournalTemplate>> journalTemplates() async {
     final rows = await _client.from('journal_templates').select().order('sort_order', ascending: true);
-    return rows.map(JournalTemplate.fromJson).toList();
+    return rows.map(journalTemplateFromJson).toList();
   }
 
   Future<int> createJournalsFromTemplate(String entityId, List<String> codes) async {
@@ -96,7 +97,7 @@ class EntitiesRepository {
 
   Future<List<AccountRef>> treasuryAccounts(String entityId) async {
     final rows = await _client.from('accounts').select('id, code, label').eq('entity_id', entityId).eq('class', 5).eq('allow_posting', true).eq('is_active', true).order('code', ascending: true);
-    return rows.map(AccountRef.fromJson).toList();
+    return rows.map(accountRefFromJson).toList();
   }
 
   Future<int> accountCount(String entityId) async {

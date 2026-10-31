@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/errors/errors.dart';
 import '../domain/entry_models.dart';
 import 'supabase_providers.dart';
+import '../infrastructure/supabase/mappers/entry_models_mappers.dart';
 
 class EntryFilter {
   const EntryFilter({this.journalId, this.month, this.status, this.reviewStatus, this.search, this.toReviewOnly = false});
@@ -57,7 +58,7 @@ class EntriesRepository {
       }
     }
     final rows = await q.order('entry_date', ascending: false).order('number', ascending: false, nullsFirst: true).limit(limit);
-    var entries = rows.map(EntryModel.fromJson).toList();
+    var entries = rows.map(entryModelFromJson).toList();
     // Recherche par montant, compte ou tiers : filtre côté client sur les lignes chargées
     if (s != null && s.isNotEmpty) {
       final n = int.tryParse(s.replaceAll(RegExp(r'[\s  .]'), ''));
@@ -71,7 +72,7 @@ class EntriesRepository {
     return entries;
   }
 
-  Future<EntryModel> get(String id) async => EntryModel.fromJson(await _client.from('entries').select(_select).eq('id', id).single());
+  Future<EntryModel> get(String id) async => entryModelFromJson(await _client.from('entries').select(_select).eq('id', id).single());
 
   Future<String> saveDraft(String cabinetId, String entityId, EntryDraft d) async {
     final header = {

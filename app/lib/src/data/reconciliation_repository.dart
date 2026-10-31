@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/bank_models.dart';
 import 'supabase_providers.dart';
+import '../infrastructure/supabase/mappers/bank_models_mappers.dart';
 
 /// Module 7 — rapprochement : gabarits, relevés, lignes non pointées, propositions, pointage, état, écriture depuis le relevé, état figé.
 class ReconciliationRepository {
@@ -14,12 +15,12 @@ class ReconciliationRepository {
 
   Future<List<StatementTemplate>> templates() async {
     final rows = await _client.from('bank_statement_templates').select().order('bank_name', ascending: true);
-    return rows.map(StatementTemplate.fromJson).toList();
+    return rows.map(statementTemplateFromJson).toList();
   }
 
   Future<StatementTemplate> saveTemplate(String cabinetId, StatementTemplate t) async {
     final row = await _client.from('bank_statement_templates').insert({'cabinet_id': cabinetId, ...t.toJson()}).select().single();
-    return StatementTemplate.fromJson(row);
+    return statementTemplateFromJson(row);
   }
 
   Future<String> importStatement({required String journalId, required DateTime from, required DateTime to, required List<ParsedStatementLine> lines, int? opening, int? closing, String? templateId, String? fileName}) async =>
@@ -30,17 +31,17 @@ class ReconciliationRepository {
 
   Future<List<StatementLine>> unmatchedStatementLines(String journalId, {DateTime? until}) async {
     final rows = await _client.rpc('unmatched_statement_lines', params: {'p_journal': journalId, 'p_until': until == null ? null : _d(until)}) as List;
-    return rows.map((j) => StatementLine.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => statementLineFromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<List<BookLine>> unmatchedBookLines(String journalId, {DateTime? until}) async {
     final rows = await _client.rpc('unmatched_book_lines', params: {'p_journal': journalId, 'p_until': until == null ? null : _d(until)}) as List;
-    return rows.map((j) => BookLine.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => bookLineFromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<List<ReconciliationProposalModel>> proposals(String journalId, {DateTime? until}) async {
     final rows = await _client.rpc('reconciliation_proposals', params: {'p_journal': journalId, 'p_until': until == null ? null : _d(until)}) as List;
-    return rows.map((j) => ReconciliationProposalModel.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => reconciliationProposalModelFromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<String> match(String journalId, List<int> statementLineIds, List<String> entryLineIds, {String? note}) async =>
@@ -48,7 +49,7 @@ class ReconciliationRepository {
 
   Future<ReconciliationStateModel> state(String journalId, DateTime asOf) async {
     final rows = await _client.rpc('reconciliation_state', params: {'p_journal': journalId, 'p_as_of': _d(asOf)}) as List;
-    return ReconciliationStateModel.fromJson(rows.first as Map<String, dynamic>);
+    return reconciliationStateModelFromJson(rows.first as Map<String, dynamic>);
   }
 
   /// Crée (et valide puis pointe) l'écriture d'une ligne de relevé ; [entryDate] permet de la dater

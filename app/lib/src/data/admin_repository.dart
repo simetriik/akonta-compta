@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/models.dart';
 import 'supabase_providers.dart';
+import '../infrastructure/supabase/mappers/models_mappers.dart';
 
 /// Rôle d'un cabinet avec ses permissions (ajustables par l'associé).
 class RoleDef {
@@ -66,7 +67,7 @@ class AdminRepository {
 
   Future<List<Profile>> profiles() async {
     final rows = await _client.from('profiles').select().order('full_name', ascending: true);
-    return rows.map(Profile.fromJson).toList();
+    return rows.map(profileFromJson).toList();
   }
 
   Future<void> setActive(String userId, bool active) => _client.from('profiles').update({'is_active': active}).eq('id', userId);

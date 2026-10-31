@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'supabase_providers.dart';
 import '../core/errors/errors.dart';
+import '../infrastructure/supabase/mappers/documents_repository_mappers.dart';
 
 class DocumentModel {
   const DocumentModel({required this.id, required this.entityId, required this.storagePath, required this.fileName, required this.mimeType, required this.sizeBytes, required this.sha256, required this.capturedVia, required this.capturedAt, this.note, this.entryIds = const []});
@@ -21,20 +22,6 @@ class DocumentModel {
   final DateTime capturedAt;
   final String? note;
   final List<String> entryIds;
-
-  factory DocumentModel.fromJson(Map<String, dynamic> j) => DocumentModel(
-        id: j['id'] as String,
-        entityId: j['entity_id'] as String,
-        storagePath: j['storage_path'] as String,
-        fileName: j['file_name'] as String,
-        mimeType: j['mime_type'] as String,
-        sizeBytes: (j['size_bytes'] as num).toInt(),
-        sha256: j['sha256'] as String,
-        capturedVia: j['captured_via'] as String,
-        capturedAt: DateTime.parse(j['captured_at'] as String).toLocal(),
-        note: j['note'] as String?,
-        entryIds: [for (final l in (j['entry_documents'] as List? ?? const [])) l['entry_id'] as String],
-      );
 
   bool get isInInbox => entryIds.isEmpty;
   bool get isImage => mimeType.startsWith('image/');
@@ -68,13 +55,13 @@ class DocumentsRepository {
 
   Future<List<DocumentModel>> list(String entityId, {bool inboxOnly = false}) async {
     final rows = await _client.from('documents').select('*, entry_documents(entry_id)').eq('entity_id', entityId).order('captured_at', ascending: false).limit(500);
-    final docs = rows.map(DocumentModel.fromJson).toList();
+    final docs = rows.map(documentModelFromJson).toList();
     return inboxOnly ? docs.where((d) => d.isInInbox).toList() : docs;
   }
 
   Future<List<DocumentModel>> forEntry(String entryId) async {
     final rows = await _client.from('entry_documents').select('documents(*, entry_documents(entry_id))').eq('entry_id', entryId);
-    return [for (final r in rows) DocumentModel.fromJson(r['documents'] as Map<String, dynamic>)];
+    return [for (final r in rows) documentModelFromJson(r['documents'] as Map<String, dynamic>)];
   }
 
   /// Dépose un fichier : contrôle du type et de la taille, envoi au Storage sous `cabinet/entité/uuid.ext`, enregistrement.
@@ -100,7 +87,7 @@ class DocumentsRepository {
         'captured_via': capturedVia,
         'note': note,
       }).select('*, entry_documents(entry_id)').single();
-      return DocumentModel.fromJson(row);
+      return documentModelFromJson(row);
     } catch (e) {
       await _client.storage.from(bucket).remove([path]);
       rethrow;

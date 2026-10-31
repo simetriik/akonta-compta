@@ -15,7 +15,7 @@ import '../../data/supabase_providers.dart';
 import '../../domain/bank_models.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
-import '../inventory/inventory_screen.dart' show showErrorSnack;
+import '../inventory/inventory_screen.dart';
 import '../widgets/require_entity.dart';
 
 /// Rapprochement bancaire (§10.7) : import du relevé selon un gabarit mémorisé, deux volets relevé / comptabilité,

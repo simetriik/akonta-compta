@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'supabase_providers.dart';
+import '../infrastructure/supabase/mappers/consultation_repository_mappers.dart';
 
 class LedgerLine {
   const LedgerLine({required this.accountCode, required this.accountLabel, required this.entryId, required this.entryDate, required this.journalCode, required this.number, this.reference, required this.label, this.thirdPartyCode, required this.debit, required this.credit, required this.runningBalance, this.letterCode});
@@ -21,22 +22,6 @@ class LedgerLine {
   final int credit;
   final int runningBalance;
   final String? letterCode;
-
-  factory LedgerLine.fromJson(Map<String, dynamic> j) => LedgerLine(
-        accountCode: j['account_code'] as String,
-        accountLabel: j['account_label'] as String,
-        entryId: j['entry_id'] as String,
-        entryDate: DateTime.parse(j['entry_date'] as String),
-        journalCode: j['journal_code'] as String,
-        number: (j['number'] as num).toInt(),
-        reference: j['reference'] as String?,
-        label: j['label'] as String,
-        thirdPartyCode: j['third_party_code'] as String?,
-        debit: (j['debit'] as num).toInt(),
-        credit: (j['credit'] as num).toInt(),
-        runningBalance: (j['running_balance'] as num).toInt(),
-        letterCode: j['letter_code'] as String?,
-      );
 }
 
 class BalanceRow {
@@ -52,19 +37,6 @@ class BalanceRow {
   final int periodCredit;
   final int closingDebit;
   final int closingCredit;
-
-  factory BalanceRow.fromJson(Map<String, dynamic> j) => BalanceRow(
-        accountCode: j['account_code'] as String,
-        accountLabel: (j['account_label'] as String?) ?? '',
-        thirdPartyCode: j['third_party_code'] as String?,
-        thirdPartyName: j['third_party_name'] as String?,
-        openingDebit: (j['opening_debit'] as num).toInt(),
-        openingCredit: (j['opening_credit'] as num).toInt(),
-        periodDebit: (j['period_debit'] as num).toInt(),
-        periodCredit: (j['period_credit'] as num).toInt(),
-        closingDebit: (j['closing_debit'] as num).toInt(),
-        closingCredit: (j['closing_credit'] as num).toInt(),
-      );
 }
 
 class AgedRow {
@@ -74,18 +46,6 @@ class AgedRow {
   final String thirdPartyCode;
   final String thirdPartyName;
   final int d0_30, d31_60, d61_90, d91_180, over180, total;
-
-  factory AgedRow.fromJson(Map<String, dynamic> j) => AgedRow(
-        accountCode: j['account_code'] as String,
-        thirdPartyCode: j['third_party_code'] as String,
-        thirdPartyName: j['third_party_name'] as String,
-        d0_30: (j['d0_30'] as num).toInt(),
-        d31_60: (j['d31_60'] as num).toInt(),
-        d61_90: (j['d61_90'] as num).toInt(),
-        d91_180: (j['d91_180'] as num).toInt(),
-        over180: (j['over_180'] as num).toInt(),
-        total: (j['total'] as num).toInt(),
-      );
 }
 
 class CentralizationRow {
@@ -98,16 +58,6 @@ class CentralizationRow {
   final int entriesCount;
   final int totalDebit;
   final int totalCredit;
-
-  factory CentralizationRow.fromJson(Map<String, dynamic> j) => CentralizationRow(
-        journalCode: j['journal_code'] as String,
-        journalLabel: j['journal_label'] as String,
-        periodNo: (j['period_no'] as num).toInt(),
-        monthStart: DateTime.parse(j['month_start'] as String),
-        entriesCount: (j['entries_count'] as num).toInt(),
-        totalDebit: (j['total_debit'] as num).toInt(),
-        totalCredit: (j['total_credit'] as num).toInt(),
-      );
 }
 
 class ConsultationParams {
@@ -140,28 +90,28 @@ class ConsultationRepository {
 
   Future<List<LedgerLine>> generalLedger(ConsultationParams p) async {
     final rows = await _client.rpc('general_ledger', params: {'p_entity': p.entityId, 'p_from': _d(p.from), 'p_to': _d(p.to), 'p_account_from': p.accountFrom, 'p_account_to': p.accountTo, 'p_third_party': null}) as List;
-    return rows.map((j) => LedgerLine.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => ledgerLineFromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<List<BalanceRow>> trialBalance(ConsultationParams p) async {
     final rows = await _client.rpc('trial_balance', params: {'p_entity': p.entityId, 'p_from': _d(p.from), 'p_to': _d(p.to), 'p_class': p.classNo}) as List;
-    return rows.map((j) => BalanceRow.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => balanceRowFromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<List<BalanceRow>> auxiliaryBalance(ConsultationParams p) async {
     final rows = await _client.rpc('auxiliary_balance', params: {'p_entity': p.entityId, 'p_from': _d(p.from), 'p_to': _d(p.to), 'p_account': null}) as List;
-    return rows.map((j) => BalanceRow.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => balanceRowFromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<List<AgedRow>> agedBalance(ConsultationParams p) async {
     final rows = await _client.rpc('aged_balance', params: {'p_entity': p.entityId, 'p_as_of': _d(p.to), 'p_side': p.side}) as List;
-    return rows.map((j) => AgedRow.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => agedRowFromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<List<CentralizationRow>> centralization(ConsultationParams p) async {
     if (p.fiscalYearId == null) return const [];
     final rows = await _client.rpc('journal_centralization', params: {'p_entity': p.entityId, 'p_fiscal_year': p.fiscalYearId}) as List;
-    return rows.map((j) => CentralizationRow.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => centralizationRowFromJson(j as Map<String, dynamic>)).toList();
   }
 
   /// Export PDF / Excel : renvoie le nom du fichier et son contenu.

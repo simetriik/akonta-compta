@@ -9,7 +9,7 @@ import '../../data/references_repository.dart';
 import '../../data/supabase_providers.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
-import '../inventory/inventory_screen.dart' show showErrorSnack;
+import '../inventory/inventory_screen.dart';
 import '../widgets/require_entity.dart';
 
 /// Lettrage par compte de tiers (§10.7) : débits et crédits non lettrés, sélection, écart, propositions, partiel, délettrage.

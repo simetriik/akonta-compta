@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'consultation_repository.dart';
 import 'supabase_providers.dart';
+import '../infrastructure/supabase/mappers/inventory_repository_mappers.dart';
 
 class FixedAsset {
   const FixedAsset({required this.id, required this.code, required this.designation, required this.assetAccountCode, required this.acquisitionDate, required this.serviceDate, required this.grossValue, required this.salvageValue, required this.method, required this.durationMonths, this.decliningCoefficient, required this.priorDepreciation, required this.status, this.disposalDate, this.disposalPrice});
@@ -23,24 +24,6 @@ class FixedAsset {
   final DateTime? disposalDate;
   final int? disposalPrice;
 
-  factory FixedAsset.fromJson(Map<String, dynamic> j) => FixedAsset(
-        id: j['id'] as String,
-        code: j['code'] as String,
-        designation: j['designation'] as String,
-        assetAccountCode: (j['accounts'] as Map?)?['code'] as String? ?? '',
-        acquisitionDate: DateTime.parse(j['acquisition_date'] as String),
-        serviceDate: DateTime.parse(j['service_date'] as String),
-        grossValue: (j['gross_value'] as num).toInt(),
-        salvageValue: (j['salvage_value'] as num?)?.toInt() ?? 0,
-        method: j['method'] as String,
-        durationMonths: (j['duration_months'] as num).toInt(),
-        decliningCoefficient: j['declining_coefficient'] == null ? null : double.parse('${j['declining_coefficient']}'),
-        priorDepreciation: (j['prior_depreciation'] as num?)?.toInt() ?? 0,
-        status: j['status'] as String,
-        disposalDate: j['disposal_date'] == null ? null : DateTime.parse(j['disposal_date'] as String),
-        disposalPrice: (j['disposal_price'] as num?)?.toInt(),
-      );
-
   String get statusLabel => switch (status) { 'in_service' => 'En service', 'disposed' => 'Cédée', 'scrapped' => 'Rebut', _ => status };
 }
 
@@ -54,16 +37,6 @@ class PlanRow {
   final int charge;
   final int cumulated;
   final int netBookValue;
-
-  factory PlanRow.fromJson(Map<String, dynamic> j) => PlanRow(
-        yearNo: (j['year_no'] as num).toInt(),
-        periodStart: DateTime.parse(j['period_start'] as String),
-        periodEnd: DateTime.parse(j['period_end'] as String),
-        rate: double.parse('${j['rate']}'),
-        charge: (j['charge'] as num).toInt(),
-        cumulated: (j['cumulated'] as num).toInt(),
-        netBookValue: (j['net_book_value'] as num).toInt(),
-      );
 }
 
 class StockRow {
@@ -75,15 +48,6 @@ class StockRow {
   final int openingValue;
   final int closingValue;
   final String? entryId;
-
-  factory StockRow.fromJson(Map<String, dynamic> j) => StockRow(
-        id: j['id'] as String,
-        stockAccountCode: (j['stock'] as Map?)?['code'] as String? ?? '',
-        variationAccountCode: (j['variation'] as Map?)?['code'] as String? ?? '',
-        openingValue: (j['opening_value'] as num).toInt(),
-        closingValue: (j['closing_value'] as num).toInt(),
-        entryId: j['entry_id'] as String?,
-      );
 }
 
 class ProvisionRow {
@@ -98,18 +62,6 @@ class ProvisionRow {
   final int previousAmount;
   final String? note;
   final String? entryId;
-
-  factory ProvisionRow.fromJson(Map<String, dynamic> j) => ProvisionRow(
-        id: j['id'] as String,
-        kind: j['kind'] as String,
-        thirdPartyCode: (j['third_parties'] as Map?)?['code'] as String?,
-        baseAmount: (j['base_amount'] as num).toInt(),
-        rate: j['rate'] == null ? null : double.parse('${j['rate']}'),
-        amount: (j['amount'] as num).toInt(),
-        previousAmount: (j['previous_amount'] as num).toInt(),
-        note: j['note'] as String?,
-        entryId: j['entry_id'] as String?,
-      );
 }
 
 class AccrualRow {
@@ -127,20 +79,6 @@ class AccrualRow {
   final String? entryId;
   final String? reversalEntryId;
 
-  factory AccrualRow.fromJson(Map<String, dynamic> j) => AccrualRow(
-        id: j['id'] as String,
-        kind: j['kind'] as String,
-        description: j['description'] as String,
-        accountCode: (j['account'] as Map?)?['code'] as String? ?? '',
-        counterpartCode: (j['counterpart'] as Map?)?['code'] as String? ?? '',
-        totalAmount: (j['total_amount'] as num).toInt(),
-        periodFrom: DateTime.parse(j['period_from'] as String),
-        periodTo: DateTime.parse(j['period_to'] as String),
-        amount: (j['amount'] as num).toInt(),
-        entryId: j['entry_id'] as String?,
-        reversalEntryId: j['reversal_entry_id'] as String?,
-      );
-
   static const kindLabels = {'cap': 'Charge à payer', 'par': 'Produit à recevoir', 'cca': 'Charge constatée d\'avance', 'pca': 'Produit constaté d\'avance'};
 }
 
@@ -154,7 +92,7 @@ class InventoryRepository {
 
   Future<List<FixedAsset>> assets(String entityId) async {
     final rows = await _client.from('fixed_assets').select('*, accounts!fixed_assets_asset_account_id_fkey(code)').eq('entity_id', entityId).order('code', ascending: true);
-    return rows.map(FixedAsset.fromJson).toList();
+    return rows.map(fixedAssetFromJson).toList();
   }
 
   Future<void> saveAsset(String cabinetId, String entityId, Map<String, dynamic> values, {String? id}) async {
@@ -167,7 +105,7 @@ class InventoryRepository {
 
   Future<List<PlanRow>> plan(String assetId) async {
     final rows = await _client.rpc('depreciation_plan', params: {'p_asset': assetId}) as List;
-    return rows.map((j) => PlanRow.fromJson(j as Map<String, dynamic>)).toList();
+    return rows.map((j) => planRowFromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<String?> generateDepreciation(String entityId, String fiscalYearId) async =>
@@ -178,7 +116,7 @@ class InventoryRepository {
 
   Future<List<StockRow>> stocks(String fiscalYearId) async {
     final rows = await _client.from('inventory_stocks').select('*, stock:accounts!inventory_stocks_stock_account_id_fkey(code), variation:accounts!inventory_stocks_variation_account_id_fkey(code)').eq('fiscal_year_id', fiscalYearId).order('created_at', ascending: true);
-    return rows.map(StockRow.fromJson).toList();
+    return rows.map(stockRowFromJson).toList();
   }
 
   Future<void> upsertStock(String cabinetId, String entityId, String fiscalYearId, {required String stockAccountId, required String variationAccountId, required int closingValue}) =>
@@ -189,7 +127,7 @@ class InventoryRepository {
 
   Future<List<ProvisionRow>> provisions(String fiscalYearId) async {
     final rows = await _client.from('provisions').select('*, third_parties(code)').eq('fiscal_year_id', fiscalYearId).order('kind', ascending: true).order('created_at', ascending: true);
-    return rows.map(ProvisionRow.fromJson).toList();
+    return rows.map(provisionRowFromJson).toList();
   }
 
   Future<int> proposeReceivableProvisions(String entityId, String fiscalYearId, {required double rate91to180, required double rateOver180, Map<String, double> byThirdParty = const {}}) async =>
@@ -205,7 +143,7 @@ class InventoryRepository {
 
   Future<List<AccrualRow>> accruals(String fiscalYearId) async {
     final rows = await _client.from('accruals').select('*, account:accounts!accruals_account_id_fkey(code), counterpart:accounts!accruals_counterpart_account_id_fkey(code)').eq('fiscal_year_id', fiscalYearId).order('created_at', ascending: true);
-    return rows.map(AccrualRow.fromJson).toList();
+    return rows.map(accrualRowFromJson).toList();
   }
 
   Future<void> addAccrual(String cabinetId, String entityId, String fiscalYearId, {required String kind, required String description, required String accountId, required String counterpartAccountId, String? thirdPartyId, required int totalAmount, required DateTime from, required DateTime to}) =>
