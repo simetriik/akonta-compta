@@ -82,3 +82,8 @@
 - **Constat** : le plan de 1 130 comptes vient d'un site tiers ; le sens normal, les collectifs et les comptes lettrables sont déduits de règles par préfixe (`scripts/generate_sycebnl_accounts.py`). Les 19 modèles `AS_*` sont sans TVA.
 - **À faire** : rapprocher du Journal officiel OHADA (acte uniforme du 22 déc. 2022) ; faire valider par ABC les comptes des modèles et les sens ambigus (87, 88, 169, 475, comptes à recevoir).
 
+## Q-020 — États SYCEBNL : interprétations à valider et reste à faire
+- **À faire valider par ABC** : le total XA (RA à RH au lieu de RA à RG) ; le rattachement des comptes « p » (2919, 2939, 2949) ; le compte 2951 pour les dépréciations de AG (chiffre illisible sur le scan) ; les écarts du D-024 (35, 46, 702, 7054, 7055, 2817) ; la présentation du résultat en instance dans CG.
+- **À définir** : méthode de construction du tableau des flux de trésorerie (le texte ne donne aucune correspondance comptes → flux ; méthode directe par contrepartie des mouvements de trésorerie à proposer) ; les 35 notes annexes (priorité : notes 5, 15, 16, 17A, 17B, 23) ; export PDF et Excel des états SYCEBNL (le service de documents suit le modèle SYSCOHADA) ; adaptation des travaux d'inventaire au plan SYCEBNL.
+- **Hypothèse appliquée** : bilan et compte de résultat générés et affichés à l'écran ; flux, notes et exports « à venir ».
+
