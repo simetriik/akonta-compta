@@ -39,7 +39,7 @@ Flutter n'est pas la garantie ; la base l'est. Éléments qui traversent plusieu
 
 ## Phasage
 
-Lot 1 (fin nov. 2026) : modules 1 Socle, 2 Cabinet et dossiers, 3 Référentiels, 4 Saisie, 5 Pièces, 6 Consultation, 10 Import Perfecto. Lot 2 (mars 2027) : 7 Lettrage et rapprochement. Lot 3 (sept. 2027) : 8 Inventaire, 9 Clôture. **Schéma SQL complet des lots 1 à 3 avant toute interface.** Hors V1 : missions du cabinet/lien eABC, suggestions apprises, relevés PDF, stock permanent, saisie par les clients, système minimal, SYCEBNL.
+Lot 1 (fin nov. 2026) : modules 1 Socle, 2 Cabinet et dossiers, 3 Référentiels, 4 Saisie, 5 Pièces, 6 Consultation, 10 Import Perfecto. Lot 2 (mars 2027) : 7 Lettrage et rapprochement. Lot 3 (sept. 2027) : 8 Inventaire, 9 Clôture. **Schéma SQL complet des lots 1 à 3 avant toute interface.** Hors V1 : missions du cabinet/lien eABC, relevés PDF, stock permanent, saisie par les clients, système minimal. Avancés en V1 par décision : SYCEBNL (D-022 à D-029 dans `docs/decisions-dev.md`) et suggestions de saisie sans modèle (D-026). Ce qui est repoussé ou à reprendre (export Excel SYCEBNL, commentaires de notes, IA, déploiement) est dans `docs/reste-a-faire.md`.
 
 ## Conventions propres au projet
 
