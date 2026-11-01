@@ -265,3 +265,9 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Correction** : `onlinePolicyProvider`, dont dépendent tous les services, observe l'utilisateur connecté. Tout service est donc recréé à chaque changement d'utilisateur, et tout fournisseur qui lit ses données par un service est relu. Le cache hors connexion était déjà propre à l'utilisateur (clé par identifiant).
 - **Essai** : `session_isolation_test` reproduit le défaut (échoue sans le correctif, passe avec).
 - **Conséquence pour la recette** : après une reconnexion, les listes sont relues ; recharger la page reste un bon réflexe pour obtenir la dernière version de l'application.
+
+## D-042 — 2026-11-03 — Exports PDF et Excel : réponse toujours en octets
+- **Constat** (recette, 1er nov. 2026) : « Exporter » (PDF ou Excel) échouait avec « Une valeur n'a pas le bon format ». Le service de documents répondait 200, le fichier était bon.
+- **Cause** : la bibliothèque Supabase (`functions_client`) ne rend des octets que pour une réponse `application/octet-stream` ; pour `application/pdf` ou le type Excel, elle lit le corps comme du texte UTF-8 et échoue sur un fichier binaire. L'Edge Function renvoyait le type d'origine du fichier. Les exports n'avaient jamais été essayés depuis l'application (voir `docs/reste-a-faire.md`, section 3).
+- **Correction** : `exportResponseHeaders` (`_shared/documents.ts`) impose `application/octet-stream` ; le nom du fichier reste dans `content-disposition` (l'application le recalcule de son côté).
+- **Essais** : test Deno de l'en-tête ; essai réel de la fonction contre la base de développement et le service de documents : balance, grand livre (PDF et Excel) et balance âgée renvoient `%PDF` ou `PK` avec le bon nom. Les exports du journal, du rapprochement, des états financiers et de la liasse DGI passent par la même ligne mais n'ont pas été essayés un par un.

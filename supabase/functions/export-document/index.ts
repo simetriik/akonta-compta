@@ -2,7 +2,7 @@
 // fonctions SQL au nom de l'appelant (RLS, permission ledger.read), rendues par le service de documents,
 // et l'export est tracé dans la piste d'audit.
 import { callerClient, error } from "../_shared/auth.ts";
-import { buildPayload, type ExportRequest, servicePath, validateRequest } from "../_shared/documents.ts";
+import { buildPayload, type ExportRequest, exportResponseHeaders, servicePath, validateRequest } from "../_shared/documents.ts";
 
 const SERVICE_URL = Deno.env.get("DOCUMENTS_SERVICE_URL") ?? "http://host.containers.internal:8100";
 const SERVICE_KEY = Deno.env.get("DOCUMENTS_SERVICE_KEY") ?? "";
@@ -113,7 +113,5 @@ Deno.serve(async (req) => {
     p_action: "export", p_entity: r.entity_id,
     p_payload: { kind: r.kind, format: r.format, from: r.from, to: r.to, rows: rows.length },
   });
-  return new Response(await upstream.arrayBuffer(), {
-    headers: { "content-type": upstream.headers.get("content-type") ?? "application/octet-stream", "content-disposition": `attachment; filename="${route.filename}"` },
-  });
+  return new Response(await upstream.arrayBuffer(), { headers: exportResponseHeaders(route.filename) });
 });

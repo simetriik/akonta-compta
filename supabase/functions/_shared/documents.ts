@@ -95,3 +95,9 @@ export function buildPayload(r: ExportRequest, header: HeaderInfo, rows: Record<
       return { template_version: "SN-2025", cells: rows };
   }
 }
+
+/** En-têtes de la réponse d'un export. Le type est toujours `application/octet-stream` : le client Supabase de l'application ne rend des
+ *  octets que pour ce type, tout autre (application/pdf, Excel…) est lu comme du texte et échoue sur un fichier binaire. */
+export function exportResponseHeaders(filename: string): Record<string, string> {
+  return { "content-type": "application/octet-stream", "content-disposition": `attachment; filename="${filename}"` };
+}
