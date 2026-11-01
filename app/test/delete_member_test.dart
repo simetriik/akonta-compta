@@ -1,5 +1,6 @@
 import 'package:akonta/design/design.dart';
 import 'package:akonta/src/application/providers/repositories.dart';
+import 'package:akonta/src/application/providers/session_providers.dart';
 import 'package:akonta/src/core/errors/errors.dart';
 import 'package:akonta/src/domain/models.dart';
 import 'package:akonta/src/domain/repositories/admin_repository.dart';
@@ -38,7 +39,7 @@ void main() {
     final repo = _FakeAdmin();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [adminRepositoryProvider.overrideWithValue(repo)],
+        overrides: [adminRepositoryProvider.overrideWithValue(repo), currentUserIdProvider.overrideWithValue('admin')],
         child: MaterialApp(
           theme: buildAkontaTheme(),
           home: const Scaffold(body: UsersScreen()),

@@ -63,7 +63,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('validate-entry')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Journal requis'), findsOneWidget);
+    // Le journal est proposé d'office : l'utilisateur n'a pas à le choisir pour obtenir les autres erreurs.
+    expect(find.textContaining('Journal requis'), findsNothing);
     expect(find.textContaining('Libellé requis'), findsOneWidget);
     expect(find.textContaining('Au moins deux lignes'), findsOneWidget);
   });

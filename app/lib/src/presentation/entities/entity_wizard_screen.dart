@@ -27,6 +27,13 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
   final Set<String> _journalCodes = {};
   final Map<String, String?> _treasuryAccounts = {}; // code journal → compte de trésorerie
   List<AccountRef> _class5 = const [];
+
+  /// Comptes proposés pour un journal de trésorerie : 52 (banque) ou 57 (caisse) ; à défaut, tous les comptes de classe 5.
+  List<AccountRef> _treasuryOptions(JournalTemplate t) {
+    final prefix = t.type == 'bank' ? '52' : '57';
+    final matching = _class5.where((a) => a.code.startsWith(prefix)).toList();
+    return matching.isEmpty ? _class5 : matching;
+  }
   String? _error;
 
   static const titles = ['Fiche entité', 'Exercice', 'Plan de comptes', 'Journaux', 'Soldes d\'ouverture'];
@@ -140,6 +147,11 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
                   setState(() {
                     _journalCodes.addAll(templates.where((t) => t.isDefaultChecked && t.type != 'opening').map((t) => t.code));
                     _class5 = accounts;
+                    // Banque : comptes 52 ; caisse : comptes 57 ; le premier est proposé d'office (modifiable).
+                    for (final t in templates.where((t) => t.isTreasury)) {
+                      final options = _treasuryOptions(t);
+                      if (options.isNotEmpty) _treasuryAccounts[t.code] ??= options.first.id;
+                    }
                     _step = 3;
                   });
                 },
@@ -183,8 +195,11 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
                           child: AkDropdown<String>(
                             hint: 'Compte de trésorerie',
                             value: _treasuryAccounts[t.code],
-                            items: [for (final a in _class5) AkOption(a.id, '${a.code} ${a.label}')],
-                            onChanged: (v) => setState(() => _treasuryAccounts[t.code] = v),
+                            items: [for (final a in _treasuryOptions(t)) AkOption(a.id, '${a.code} ${a.label}')],
+                            onChanged: (v) => setState(() {
+                              _treasuryAccounts[t.code] = v;
+                              _error = null;
+                            }),
                           ),
                         ),
                     ],
@@ -203,6 +218,10 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
                       if (acc == null) throw AppError.business('Choisissez le compte de trésorerie du journal ${t.code}.');
                       await repo.createTreasuryJournal(_entity!.cabinetId, _entity!.id, code: t.code, label: t.label, type: t.type, accountId: acc);
                     }
+                    // Le dossier créé devient le dossier courant : la saisie et la consultation s'ouvrent dessus.
+                    ref.invalidate(entityDashboardProvider);
+                    final created = (await ref.read(entityDashboardProvider.future)).where((e) => e.id == _entity!.id);
+                    if (created.isNotEmpty) ref.read(currentEntityProvider.notifier).select(created.first);
                     setState(() {
                       _error = null;
                       _step = 4;

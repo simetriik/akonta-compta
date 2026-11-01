@@ -8,6 +8,7 @@ import '../../domain/models.dart';
 import '../../application/providers/repositories.dart';
 import '../../application/providers/session_providers.dart';
 import 'offline_gate.dart';
+import '../auth/change_password.dart';
 
 /// Gabarit commun : rail de navigation bleu nuit (étendu au bureau, réduit sur tablette, barre basse sur mobile)
 /// et barre supérieure avec le dossier courant toujours visible, ouvrable par Ctrl K (§12.3).
@@ -29,7 +30,7 @@ class AppShell extends ConsumerWidget {
     (route: '/referentiels', icon: Icons.account_tree_outlined, label: 'Référentiels', perm: 'references.manage', admin: false),
     (route: '/import', icon: Icons.upload_file_outlined, label: 'Import Perfecto', perm: 'import.perfecto', admin: false),
     (route: '/cabinet', icon: Icons.apartment_outlined, label: 'Cabinet', perm: 'cabinet.settings', admin: true),
-    (route: '/utilisateurs', icon: Icons.manage_accounts_outlined, label: 'Utilisateurs', perm: 'users.manage', admin: true),
+    (route: '/utilisateurs', icon: Icons.manage_accounts_outlined, label: 'Collaborateurs', perm: 'users.manage', admin: true),
     (route: '/journal-erreurs', icon: Icons.bug_report_outlined, label: 'Journal des erreurs', perm: techAdminOnly, admin: true),
   ];
 
@@ -46,6 +47,13 @@ class AppShell extends ConsumerWidget {
     final profileState = ref.watch(currentProfileProvider);
     if (profileState.hasValue && profileState.value == null && ref.watch(currentUserProvider) != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(authRepositoryProvider).signOut());
+    }
+    // Un seul dossier accessible (ou dossier qui vient d'être créé) : on le choisit à la place de l'utilisateur.
+    final accessible = ref.watch(entityDashboardProvider).value;
+    if (accessible != null && accessible.length == 1 && ref.watch(currentEntityProvider) == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (ref.read(currentEntityProvider) == null) ref.read(currentEntityProvider.notifier).select(accessible.first);
+      });
     }
     final t = context.ak;
     final location = GoRouterState.of(context).uri.path;
@@ -418,8 +426,9 @@ class _UserMenu extends StatelessWidget {
     return PopupMenuButton<String>(
       tooltip: 'Menu utilisateur',
       offset: const Offset(0, 44),
-      onSelected: (_) => onSignOut(),
+      onSelected: (v) => v == 'password' ? showChangePasswordDialog(context) : onSignOut(),
       itemBuilder: (_) => [
+        const PopupMenuItem(value: 'password', child: Row(children: [Icon(Icons.lock_outline, size: AkSpace.iconSm), SizedBox(width: AkSpace.s2), Text('Changer mon mot de passe')])),
         const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, size: AkSpace.iconSm), SizedBox(width: AkSpace.s2), Text('Se déconnecter')])),
       ],
       child: Padding(

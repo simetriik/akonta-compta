@@ -12,9 +12,11 @@ abstract interface class AuthRepository {
 
   Future<void> signOut();
 
-  Future<void> resetPassword(String email);
+  /// Vrai tant que le membre utilise le mot de passe provisoire donné par l'administrateur.
+  bool get mustChangePassword;
 
-  Future<void> updatePassword(String newPassword);
+  /// Change le mot de passe de l'utilisateur connecté et lève l'obligation de le changer.
+  Future<void> changePassword(String newPassword);
 
   Future<MfaStatus> mfaStatus();
 

@@ -55,16 +55,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _reset() async {
-    final email = _email.text.trim();
-    if (validateEmail(email) != null) {
-      setState(() => _error = 'Saisissez votre adresse e-mail pour recevoir le lien de réinitialisation.');
-      return;
-    }
-    await ref.read(authRepositoryProvider).resetPassword(email);
-    if (!mounted) return;
-    showAkToast(context, 'Si le compte existe, un e-mail de réinitialisation a été envoyé.');
-  }
+  /// Pas d'e-mail de réinitialisation : c'est l'administrateur du cabinet qui donne un nouveau mot de passe provisoire.
+  Future<void> _forgot() => showDialog<void>(
+    context: context,
+    builder: (ctx) => AkDialog(
+      title: 'Mot de passe oublié',
+      size: AkDialogSize.s,
+      content: const Text(
+        'Demandez à l\'administrateur de votre cabinet un nouveau mot de passe provisoire '
+        '(Collaborateurs, icône clé). Vous le changerez à votre prochaine connexion.',
+      ),
+      actions: [AkButton.primary('Compris', onPressed: () => Navigator.pop(ctx))],
+    ),
+  );
 
   @override
   void dispose() {
@@ -86,7 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(child: AkLogo(height: 72)),
+                const Center(child: AkLogo(height: 88, symbolOnly: true)),
                 const SizedBox(height: AkSpace.s8),
                 AkCard(
                   padding: const EdgeInsets.all(AkSpace.s8),
@@ -127,7 +130,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           Align(
                             alignment: Alignment.centerRight,
-                            child: AkButton.ghost('Mot de passe oublié ?', dense: true, onPressed: _busy ? null : _reset),
+                            child: AkButton.ghost('Mot de passe oublié ?', dense: true, onPressed: _busy ? null : _forgot),
                           ),
                           if (_error != null) ...[
                             const SizedBox(height: AkSpace.s2),

@@ -30,7 +30,7 @@
 
 ## Q-008 — Invitation : création du mot de passe
 - **Constat** : l'Edge Function `invite-user` envoie un lien Supabase, mais l'application n'a aucun écran pour définir le mot de passe depuis ce lien (`updatePassword` n'est jamais appelé) ni pour réinitialiser un mot de passe oublié.
-- **Hypothèse appliquée** : recette avec `recette/definir-mot-de-passe.sh`. À traiter avant toute mise en service.
+- **Résolu le 1er nov. 2026 (D-036)** : plus d'invitation par e-mail. L'administrateur crée le compte, reçoit un mot de passe provisoire à transmettre ; le membre le change à sa première connexion ; l'administrateur peut en générer un nouveau. L'envoi d'e-mails (invitation, « mot de passe oublié » automatique) reste à faire avant une mise en service multi-sites.
 
 ## Q-009 — Saisie en devise absente de la grille
 - **Constat** : la base accepte les écritures en devise (euro à parité fixe, autre devise avec cours) mais la grille de saisie n'expose ni devise, ni montant en devise, ni cours.

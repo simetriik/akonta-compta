@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
@@ -23,7 +24,7 @@ class DashboardScreen extends ConsumerWidget {
         child: entities.isEmpty
             ? ListView(
                 padding: EdgeInsets.all(pad),
-                children: const [AkEmptyState('Aucun dossier ne vous est affecté.', icon: Icons.folder_off_outlined)],
+                children: [_NoEntity(perms: ref.watch(permissionsProvider).value ?? PermissionSet.empty)],
               )
             : ListView(
                 padding: EdgeInsets.all(pad),
@@ -213,5 +214,36 @@ class _Counter extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.ak;
     return value > 0 ? AkBadge(label: '$value $label', color: color, tint: tint) : AkBadge(label: '0 $label', color: t.textMuted, tint: Colors.transparent);
+  }
+}
+
+/// Aucun dossier : dit quoi faire selon le rôle (créer le premier dossier, créer les comptes, ou demander une affectation).
+class _NoEntity extends StatelessWidget {
+  const _NoEntity({required this.perms});
+
+  final PermissionSet perms;
+
+  @override
+  Widget build(BuildContext context) {
+    if (perms.has('entities.manage')) {
+      return AkEmptyState(
+        'Aucun dossier pour l\'instant. L\'assistant d\'ouverture vous guide en cinq étapes.',
+        icon: Icons.create_new_folder_outlined,
+        title: 'Bienvenue dans Akonta',
+        action: AkButton.primary('Créer le premier dossier', key: const Key('first-entity'), icon: Icons.add, onPressed: () => context.go('/dossiers/nouveau')),
+      );
+    }
+    if (perms.has('users.manage')) {
+      return AkEmptyState(
+        'Créez les comptes de l\'équipe en commençant par l\'associé gérant : il ouvrira ensuite les dossiers et donnera leurs rôles aux autres.',
+        icon: Icons.group_add_outlined,
+        title: 'Bienvenue dans Akonta',
+        action: AkButton.primary('Gérer les collaborateurs', key: const Key('first-users'), icon: Icons.manage_accounts_outlined, onPressed: () => context.go('/utilisateurs')),
+      );
+    }
+    return const AkEmptyState(
+      'Aucun dossier ne vous est affecté. Demandez à l\'associé ou au chef de mission de vous affecter à un dossier.',
+      icon: Icons.folder_off_outlined,
+    );
   }
 }
