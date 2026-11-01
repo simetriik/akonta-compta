@@ -31,6 +31,11 @@ class AdminService {
     return _repository.invite(email: email, fullName: fullName, jobTitle: jobTitle, csv: csv, firstPartner: firstPartner);
   }
 
+  Future<void> deleteMember(String userId) async {
+    _online.require('L\'administration');
+    return _repository.deleteMember(userId);
+  }
+
   Future<bool> cabinetHasPartner() async {
     _online.require('L\'administration');
     return _repository.cabinetHasPartner();
