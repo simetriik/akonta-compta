@@ -56,3 +56,10 @@ Deno.test("charge utile des états financiers : titre selon le référentiel", (
   assertEquals(normal.header.title, "États financiers SYSCOHADA");
 });
 
+
+Deno.test("la réponse d'un export est toujours en octets, quel que soit le format du fichier", async () => {
+  const { exportResponseHeaders } = await import("./documents.ts");
+  const h = exportResponseHeaders("balance.xlsx");
+  assertEquals(h["content-type"], "application/octet-stream");
+  assertEquals(h["content-disposition"], 'attachment; filename="balance.xlsx"');
+});
