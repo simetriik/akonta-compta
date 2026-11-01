@@ -4,6 +4,7 @@ import 'package:akonta/src/domain/bank_models.dart';
 import 'package:akonta/src/domain/reference_models.dart';
 import 'package:akonta/src/domain/repositories/reconciliation_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akonta/src/application/providers/session_providers.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Dépôt de rapprochement en mémoire : une ligne de relevé et une ligne comptable de même montant.
@@ -52,7 +53,7 @@ void main() {
 
   setUp(() {
     repo = _FakeReconciliation();
-    container = ProviderContainer(overrides: [reconciliationRepositoryProvider.overrideWithValue(repo)]);
+    container = ProviderContainer(overrides: [reconciliationRepositoryProvider.overrideWithValue(repo), currentUserIdProvider.overrideWithValue('test-user')]);
     container.listen(reconciliationControllerProvider, (_, _) {});
   });
   tearDown(() => container.dispose());

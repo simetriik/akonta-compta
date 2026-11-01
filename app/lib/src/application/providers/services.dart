@@ -14,11 +14,18 @@ import '../services/reconciliation_service.dart';
 import '../services/references_service.dart';
 import '../services/suggestions_service.dart';
 import 'repositories.dart';
+import 'session_providers.dart';
 
 /// État de la connexion : la composition fournit le moniteur réel ; sans lui, l'appareil est supposé en ligne.
 final connectivityProvider = Provider<ConnectivityPort>((ref) => const AlwaysOnline());
 
-final onlinePolicyProvider = Provider<OnlinePolicy>((ref) => OnlinePolicy(ref.watch(connectivityProvider)));
+/// Règle de connexion, **liée à l'utilisateur connecté** : tous les services en dépendent, donc tous les écrans qui lisent leurs
+/// données par un service sont relus quand l'utilisateur change. Sans cela, après une déconnexion puis une connexion sans rechargement
+/// de la page, un compte voyait les listes (collaborateurs, rôles, affectations…) chargées par le compte précédent.
+final onlinePolicyProvider = Provider<OnlinePolicy>((ref) {
+  ref.watch(currentUserIdProvider);
+  return OnlinePolicy(ref.watch(connectivityProvider));
+});
 
 /// Vrai tant que l'appareil est en ligne ; les écrans s'en servent pour désactiver les fonctions réservées à la connexion.
 final isOnlineProvider = StreamProvider<bool>((ref) async* {

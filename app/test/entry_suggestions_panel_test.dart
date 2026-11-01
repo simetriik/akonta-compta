@@ -2,6 +2,7 @@ import 'package:akonta/design/design.dart';
 import 'package:akonta/src/domain/entry_models.dart';
 import 'package:akonta/src/domain/suggestion_models.dart';
 import 'package:akonta/src/presentation/entries/entry_suggestions_panel.dart';
+import 'package:akonta/src/application/providers/session_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,7 +65,7 @@ void main() {
     final repo = _FakeRepo(fail: fail);
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [suggestionsRepositoryProvider.overrideWithValue(repo)],
+        overrides: [suggestionsRepositoryProvider.overrideWithValue(repo), currentUserIdProvider.overrideWithValue('test-user')],
         child: MaterialApp(
           theme: buildAkontaTheme(),
           home: Scaffold(
