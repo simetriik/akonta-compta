@@ -1,10 +1,12 @@
 // Création de collaborateurs (module 1, §10.1) : un utilisateur ou une liste (import CSV eABC), ou nouveau mot de passe
 // provisoire pour un membre existant. Aucun e-mail n'est nécessaire : le compte est créé avec un mot de passe provisoire
 // que l'administrateur technique reçoit une seule fois et transmet ; l'intéressé doit le changer à sa première connexion.
-// L'appelant doit détenir « users.manage » ; le profil est créé par le déclencheur Auth à partir des métadonnées.
-import { callerClient, error, json, requirePermission, serviceClient } from "../_shared/auth.ts";
+// L'appelant détient « users.manage » (administrateur technique : tous les comptes) ou « team.manage » (associé : son équipe,
+// avec un rôle d'équipe et un dossier) ; le profil est créé par le déclencheur Auth à partir des métadonnées.
+import { callerClient, error, json, requireAnyPermission, serviceClient } from "../_shared/auth.ts";
 import { parseUsersCsv, type UserRow } from "../_shared/csv.ts";
 import { generateTemporaryPassword } from "../_shared/passwords.ts";
+import { validateInvite } from "../_shared/team_invite.ts";
 
 interface InvitePayload {
   email?: string;
@@ -13,6 +15,9 @@ interface InvitePayload {
   csv?: string;
   /** Donne le rôle Associé à l'invité : permis une seule fois, tant que le cabinet n'a aucun associé (Q-016). */
   first_partner?: boolean;
+  /** Rôle d'équipe donné à la création (associé seulement) : manager, assistant ou trainee, avec entity_id. */
+  role?: string;
+  entity_id?: string;
   /** Nouveau mot de passe provisoire pour ce membre (oubli, première remise perdue). */
   reset_user_id?: string;
 }
@@ -21,13 +26,21 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return error("Méthode non autorisée", 405);
   const caller = callerClient(req);
   if (!caller) return error("Non authentifié", 401);
-  const ctx = await requirePermission(caller, "users.manage");
+  const ctx = await requireAnyPermission(caller, ["users.manage", "team.manage"]);
   if (ctx instanceof Response) return ctx;
 
   let payload: InvitePayload;
   try { payload = await req.json(); } catch { return error("Corps JSON attendu"); }
 
   if (payload.reset_user_id) return await resetPassword(caller, ctx, payload.reset_user_id);
+
+  const refusal = validateInvite(payload, ctx.isAdmin);
+  if (refusal) return error(refusal, 403);
+  if (payload.role) {
+    // Même règle que la base : l'appelant peut-il attribuer ce rôle sur ce dossier ?
+    const { data: allowed } = await caller.rpc("can_assign_role", { p_code: payload.role, p_entity: payload.entity_id });
+    if (!allowed) return error("Vous ne pouvez pas attribuer ce rôle sur ce dossier", 403);
+  }
 
   let rows: UserRow[] = [];
   let parseErrors: { line: number; error: string }[] = [];
@@ -75,6 +88,17 @@ Deno.serve(async (req) => {
         continue;
       }
     }
+    if (payload.role) {
+      const { data: role } = await admin.from("roles").select("id").eq("cabinet_id", ctx.cabinetId).eq("code", payload.role).maybeSingle();
+      const { error: assignError } = role
+        ? await admin.from("assignments").insert({ cabinet_id: ctx.cabinetId, user_id: data.user.id, entity_id: payload.entity_id, role_id: role.id, created_by: ctx.userId })
+        : { error: { message: "rôle introuvable" } };
+      if (assignError) {
+        await admin.auth.admin.deleteUser(data.user.id);
+        failed.push({ email: row.email, error: `affectation refusée : ${assignError.message}` });
+        continue;
+      }
+    }
     invited.push({ email: row.email, user_id: data.user.id, temporary_password: temporaryPassword });
   }
   // Piste d'audit (au nom de l'appelant) : jamais les mots de passe.
@@ -87,10 +111,13 @@ Deno.serve(async (req) => {
 
 async function resetPassword(
   caller: ReturnType<typeof callerClient> & object,
-  ctx: { userId: string; cabinetId: string },
+  ctx: { userId: string; cabinetId: string; isAdmin: boolean },
   userId: string,
 ): Promise<Response> {
   if (userId === ctx.userId) return error("Pour changer votre propre mot de passe, utilisez « Mon compte »");
+  // Même règle que la base : l'administrateur gère tous les membres, l'associé son équipe.
+  const { data: manageable } = await caller.rpc("can_manage_member", { p_user: userId });
+  if (!manageable) return error("Vous ne pouvez pas gérer ce membre", 403);
   // Lecture au nom de l'appelant : la RLS limite aux membres de son cabinet.
   const { data: profile } = await caller.from("profiles").select("id, email").eq("id", userId).maybeSingle();
   if (!profile) return error("Membre introuvable", 404);

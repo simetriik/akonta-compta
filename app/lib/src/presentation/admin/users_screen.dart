@@ -15,14 +15,19 @@ import '../widgets/async_view.dart';
 import '../../application/providers/admin_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
+import '../../application/rules/member_rules.dart';
 
-/// Utilisateurs et sécurité (administrateur technique) : invitation, import CSV eABC, désactivation (§10.1).
+/// Collaborateurs : l'administrateur technique gère tous les comptes, l'associé son équipe (chefs de mission, assistants, stagiaires).
 class UsersScreen extends ConsumerWidget {
   const UsersScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profiles = ref.watch(profilesProvider);
+    final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
+    final assignments = ref.watch(assignmentsProvider).value ?? const <Assignment>[];
+    final rolesByUser = MemberRules.roleCodesByUser(assignments);
+    final me = ref.watch(currentUserIdProvider);
     final t = context.ak;
     return AsyncView(
       value: profiles,
@@ -33,7 +38,7 @@ class UsersScreen extends ConsumerWidget {
             title: 'Collaborateurs',
             subtitle: '${list.where((p) => p.isActive).length} actif${list.where((p) => p.isActive).length > 1 ? 's' : ''} sur ${list.length}',
             actions: [
-              AkButton.secondary('Importer un CSV eABC', icon: Icons.upload_file_outlined, dense: true, onPressed: () => _importCsv(context, ref)),
+              if (MemberRules.isAdmin(perms)) AkButton.secondary('Importer un CSV eABC', icon: Icons.upload_file_outlined, dense: true, onPressed: () => _importCsv(context, ref)),
               AkButton.primary(
                 'Ajouter un collaborateur',
                 key: const Key('invite-user'),
@@ -57,7 +62,13 @@ class UsersScreen extends ConsumerWidget {
                   if (i > 0) Divider(height: 1, color: t.border),
                   _UserRow(
                     profile: list[i],
-                    isSelf: list[i].id == ref.watch(currentUserIdProvider),
+                    isSelf: list[i].id == me,
+                    canManage: MemberRules.canManage(perms, rolesByUser[list[i].id] ?? const {}, isSelf: list[i].id == me),
+                    canDesignate: MemberRules.canDesignatePartner(perms, rolesByUser[list[i].id] ?? const {}, isSelf: list[i].id == me),
+                    canRevoke: MemberRules.canRevokePartner(perms, rolesByUser[list[i].id] ?? const {}, isSelf: list[i].id == me),
+                    rolesLabel: MemberRules.rolesLabel(assignments, list[i].id),
+                    onDesignate: () => _designate(context, ref, list[i], true),
+                    onRevoke: () => _designate(context, ref, list[i], false),
                     onToggle: (v) async {
                       final p = list[i];
                       final ok =
@@ -88,6 +99,34 @@ class UsersScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Désignation ou retrait du rôle d'associé (administrateur technique), avec confirmation : droits étendus à tous les dossiers.
+  Future<void> _designate(BuildContext context, WidgetRef ref, Profile p, bool grant) async {
+    final name = p.fullName.isEmpty ? p.email : p.fullName;
+    final ok = await showAkConfirm(
+      context,
+      title: grant ? 'Désigner un associé' : 'Retirer le rôle d\'associé',
+      message: grant
+          ? 'Donner le rôle d\'associé à $name ? Il aura accès à tous les dossiers du cabinet, gérera l\'équipe et verra toute la comptabilité. L\'opération est inscrite dans la piste d\'audit.'
+          : 'Retirer le rôle d\'associé à $name ? Il perdra l\'accès à l\'ensemble des dossiers. Le cabinet doit garder au moins un associé.',
+      danger: !grant,
+    );
+    if (!ok || !context.mounted) return;
+    try {
+      final admin = ref.read(adminServiceProvider);
+      if (grant) {
+        await admin.designatePartner(p.id);
+      } else {
+        await admin.revokePartner(p.id);
+      }
+      ref.invalidate(assignmentsProvider);
+      ref.invalidate(profilesProvider);
+      ref.invalidate(cabinetHasPartnerProvider);
+      if (context.mounted) showAkToast(context, grant ? '$name est maintenant associé' : 'Rôle d\'associé retiré à $name');
+    } catch (e) {
+      if (context.mounted) showErrorSnack(context, errorText(e, action: grant ? 'Désignation impossible' : 'Retrait impossible'));
+    }
   }
 
   /// Nouveau mot de passe provisoire (oubli) : affiché une seule fois à l'administrateur, à transmettre au membre.
@@ -152,11 +191,32 @@ class UsersScreen extends ConsumerWidget {
 
 /// Ligne d'un collaborateur : avatar, identité, statut (icône + mot) et interrupteur d'activation.
 class _UserRow extends StatelessWidget {
-  const _UserRow({required this.profile, required this.onToggle, required this.isSelf, required this.onResetPassword, required this.onEdit, required this.onDelete});
+  const _UserRow({
+    required this.profile,
+    required this.onToggle,
+    required this.isSelf,
+    required this.canManage,
+    required this.canDesignate,
+    required this.canRevoke,
+    required this.rolesLabel,
+    required this.onDesignate,
+    required this.onRevoke,
+    required this.onResetPassword,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final Profile profile;
   final ValueChanged<bool> onToggle;
   final bool isSelf;
+
+  /// Peut-on modifier, désactiver, supprimer ce membre et lui donner un mot de passe provisoire ?
+  final bool canManage;
+  final bool canDesignate;
+  final bool canRevoke;
+  final String rolesLabel;
+  final VoidCallback onDesignate;
+  final VoidCallback onRevoke;
   final VoidCallback onResetPassword;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -181,6 +241,7 @@ class _UserRow extends StatelessWidget {
                   style: AkText.bodyStrong.copyWith(color: p.isActive ? t.text : t.textMuted, decoration: p.isActive ? null : TextDecoration.lineThrough),
                 ),
                 Text([p.email, if (p.jobTitle != null) p.jobTitle!].join(' · '), style: AkText.caption.copyWith(color: t.textMuted)),
+                if (rolesLabel.isNotEmpty) Text(rolesLabel, key: Key('member-roles-${p.id}'), style: AkText.caption.copyWith(color: t.text, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -191,19 +252,26 @@ class _UserRow extends StatelessWidget {
             AkBadge(label: 'Désactivé', color: t.textMuted, tint: t.surfaceSunken, icon: Icons.block),
           const SizedBox(width: AkSpace.s2),
           // Sur sa propre ligne : ni désactivation, ni suppression, ni mot de passe provisoire (« Changer mon mot de passe » existe).
-          if (!isSelf) AkSwitch(value: p.isActive, onChanged: onToggle),
-          if (!isSelf) AkIconButton(key: Key('reset-password-${p.id}'), icon: Icons.key_outlined, tooltip: 'Nouveau mot de passe provisoire', onPressed: onResetPassword),
-          AkIconButton(key: Key('edit-member-${p.id}'), icon: Icons.edit_outlined, tooltip: 'Modifier le membre', onPressed: onEdit),
-          if (!isSelf) AkIconButton(key: Key('delete-member-${p.id}'), icon: Icons.delete_outline, tooltip: 'Supprimer le membre', color: t.danger, onPressed: onDelete),
+          // Sur la ligne d'un associé ou de l'administrateur, l'associé n'a aucune action (règle de la base).
+          if (canManage) AkSwitch(value: p.isActive, onChanged: onToggle),
+          if (canManage) AkIconButton(key: Key('reset-password-${p.id}'), icon: Icons.key_outlined, tooltip: 'Nouveau mot de passe provisoire', onPressed: onResetPassword),
+          if (canManage || isSelf) AkIconButton(key: Key('edit-member-${p.id}'), icon: Icons.edit_outlined, tooltip: 'Modifier le membre', onPressed: onEdit),
+          if (canDesignate) AkIconButton(key: Key('designate-partner-${p.id}'), icon: Icons.workspace_premium_outlined, tooltip: 'Désigner comme associé', onPressed: onDesignate),
+          if (canRevoke) AkIconButton(key: Key('revoke-partner-${p.id}'), icon: Icons.remove_moderator_outlined, tooltip: 'Retirer le rôle d\'associé', onPressed: onRevoke),
+          if (canManage) AkIconButton(key: Key('delete-member-${p.id}'), icon: Icons.delete_outline, tooltip: 'Supprimer le membre', color: t.danger, onPressed: onDelete),
         ],
       ),
     );
   }
 }
 
-/// Invitation d'un collaborateur : e-mail, nom, fonction. Sans mot de passe : l'invité le choisit via le lien reçu.
+/// Création d'un collaborateur : nom, e-mail, fonction ; l'associé choisit en plus son rôle et son dossier. Sans mot de passe
+/// saisi : un mot de passe provisoire est généré (D-036).
 class InviteUserDialog extends ConsumerStatefulWidget {
-  const InviteUserDialog({super.key});
+  const InviteUserDialog({super.key, this.presetEntityId});
+
+  /// Dossier imposé (création depuis l'onglet « Équipe » du dossier).
+  final String? presetEntityId;
 
   @override
   ConsumerState<InviteUserDialog> createState() => _InviteUserDialogState();
@@ -216,6 +284,8 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
   final _job = TextEditingController();
   bool _busy = false;
   bool _firstPartner = false;
+  String? _roleCode; // rôle d'équipe donné à la création (associé seulement)
+  String? _entityId;
   String? _error;
 
   static String? validateEmail(String? v) {
@@ -228,6 +298,10 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
+    if (_roleCode != null && (widget.presetEntityId ?? _entityId) == null) {
+      setState(() => _error = 'Choisissez le dossier sur lequel cette personne travaille.');
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -240,6 +314,8 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
             fullName: _name.text.trim(),
             jobTitle: _job.text.trim().isEmpty ? null : _job.text.trim(),
             firstPartner: _firstPartner,
+            role: _roleCode,
+            entityId: _roleCode == null ? null : (widget.presetEntityId ?? _entityId),
           );
       ref.invalidate(profilesProvider);
       ref.invalidate(cabinetHasPartnerProvider);
@@ -258,6 +334,10 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
+    // L'associé donne un rôle d'équipe dès la création ; l'administrateur technique, non (c'est l'affaire de l'associé).
+    final withTeamRole = perms.has('team.manage') && !perms.has('users.manage');
+    final entities = ref.watch(adminEntitiesProvider).value ?? const <({String id, String name})>[];
     return AkDialog(
       title: 'Créer un collaborateur',
       size: AkDialogSize.s,
@@ -278,6 +358,31 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
             ),
             const SizedBox(height: AkSpace.s3),
             AkTextField(controller: _job, label: 'Fonction (facultatif)', textInputAction: TextInputAction.done, onSubmitted: (_) => _busy ? null : _submit()),
+            if (withTeamRole) ...[
+              const SizedBox(height: AkSpace.s3),
+              AkDropdown<String>(
+                key: const Key('invite-role'),
+                value: _roleCode ?? '',
+                label: 'Rôle',
+                items: const [
+                  AkOption('', 'Aucun pour l\'instant'),
+                  AkOption('manager', 'Chef de mission'),
+                  AkOption('assistant', 'Assistant'),
+                  AkOption('trainee', 'Stagiaire'),
+                ],
+                onChanged: (v) => setState(() => _roleCode = (v == null || v.isEmpty) ? null : v),
+              ),
+              if (_roleCode != null && widget.presetEntityId == null) ...[
+                const SizedBox(height: AkSpace.s3),
+                AkDropdown<String>(
+                  key: const Key('invite-entity'),
+                  value: _entityId,
+                  label: 'Dossier',
+                  items: [for (final e in entities) AkOption(e.id, e.name)],
+                  onChanged: (v) => setState(() => _entityId = v),
+                ),
+              ],
+            ],
             // Proposé seulement tant que le cabinet n'a aucun associé ; en cas d'erreur de lecture, la case reste cachée.
             if (ref.watch(cabinetHasPartnerProvider).value == false)
               Padding(

@@ -40,3 +40,22 @@ export async function requirePermission(
   if (!cabinetId) return error("Aucun cabinet pour cet utilisateur", 403);
   return { userId: userData.user.id, cabinetId: cabinetId as string };
 }
+
+/** Comme requirePermission, mais accepte l'une des permissions ; `isAdmin` vaut vrai si c'est `users.manage` (administrateur technique). */
+export async function requireAnyPermission(
+  caller: SupabaseClient,
+  permissions: string[],
+): Promise<{ userId: string; cabinetId: string; isAdmin: boolean } | Response> {
+  const { data: userData, error: userError } = await caller.auth.getUser();
+  if (userError || !userData.user) return error("Non authentifié", 401);
+  let granted: string | null = null;
+  for (const p of permissions) {
+    const { data: allowed, error: permError } = await caller.rpc("has_permission", { p_entity: null, p_code: p });
+    if (permError) return error(`Vérification des permissions impossible : ${permError.message}`, 500);
+    if (allowed) { granted = p; break; }
+  }
+  if (!granted) return error(`Permission refusée : ${permissions.join(" ou ")}`, 403);
+  const { data: cabinetId } = await caller.rpc("current_cabinet_id");
+  if (!cabinetId) return error("Aucun cabinet pour cet utilisateur", 403);
+  return { userId: userData.user.id, cabinetId: cabinetId as string, isAdmin: granted === "users.manage" };
+}

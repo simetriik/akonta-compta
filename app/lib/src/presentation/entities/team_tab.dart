@@ -10,6 +10,7 @@ import '../../core/errors/errors.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/models.dart';
 import '../inventory/inventory_widgets.dart' show showErrorSnack;
+import '../admin/users_screen.dart' show InviteUserDialog, TemporaryAccessDialog;
 import '../widgets/async_view.dart';
 
 /// Équipe d'un dossier : chef de mission, assistants, stagiaires. L'associé gère tout ; le chef de mission affecte assistants
@@ -168,6 +169,19 @@ class _TeamAssignDialogState extends ConsumerState<TeamAssignDialog> {
   String? _error;
   bool _busy = false;
 
+  /// Crée le compte (rôle et dossier imposés par l'onglet), puis montre le mot de passe provisoire.
+  Future<void> _createMember() async {
+    final navigator = Navigator.of(context);
+    final rootContext = navigator.context;
+    final created = await showDialog<InviteResult>(context: context, builder: (_) => InviteUserDialog(presetEntityId: widget.entityId));
+    if (created == null || !mounted) return;
+    ref.invalidate(teamProvider(widget.entityId));
+    ref.invalidate(teamCandidatesProvider);
+    ref.invalidate(assignmentsProvider);
+    navigator.pop();
+    if (rootContext.mounted) showDialog<void>(context: rootContext, builder: (_) => TemporaryAccessDialog(title: 'Compte créé', accesses: created.invited));
+  }
+
   Future<void> _submit(List<RoleDef> roles, Assignment? manager) async {
     final role = roles.where((r) => r.id == _roleId).firstOrNull;
     if (_user == null || role == null) {
@@ -231,6 +245,17 @@ class _TeamAssignDialogState extends ConsumerState<TeamAssignDialog> {
             items: [for (final r in roles) AkOption(r.id, r.name)],
             onChanged: (v) => setState(() => _roleId = v),
           ),
+          if (perms.has('team.manage'))
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AkButton.ghost(
+                'La personne n\'a pas encore de compte ? La créer',
+                key: const Key('team-create-member'),
+                dense: true,
+                icon: Icons.person_add_alt_1_outlined,
+                onPressed: _busy ? null : _createMember,
+              ),
+            ),
           if (selected?.code == 'manager' && manager != null)
             Padding(
               padding: const EdgeInsets.only(top: AkSpace.s3),

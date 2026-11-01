@@ -38,10 +38,18 @@ class SupabaseAdminRepository implements AdminRepository {
   Future<bool> cabinetHasPartner() async => (await _client.rpc('cabinet_has_partner')) as bool;
 
   @override
-  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv, bool firstPartner = false}) async {
+  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv, bool firstPartner = false, String? role, String? entityId}) async {
     final res = await _client.functions.invoke(
       'invite-user',
-      body: {if (firstPartner) 'first_partner': true, 'email': ?email, 'full_name': ?fullName, 'job_title': ?jobTitle, 'csv': ?csv},
+      body: {
+        if (firstPartner) 'first_partner': true,
+        'email': ?email,
+        'full_name': ?fullName,
+        'job_title': ?jobTitle,
+        'csv': ?csv,
+        'role': ?role,
+        'entity_id': ?entityId,
+      },
     );
     final data = res.data as Map<String, dynamic>;
     return InviteResult(
@@ -115,6 +123,12 @@ class SupabaseAdminRepository implements AdminRepository {
   @override
   Future<void> addAssignment({required String cabinetId, required String userId, required String roleId, String? entityId}) =>
       _client.from('assignments').insert({'cabinet_id': cabinetId, 'user_id': userId, 'role_id': roleId, 'entity_id': entityId});
+
+  @override
+  Future<void> designatePartner(String userId) => _client.rpc('designate_partner', params: {'p_user': userId});
+
+  @override
+  Future<void> revokePartner(String userId) => _client.rpc('revoke_partner', params: {'p_user': userId});
 
   @override
   Future<List<TeamCandidate>> teamCandidates(String entityId, {String? role}) async {

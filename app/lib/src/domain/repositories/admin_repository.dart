@@ -8,7 +8,7 @@ abstract interface class AdminRepository {
 
   Future<void> updateProfile(String userId, {required String fullName, String? jobTitle});
 
-  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv, bool firstPartner = false});
+  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv, bool firstPartner = false, String? role, String? entityId});
 
   /// Nouveau mot de passe provisoire pour un membre (oubli) ; il devra le changer à sa prochaine connexion.
   Future<TemporaryAccess> resetPassword(String userId);
@@ -32,6 +32,11 @@ abstract interface class AdminRepository {
   Future<void> addAssignment({required String cabinetId, required String userId, required String roleId, String? entityId});
 
   Future<void> removeAssignment(String id);
+
+  /// Désigne un associé (administrateur technique) ; [revokePartner] lui retire ce rôle, le dernier associé étant protégé.
+  Future<void> designatePartner(String userId);
+
+  Future<void> revokePartner(String userId);
 
   /// Collaborateurs affectables à ce dossier ; [role] précise le rôle visé (ex. `manager`).
   Future<List<TeamCandidate>> teamCandidates(String entityId, {String? role});
