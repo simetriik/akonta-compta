@@ -148,13 +148,15 @@ class RolesTab extends ConsumerWidget {
         value: perms,
         builder: (permList) {
           final visibleRoles = roleList.where((r) => r.code != 'tech_admin').toList();
+          // Droits d'administration : jamais accordables depuis cet écran ; droits des rôles associé et administrateur : fixes.
+          final adjustable = permList.where((p) => !AssignableRoles.reservedPermissions.contains(p.code)).toList();
           return AkPage(
             children: [
               const AkSectionTitle('Rôles et permissions'),
               const SizedBox(height: AkSpace.s3),
               AkTable<PermissionDef>(
                 minWidth: 280 + 120.0 * visibleRoles.length,
-                rows: permList,
+                rows: adjustable,
                 columns: [
                   AkColumn<PermissionDef>.text(label: 'Permission', text: (p) => p.label, flex: 3),
                   for (final r in visibleRoles)
@@ -164,11 +166,13 @@ class RolesTab extends ConsumerWidget {
                       cell: (context, p) => AkCheckbox(
                         dense: true,
                         value: r.permissions.contains(p.code),
-                        onChanged: (v) async {
-                          await ref.read(adminServiceProvider).setRolePermission(r.id, p.code, v);
-                          ref.invalidate(rolesProvider);
-                          ref.invalidate(permissionsProvider);
-                        },
+                        onChanged: !AssignableRoles.codes.contains(r.code)
+                            ? null
+                            : (v) async {
+                                await ref.read(adminServiceProvider).setRolePermission(r.id, p.code, v);
+                                ref.invalidate(rolesProvider);
+                                ref.invalidate(permissionsProvider);
+                              },
                       ),
                     ),
                 ],
@@ -280,8 +284,8 @@ class _AssignmentDialogState extends ConsumerState<AssignmentDialog> {
     final roles = ref.watch(rolesProvider).value ?? const <RoleDef>[];
     final entities = ref.watch(adminEntitiesProvider).value ?? const [];
     final cabinet = ref.watch(currentCabinetProvider).value;
-    final roleDef = roles.where((r) => r.id == _role).firstOrNull;
-    final cabinetScope = roleDef != null && (roleDef.code == 'partner' || roleDef.code == 'tech_admin');
+    // L'associé n'attribue que ces trois rôles, tous rattachés à un dossier (règle appliquée par la base, D-037).
+    final assignable = roles.where((r) => AssignableRoles.codes.contains(r.code)).toList();
     return AkDialog(
       title: 'Affecter un collaborateur',
       size: AkDialogSize.s,
@@ -296,15 +300,19 @@ class _AssignmentDialogState extends ConsumerState<AssignmentDialog> {
             onChanged: (v) => setState(() => _user = v),
           ),
           const SizedBox(height: AkSpace.s3),
-          AkDropdown<String>(value: _role, label: 'Rôle', items: [for (final r in roles) AkOption(r.id, r.name)], onChanged: (v) => setState(() => _role = v)),
+          AkDropdown<String>(
+            value: _role,
+            label: 'Rôle',
+            items: [for (final r in assignable) AkOption(r.id, r.name)],
+            onChanged: (v) => setState(() => _role = v),
+          ),
           const SizedBox(height: AkSpace.s3),
-          if (!cabinetScope)
-            AkDropdown<String>(
-              value: _entity,
-              label: 'Dossier',
-              items: [for (final e in entities) AkOption(e.id, e.name)],
-              onChanged: (v) => setState(() => _entity = v),
-            ),
+          AkDropdown<String>(
+            value: _entity,
+            label: 'Dossier',
+            items: [for (final e in entities) AkOption(e.id, e.name)],
+            onChanged: (v) => setState(() => _entity = v),
+          ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: AkSpace.s3),
@@ -317,14 +325,12 @@ class _AssignmentDialogState extends ConsumerState<AssignmentDialog> {
         AkButton.primary(
           'Affecter',
           onPressed: () async {
-            if (_user == null || _role == null || (!cabinetScope && _entity == null) || cabinet == null) {
+            if (_user == null || _role == null || _entity == null || cabinet == null) {
               setState(() => _error = 'Renseignez le collaborateur, le rôle et le dossier.');
               return;
             }
             try {
-              await ref
-                  .read(adminServiceProvider)
-                  .addAssignment(cabinetId: cabinet.id, userId: _user!, roleId: _role!, entityId: cabinetScope ? null : _entity);
+              await ref.read(adminServiceProvider).addAssignment(cabinetId: cabinet.id, userId: _user!, roleId: _role!, entityId: _entity);
               ref.invalidate(assignmentsProvider);
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
