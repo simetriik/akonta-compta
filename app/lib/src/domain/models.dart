@@ -25,12 +25,16 @@ class Cabinet {
     required this.name,
     required this.defaultAccountLength,
     required this.inactivityMinutes,
+    this.warnMissingDocument = true,
   });
 
   final String id;
   final String name;
   final int defaultAccountLength;
   final int inactivityMinutes;
+
+  /// Avertir (sans bloquer) à la validation d'une écriture sans pièce jointe.
+  final bool warnMissingDocument;
 }
 
 /// Rôle tel que porté par une affectation de l'utilisateur courant.

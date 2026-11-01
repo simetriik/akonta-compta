@@ -64,6 +64,7 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
   final _length = TextEditingController();
   final _inactivity = TextEditingController();
   bool _loaded = false;
+  bool _warnMissingDocument = true;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +77,7 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
           _name.text = c.name;
           _length.text = '${c.defaultAccountLength}';
           _inactivity.text = '${c.inactivityMinutes}';
+          _warnMissingDocument = c.warnMissingDocument;
           _loaded = true;
         }
         return AkPage(
@@ -102,6 +104,13 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: AkSpace.s3),
+                  AkCheckbox(
+                    key: const Key('warn-missing-document'),
+                    value: _warnMissingDocument,
+                    label: 'Prévenir quand on valide une écriture sans pièce jointe',
+                    onChanged: (v) => setState(() => _warnMissingDocument = v),
+                  ),
                   const SizedBox(height: AkSpace.s4),
                   Align(
                     alignment: Alignment.centerLeft,
@@ -118,6 +127,7 @@ class _CabinetSettingsTabState extends ConsumerState<CabinetSettingsTab> {
                           'name': _name.text.trim(),
                           'default_account_length': len,
                           'inactivity_minutes': min,
+                          'warn_missing_document': _warnMissingDocument,
                         });
                         ref.invalidate(currentCabinetProvider);
                         if (context.mounted) showAkToast(context, 'Paramètres enregistrés.');

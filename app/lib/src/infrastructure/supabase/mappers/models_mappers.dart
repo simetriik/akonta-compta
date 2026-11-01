@@ -16,6 +16,8 @@ Cabinet cabinetFromJson(Map<String, dynamic> j) => Cabinet(
         name: j['name'] as String,
         defaultAccountLength: (j['default_account_length'] as num).toInt(),
         inactivityMinutes: (j['inactivity_minutes'] as num).toInt(),
+        // Absent d'un cache hors connexion ancien : l'avertissement reste actif.
+        warnMissingDocument: (j['warn_missing_document'] as bool?) ?? true,
       );
 
 AssignedRole assignedRoleFromJson(Map<String, dynamic> j) {
