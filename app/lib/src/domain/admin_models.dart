@@ -18,7 +18,16 @@ class PermissionDef {
 }
 
 class Assignment {
-  const Assignment({required this.id, required this.userId, required this.userName, required this.roleId, required this.roleName, required this.roleCode, this.entityId, this.entityName});
+  const Assignment({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    required this.roleId,
+    required this.roleName,
+    required this.roleCode,
+    this.entityId,
+    this.entityName,
+  });
 
   final String id;
   final String userId;
@@ -31,7 +40,17 @@ class Assignment {
 }
 
 class AuditEvent {
-  const AuditEvent({required this.id, required this.occurredAt, required this.action, this.actorName, this.tableName, this.recordId, this.entityId, required this.payload, required this.hash});
+  const AuditEvent({
+    required this.id,
+    required this.occurredAt,
+    required this.action,
+    this.actorName,
+    this.tableName,
+    this.recordId,
+    this.entityId,
+    required this.payload,
+    required this.hash,
+  });
 
   final int id;
   final DateTime occurredAt;
@@ -58,4 +77,13 @@ class InviteResult {
   final List<TemporaryAccess> invited;
   final List<String> failed;
   final List<String> parseErrors;
+}
+
+/// Miroir côté application des règles de la base sur les rôles (D-037) : la base reste la garantie.
+abstract final class AssignableRoles {
+  /// Rôles qu'un associé attribue et retire.
+  static const codes = {'manager', 'assistant', 'trainee'};
+
+  /// Droits d'administration, jamais accordables à un rôle depuis l'application.
+  static const reservedPermissions = {'users.manage', 'team.manage', 'roles.manage', 'assignments.manage'};
 }
