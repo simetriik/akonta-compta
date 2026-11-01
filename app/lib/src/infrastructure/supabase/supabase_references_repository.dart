@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/references_repository.dart';
 import '../../domain/reference_models.dart';
 import 'mappers/reference_models_mappers.dart';
+import 'paginate.dart';
 
 /// Module 3 : plan de comptes de l'entité, tiers, journaux, modèles d'écritures, taux.
 class SupabaseReferencesRepository implements ReferencesRepository {
@@ -15,7 +16,8 @@ class SupabaseReferencesRepository implements ReferencesRepository {
     if (prefix != null && prefix.isNotEmpty) q = q.like('code', '$prefix%');
     if (search != null && search.isNotEmpty) q = q.or('code.like.$search%,label.ilike.%$search%');
     if (onlyActive) q = q.eq('is_active', true);
-    final rows = await q.order('code', ascending: true).limit(2000);
+    // Un plan à 7 chiffres dépasse le plafond de 1 000 lignes du serveur : lecture par pages (recette du 1er nov. 2026, A1).
+    final rows = await fetchAllPages((from, to) => q.order('code', ascending: true).range(from, to));
     return rows.map(accountFromJson).toList();
   }
 
