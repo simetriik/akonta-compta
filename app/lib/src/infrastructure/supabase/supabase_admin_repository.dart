@@ -25,6 +25,9 @@ class SupabaseAdminRepository implements AdminRepository {
       _client.from('profiles').update({'full_name': fullName, 'job_title': jobTitle}).eq('id', userId);
 
   @override
+  Future<void> deleteMember(String userId) => _client.rpc('delete_member', params: {'p_user': userId});
+
+  @override
   Future<bool> cabinetHasPartner() async => (await _client.rpc('cabinet_has_partner')) as bool;
 
   @override

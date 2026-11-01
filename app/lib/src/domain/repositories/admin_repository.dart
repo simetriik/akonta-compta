@@ -13,6 +13,9 @@ abstract interface class AdminRepository {
   /// Le cabinet de l'utilisateur courant a-t-il déjà un associé ?
   Future<bool> cabinetHasPartner();
 
+  /// Supprime un membre sans aucune trace ; la base refuse sinon (il faut alors le désactiver).
+  Future<void> deleteMember(String userId);
+
   Future<List<PermissionDef>> permissions();
 
   Future<List<RoleDef>> roles();

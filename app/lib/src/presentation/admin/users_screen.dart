@@ -7,6 +7,7 @@ import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../domain/models.dart';
+import '../inventory/inventory_widgets.dart' show showErrorSnack;
 import '../widgets/async_view.dart';
 import '../../application/providers/admin_providers.dart';
 import '../../application/providers/services.dart';
@@ -63,6 +64,11 @@ class UsersScreen extends ConsumerWidget {
                       await ref.read(adminServiceProvider).setActive(p.id, v);
                       ref.invalidate(profilesProvider);
                     },
+                    onEdit: () => showDialog(
+                      context: context,
+                      builder: (_) => EditMemberDialog(profile: list[i]),
+                    ),
+                    onDelete: () => _delete(context, ref, list[i]),
                   ),
                 ],
                 if (list.isEmpty) const AkEmptyState('Aucun collaborateur.'),
@@ -72,6 +78,26 @@ class UsersScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Suppression définitive, réservée aux membres sans trace : la base refuse sinon et on propose la désactivation.
+  Future<void> _delete(BuildContext context, WidgetRef ref, Profile p) async {
+    final name = p.fullName.isEmpty ? p.email : p.fullName;
+    final ok = await showAkConfirm(
+      context,
+      title: 'Supprimer le membre',
+      message:
+          'Supprimer définitivement $name ? Possible seulement s\'il n\'a rien saisi ni validé ; sinon désactivez-le. La suppression est inscrite dans la piste d\'audit.',
+      danger: true,
+    );
+    if (!ok || !context.mounted) return;
+    try {
+      await ref.read(adminServiceProvider).deleteMember(p.id);
+      ref.invalidate(profilesProvider);
+      if (context.mounted) showAkToast(context, '$name supprimé');
+    } catch (e) {
+      if (context.mounted) showErrorSnack(context, errorText(e, action: 'Suppression impossible'));
+    }
   }
 
   Future<void> _importCsv(BuildContext context, WidgetRef ref) async {
@@ -102,10 +128,12 @@ class UsersScreen extends ConsumerWidget {
 
 /// Ligne d'un collaborateur : avatar, identité, statut (icône + mot) et interrupteur d'activation.
 class _UserRow extends StatelessWidget {
-  const _UserRow({required this.profile, required this.onToggle});
+  const _UserRow({required this.profile, required this.onToggle, required this.onEdit, required this.onDelete});
 
   final Profile profile;
   final ValueChanged<bool> onToggle;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +165,8 @@ class _UserRow extends StatelessWidget {
             AkBadge(label: 'Désactivé', color: t.textMuted, tint: t.surfaceSunken, icon: Icons.block),
           const SizedBox(width: AkSpace.s2),
           AkSwitch(value: p.isActive, onChanged: onToggle),
+          AkIconButton(key: Key('edit-member-${p.id}'), icon: Icons.edit_outlined, tooltip: 'Modifier le membre', onPressed: onEdit),
+          AkIconButton(key: Key('delete-member-${p.id}'), icon: Icons.delete_outline, tooltip: 'Supprimer le membre', color: t.danger, onPressed: onDelete),
         ],
       ),
     );
@@ -243,6 +273,86 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
       actions: [
         AkButton.secondary('Annuler', onPressed: _busy ? null : () => Navigator.pop(context)),
         AkButton.primary('Envoyer l\'invitation', key: const Key('invite-submit'), loading: _busy, onPressed: _submit),
+      ],
+    );
+  }
+}
+
+/// Modification d'un membre par l'administrateur : nom et fonction. L'adresse e-mail est l'identifiant de connexion : elle ne change pas ici.
+class EditMemberDialog extends ConsumerStatefulWidget {
+  const EditMemberDialog({super.key, required this.profile});
+
+  final Profile profile;
+
+  @override
+  ConsumerState<EditMemberDialog> createState() => _EditMemberDialogState();
+}
+
+class _EditMemberDialogState extends ConsumerState<EditMemberDialog> {
+  final _form = GlobalKey<FormState>();
+  late final _name = TextEditingController(text: widget.profile.fullName);
+  late final _job = TextEditingController(text: widget.profile.jobTitle ?? '');
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _job.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(adminServiceProvider)
+          .updateProfile(widget.profile.id, fullName: _name.text.trim(), jobTitle: _job.text.trim().isEmpty ? null : _job.text.trim());
+      ref.invalidate(profilesProvider);
+      if (!mounted) return;
+      Navigator.pop(context);
+      showAkToast(context, 'Membre modifié');
+    } catch (e) {
+      if (mounted) setState(() => _error = errorText(e, action: 'Modification impossible'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AkDialog(
+      title: 'Modifier le membre',
+      size: AkDialogSize.s,
+      content: Form(
+        key: _form,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AkTextField(controller: _name, key: const Key('edit-name'), label: 'Nom complet', validator: _InviteUserDialogState.validateName, autofocus: true),
+            const SizedBox(height: AkSpace.s3),
+            AkTextField(controller: _job, key: const Key('edit-job'), label: 'Fonction (facultatif)'),
+            const SizedBox(height: AkSpace.s3),
+            Text(
+              'Adresse e-mail : ${widget.profile.email} (identifiant de connexion, non modifiable ici)',
+              style: AkText.caption.copyWith(color: context.ak.textMuted),
+            ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AkSpace.s3),
+                child: AkBanner(kind: AkBannerKind.danger, child: Text(_error!)),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        AkButton.secondary('Annuler', onPressed: _busy ? null : () => Navigator.pop(context)),
+        AkButton.primary('Enregistrer', key: const Key('edit-submit'), loading: _busy, onPressed: _submit),
       ],
     );
   }
