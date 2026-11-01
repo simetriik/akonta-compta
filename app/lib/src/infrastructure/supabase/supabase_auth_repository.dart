@@ -45,10 +45,17 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> resetPassword(String email) => _auth.resetPasswordForEmail(email.trim());
+  bool get mustChangePassword => _auth.currentUser?.userMetadata?['must_change_password'] == true;
 
   @override
-  Future<void> updatePassword(String newPassword) => _auth.updateUser(UserAttributes(password: newPassword));
+  Future<void> changePassword(String newPassword) async {
+    await _auth.updateUser(UserAttributes(password: newPassword, data: {'must_change_password': false}));
+    try {
+      await _client.rpc('log_audit_event', params: {'p_action': 'password_changed', 'p_payload': {}});
+    } catch (_) {
+      // Le changement a réussi ; l'écart de journalisation apparaîtra côté serveur.
+    }
+  }
 
   /// Facteurs lus sur l'utilisateur courant : `listFactors()` rafraîchirait le jeton à chaque appel,
   /// ce qui émet un événement d'authentification et relancerait la redirection en boucle.

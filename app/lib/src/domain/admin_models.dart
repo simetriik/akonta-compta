@@ -44,10 +44,18 @@ class AuditEvent {
   final String hash;
 }
 
+/// Accès provisoire d'un membre : adresse e-mail et mot de passe provisoire, montrés une seule fois à l'administrateur.
+class TemporaryAccess {
+  const TemporaryAccess({required this.email, required this.password});
+
+  final String email;
+  final String password;
+}
+
 class InviteResult {
   const InviteResult({required this.invited, required this.failed, required this.parseErrors});
 
-  final List<String> invited;
+  final List<TemporaryAccess> invited;
   final List<String> failed;
   final List<String> parseErrors;
 }

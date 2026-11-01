@@ -8,6 +8,7 @@ import '../../domain/models.dart';
 import '../../application/providers/repositories.dart';
 import '../../application/providers/session_providers.dart';
 import 'offline_gate.dart';
+import '../auth/change_password.dart';
 
 /// Gabarit commun : rail de navigation bleu nuit (étendu au bureau, réduit sur tablette, barre basse sur mobile)
 /// et barre supérieure avec le dossier courant toujours visible, ouvrable par Ctrl K (§12.3).
@@ -418,8 +419,9 @@ class _UserMenu extends StatelessWidget {
     return PopupMenuButton<String>(
       tooltip: 'Menu utilisateur',
       offset: const Offset(0, 44),
-      onSelected: (_) => onSignOut(),
+      onSelected: (v) => v == 'password' ? showChangePasswordDialog(context) : onSignOut(),
       itemBuilder: (_) => [
+        const PopupMenuItem(value: 'password', child: Row(children: [Icon(Icons.lock_outline, size: AkSpace.iconSm), SizedBox(width: AkSpace.s2), Text('Changer mon mot de passe')])),
         const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, size: AkSpace.iconSm), SizedBox(width: AkSpace.s2), Text('Se déconnecter')])),
       ],
       child: Padding(

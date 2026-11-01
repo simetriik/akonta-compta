@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
+import '../../domain/admin_models.dart';
 import '../../domain/models.dart';
 import '../inventory/inventory_widgets.dart' show showErrorSnack;
 import '../widgets/async_view.dart';
@@ -31,11 +33,15 @@ class UsersScreen extends ConsumerWidget {
             actions: [
               AkButton.secondary('Importer un CSV eABC', icon: Icons.upload_file_outlined, dense: true, onPressed: () => _importCsv(context, ref)),
               AkButton.primary(
-                'Inviter',
+                'Ajouter un collaborateur',
                 key: const Key('invite-user'),
                 icon: Icons.person_add_alt,
                 dense: true,
-                onPressed: () => showDialog(context: context, builder: (_) => const InviteUserDialog()),
+                onPressed: () async {
+                  final created = await showDialog<InviteResult>(context: context, builder: (_) => const InviteUserDialog());
+                  if (created == null || !context.mounted) return;
+                  showDialog<void>(context: context, builder: (_) => TemporaryAccessDialog(title: 'Compte créé', accesses: created.invited));
+                },
               ),
             ],
           ),
@@ -64,6 +70,7 @@ class UsersScreen extends ConsumerWidget {
                       await ref.read(adminServiceProvider).setActive(p.id, v);
                       ref.invalidate(profilesProvider);
                     },
+                    onResetPassword: () => _resetPassword(context, ref, list[i]),
                     onEdit: () => showDialog(
                       context: context,
                       builder: (_) => EditMemberDialog(profile: list[i]),
@@ -78,6 +85,23 @@ class UsersScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Nouveau mot de passe provisoire (oubli) : affiché une seule fois à l'administrateur, à transmettre au membre.
+  Future<void> _resetPassword(BuildContext context, WidgetRef ref, Profile p) async {
+    final name = p.fullName.isEmpty ? p.email : p.fullName;
+    final ok = await showAkConfirm(
+      context,
+      title: 'Nouveau mot de passe provisoire',
+      message: 'Donner un nouveau mot de passe provisoire à $name ? L\'ancien ne fonctionnera plus ; $name devra en choisir un à sa prochaine connexion.',
+    );
+    if (!ok || !context.mounted) return;
+    try {
+      final access = await ref.read(adminServiceProvider).resetPassword(p.id);
+      if (context.mounted) showDialog<void>(context: context, builder: (_) => TemporaryAccessDialog(title: 'Mot de passe provisoire', accesses: [access]));
+    } catch (e) {
+      if (context.mounted) showErrorSnack(context, errorText(e, action: 'Réinitialisation impossible'));
+    }
   }
 
   /// Suppression définitive, réservée aux membres sans trace : la base refuse sinon et on propose la désactivation.
@@ -111,16 +135,13 @@ class UsersScreen extends ConsumerWidget {
     if (!context.mounted) return;
     showDialog(
       context: context,
-      builder: (ctx) => AkDialog(
+      builder: (_) => TemporaryAccessDialog(
         title: 'Résultat de l\'import',
-        content: Text(
-          [
-            '${result.invited.length} invitation(s) envoyée(s).',
-            if (result.failed.isNotEmpty) '\nÉchecs :\n${result.failed.join('\n')}',
-            if (result.parseErrors.isNotEmpty) '\nLignes ignorées :\n${result.parseErrors.join('\n')}',
-          ].join('\n'),
-        ),
-        actions: [AkButton.primary('Fermer', onPressed: () => Navigator.pop(ctx))],
+        accesses: result.invited,
+        notes: [
+          if (result.failed.isNotEmpty) 'Échecs :\n${result.failed.join('\n')}',
+          if (result.parseErrors.isNotEmpty) 'Lignes ignorées :\n${result.parseErrors.join('\n')}',
+        ],
       ),
     );
   }
@@ -128,10 +149,11 @@ class UsersScreen extends ConsumerWidget {
 
 /// Ligne d'un collaborateur : avatar, identité, statut (icône + mot) et interrupteur d'activation.
 class _UserRow extends StatelessWidget {
-  const _UserRow({required this.profile, required this.onToggle, required this.onEdit, required this.onDelete});
+  const _UserRow({required this.profile, required this.onToggle, required this.onResetPassword, required this.onEdit, required this.onDelete});
 
   final Profile profile;
   final ValueChanged<bool> onToggle;
+  final VoidCallback onResetPassword;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -165,6 +187,7 @@ class _UserRow extends StatelessWidget {
             AkBadge(label: 'Désactivé', color: t.textMuted, tint: t.surfaceSunken, icon: Icons.block),
           const SizedBox(width: AkSpace.s2),
           AkSwitch(value: p.isActive, onChanged: onToggle),
+          AkIconButton(key: Key('reset-password-${p.id}'), icon: Icons.key_outlined, tooltip: 'Nouveau mot de passe provisoire', onPressed: onResetPassword),
           AkIconButton(key: Key('edit-member-${p.id}'), icon: Icons.edit_outlined, tooltip: 'Modifier le membre', onPressed: onEdit),
           AkIconButton(key: Key('delete-member-${p.id}'), icon: Icons.delete_outline, tooltip: 'Supprimer le membre', color: t.danger, onPressed: onDelete),
         ],
@@ -220,8 +243,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
         setState(() => _error = r.failed.join('\n'));
         return;
       }
-      Navigator.pop(context);
-      showAkToast(context, 'Invitation envoyée à ${_email.text.trim()}');
+      Navigator.pop(context, r);
     } catch (e) {
       setState(() => _error = errorText(e, action: 'Invitation impossible'));
     } finally {
@@ -232,7 +254,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
   @override
   Widget build(BuildContext context) {
     return AkDialog(
-      title: 'Inviter un collaborateur',
+      title: 'Créer un collaborateur',
       size: AkDialogSize.s,
       content: Form(
         key: _form,
@@ -272,8 +294,71 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
       ),
       actions: [
         AkButton.secondary('Annuler', onPressed: _busy ? null : () => Navigator.pop(context)),
-        AkButton.primary('Envoyer l\'invitation', key: const Key('invite-submit'), loading: _busy, onPressed: _submit),
+        AkButton.primary('Créer le compte', key: const Key('invite-submit'), loading: _busy, onPressed: _submit),
       ],
+    );
+  }
+}
+
+/// Accès provisoires à transmettre (adresse + mot de passe), montrés une seule fois : ils ne sont conservés nulle part.
+class TemporaryAccessDialog extends StatelessWidget {
+  const TemporaryAccessDialog({super.key, required this.title, required this.accesses, this.notes = const []});
+
+  final String title;
+  final List<TemporaryAccess> accesses;
+  final List<String> notes;
+
+  /// Message prêt à envoyer (WhatsApp, SMS, e-mail) pour un membre.
+  static String message(TemporaryAccess a) =>
+      'Bonjour, votre compte Akonta est prêt.\nIdentifiant : ${a.email}\nMot de passe provisoire : ${a.password}\n'
+      'Vous devrez choisir votre propre mot de passe à la première connexion.';
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return AkDialog(
+      title: title,
+      content: SizedBox(
+        width: 460,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (accesses.isNotEmpty)
+              const AkBanner(
+                kind: AkBannerKind.warning,
+                child: Text('Notez ou copiez ces mots de passe maintenant : ils ne seront plus affichés. Chaque membre devra en choisir un autre à sa première connexion.'),
+              ),
+            for (final a in accesses) ...[
+              const SizedBox(height: AkSpace.s3),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(a.email, style: AkText.bodyStrong.copyWith(color: t.text)),
+                        SelectableText(a.password, key: Key('temporary-password-${a.email}'), style: AkText.amount.copyWith(color: t.text, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  AkButton.secondary(
+                    'Copier le message',
+                    icon: Icons.copy_outlined,
+                    dense: true,
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: message(a)));
+                      if (context.mounted) showAkToast(context, 'Message copié');
+                    },
+                  ),
+                ],
+              ),
+            ],
+            for (final n in notes) ...[const SizedBox(height: AkSpace.s3), Text(n, style: AkText.body.copyWith(color: t.text))],
+          ],
+        ),
+      ),
+      actions: [AkButton.primary('J\'ai noté les mots de passe', key: const Key('access-close'), onPressed: () => Navigator.pop(context))],
     );
   }
 }

@@ -10,6 +10,9 @@ abstract interface class AdminRepository {
 
   Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv, bool firstPartner = false});
 
+  /// Nouveau mot de passe provisoire pour un membre (oubli) ; il devra le changer à sa prochaine connexion.
+  Future<TemporaryAccess> resetPassword(String userId);
+
   /// Le cabinet de l'utilisateur courant a-t-il déjà un associé ?
   Future<bool> cabinetHasPartner();
 

@@ -25,6 +25,13 @@ class SupabaseAdminRepository implements AdminRepository {
       _client.from('profiles').update({'full_name': fullName, 'job_title': jobTitle}).eq('id', userId);
 
   @override
+  Future<TemporaryAccess> resetPassword(String userId) async {
+    final res = await _client.functions.invoke('invite-user', body: {'reset_user_id': userId});
+    final r = (res.data as Map<String, dynamic>)['reset'] as Map<String, dynamic>;
+    return TemporaryAccess(email: r['email'] as String, password: r['temporary_password'] as String);
+  }
+
+  @override
   Future<void> deleteMember(String userId) => _client.rpc('delete_member', params: {'p_user': userId});
 
   @override
@@ -38,7 +45,7 @@ class SupabaseAdminRepository implements AdminRepository {
     );
     final data = res.data as Map<String, dynamic>;
     return InviteResult(
-      invited: [for (final i in (data['invited'] as List? ?? [])) i['email'] as String],
+      invited: [for (final i in (data['invited'] as List? ?? [])) TemporaryAccess(email: i['email'] as String, password: i['temporary_password'] as String)],
       failed: [for (final f in (data['failed'] as List? ?? [])) '${f['email']} : ${f['error']}'],
       parseErrors: [for (final e in (data['parse_errors'] as List? ?? [])) 'ligne ${e['line']} : ${e['error']}'],
     );

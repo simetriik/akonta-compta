@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'admin/cabinet_screen.dart';
 import 'admin/error_log_screen.dart';
 import 'admin/users_screen.dart';
+import 'auth/change_password.dart';
 import 'auth/login_screen.dart';
 import 'auth/mfa_screens.dart';
 import 'consultation/consultation_screen.dart';
@@ -65,6 +66,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (_devCatalog && state.matchedLocation == '/catalogue') return null;
       if (!signedIn) return onLogin ? null : '/connexion';
       if (onLogin) return '/';
+      // Mot de passe provisoire : à changer avant tout le reste (y compris l'enrôlement TOTP).
+      final onPassword = state.matchedLocation == '/mot-de-passe';
+      if (auth.mustChangePassword) return onPassword ? null : '/mot-de-passe';
+      if (onPassword) return '/';
       // MFA : défi si un facteur est enrôlé ; enrôlement forcé pour les rôles qui l'exigent.
       // Statut lu directement sur la session (synchrone) : passer par un provider asynchrone
       // laissait la redirection initiale en attente au chargement à froid d'une URL profonde.
@@ -82,6 +87,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Catalogue du système de design : mode développement seulement.
       if (_devCatalog) GoRoute(path: '/catalogue', builder: (_, _) => const CatalogScreen()),
       GoRoute(path: '/connexion', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/mot-de-passe', builder: (context, _) => ChangePasswordScreen(onDone: () => context.go('/'))),
       GoRoute(path: '/mfa/verification', builder: (context, _) => MfaChallengeScreen(onVerified: () => context.go('/'))),
       GoRoute(path: '/mfa/activation', builder: (context, _) => MfaEnrollScreen(mandatory: true, onDone: () => context.go('/'))),
       ShellRoute(
