@@ -25,9 +25,15 @@ class AdminService {
     return _repository.updateProfile(userId, fullName: fullName, jobTitle: jobTitle);
   }
 
-  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv}) async {
+  /// [firstPartner] : donne le rôle Associé à l'invité (permis une seule fois par cabinet, vérifié par la base).
+  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv, bool firstPartner = false}) async {
     _online.require('L\'administration');
-    return _repository.invite(email: email, fullName: fullName, jobTitle: jobTitle, csv: csv);
+    return _repository.invite(email: email, fullName: fullName, jobTitle: jobTitle, csv: csv, firstPartner: firstPartner);
+  }
+
+  Future<bool> cabinetHasPartner() async {
+    _online.require('L\'administration');
+    return _repository.cabinetHasPartner();
   }
 
   Future<List<PermissionDef>> permissions() async {

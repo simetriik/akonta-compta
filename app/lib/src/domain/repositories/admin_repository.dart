@@ -8,7 +8,10 @@ abstract interface class AdminRepository {
 
   Future<void> updateProfile(String userId, {required String fullName, String? jobTitle});
 
-  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv});
+  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv, bool firstPartner = false});
+
+  /// Le cabinet de l'utilisateur courant a-t-il déjà un associé ?
+  Future<bool> cabinetHasPartner();
 
   Future<List<PermissionDef>> permissions();
 

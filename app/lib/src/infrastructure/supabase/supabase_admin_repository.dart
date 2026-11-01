@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../domain/admin_models.dart';
 import '../../domain/models.dart';
 import 'mappers/models_mappers.dart';
@@ -24,13 +25,14 @@ class SupabaseAdminRepository implements AdminRepository {
       _client.from('profiles').update({'full_name': fullName, 'job_title': jobTitle}).eq('id', userId);
 
   @override
-  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv}) async {
-    final res = await _client.functions.invoke('invite-user', body: {
-      'email': ?email,
-      'full_name': ?fullName,
-      'job_title': ?jobTitle,
-      'csv': ?csv,
-    });
+  Future<bool> cabinetHasPartner() async => (await _client.rpc('cabinet_has_partner')) as bool;
+
+  @override
+  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv, bool firstPartner = false}) async {
+    final res = await _client.functions.invoke(
+      'invite-user',
+      body: {if (firstPartner) 'first_partner': true, 'email': ?email, 'full_name': ?fullName, 'job_title': ?jobTitle, 'csv': ?csv},
+    );
     final data = res.data as Map<String, dynamic>;
     return InviteResult(
       invited: [for (final i in (data['invited'] as List? ?? [])) i['email'] as String],
@@ -79,16 +81,18 @@ class SupabaseAdminRepository implements AdminRepository {
       // Une ligne dont le profil n'est pas lisible (masqué par la RLS) est ignorée plutôt que de faire échouer la liste.
       for (final r in rows)
         if (r['profiles'] is Map)
-        Assignment(
-          id: r['id'] as String,
-          userId: r['user_id'] as String,
-          userName: ((r['profiles'] as Map)['full_name'] as String?)?.isNotEmpty == true ? (r['profiles'] as Map)['full_name'] as String : (r['profiles'] as Map)['email'] as String,
-          roleId: r['role_id'] as String,
-          roleName: (r['roles'] as Map)['name'] as String,
-          roleCode: (r['roles'] as Map)['code'] as String,
-          entityId: r['entity_id'] as String?,
-          entityName: (r['entities'] as Map?)?['name'] as String?,
-        ),
+          Assignment(
+            id: r['id'] as String,
+            userId: r['user_id'] as String,
+            userName: ((r['profiles'] as Map)['full_name'] as String?)?.isNotEmpty == true
+                ? (r['profiles'] as Map)['full_name'] as String
+                : (r['profiles'] as Map)['email'] as String,
+            roleId: r['role_id'] as String,
+            roleName: (r['roles'] as Map)['name'] as String,
+            roleCode: (r['roles'] as Map)['code'] as String,
+            entityId: r['entity_id'] as String?,
+            entityName: (r['entities'] as Map?)?['name'] as String?,
+          ),
     ];
   }
 
@@ -110,8 +114,13 @@ class SupabaseAdminRepository implements AdminRepository {
   Future<int> reassignAll({required String cabinetId, required String fromUserId, required String toUserId}) async {
     final current = (await assignments()).where((a) => a.userId == fromUserId && a.entityId != null).toList();
     for (final a in current) {
-      await _client.from('assignments').upsert({'cabinet_id': cabinetId, 'user_id': toUserId, 'role_id': a.roleId, 'entity_id': a.entityId},
-          onConflict: 'user_id,role_id,entity_id', ignoreDuplicates: true);
+      await _client
+          .from('assignments')
+          .upsert(
+            {'cabinet_id': cabinetId, 'user_id': toUserId, 'role_id': a.roleId, 'entity_id': a.entityId},
+            onConflict: 'user_id,role_id,entity_id',
+            ignoreDuplicates: true,
+          );
       await removeAssignment(a.id);
     }
     return current.length;
@@ -125,7 +134,10 @@ class SupabaseAdminRepository implements AdminRepository {
     if (from != null) q = q.gte('occurred_at', from.toIso8601String());
     if (to != null) q = q.lt('occurred_at', to.add(const Duration(days: 1)).toIso8601String());
     final rows = await q.order('id', ascending: false).limit(limit);
-    final actorIds = {for (final r in rows) if (r['actor_id'] != null) r['actor_id'] as String};
+    final actorIds = {
+      for (final r in rows)
+        if (r['actor_id'] != null) r['actor_id'] as String,
+    };
     final names = <String, String>{};
     if (actorIds.isNotEmpty) {
       // Libellés fournis par la base : un administrateur technique y apparaît sous un nom générique (D-017).

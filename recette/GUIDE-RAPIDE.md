@@ -37,7 +37,7 @@ La double authentification (code à 6 chiffres, application type Google Authenti
 
 ## C. Créer les utilisateurs
 
-1. L'administrateur invite : `associe@akonta.test`, `chef@akonta.test`, `assistant@akonta.test`, `stagiaire@akonta.test`.
+1. L'administrateur invite : `associe@akonta.test` en cochant « Premier associé du cabinet » (case proposée tant que le cabinet n'a pas d'associé), puis `chef@akonta.test`, `assistant@akonta.test`, `stagiaire@akonta.test` (l'associé leur donne ensuite leur rôle dans Cabinet > Affectations).
 2. Les e-mails d'invitation ne partent pas vraiment : ils tombent dans la boîte de test de l'hôte, `http://127.0.0.1:55324`. Ne pas s'en servir.
 3. L'hôte fixe le mot de passe de chacun (12 caractères minimum) :
 ```bash

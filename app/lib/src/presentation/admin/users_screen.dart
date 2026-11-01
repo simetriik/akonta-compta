@@ -157,6 +157,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
   final _name = TextEditingController();
   final _job = TextEditingController();
   bool _busy = false;
+  bool _firstPartner = false;
   String? _error;
 
   static String? validateEmail(String? v) {
@@ -176,8 +177,14 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
     try {
       final r = await ref
           .read(adminServiceProvider)
-          .invite(email: _email.text.trim(), fullName: _name.text.trim(), jobTitle: _job.text.trim().isEmpty ? null : _job.text.trim());
+          .invite(
+            email: _email.text.trim(),
+            fullName: _name.text.trim(),
+            jobTitle: _job.text.trim().isEmpty ? null : _job.text.trim(),
+            firstPartner: _firstPartner,
+          );
       ref.invalidate(profilesProvider);
+      ref.invalidate(cabinetHasPartnerProvider);
       if (!mounted) return;
       if (r.failed.isNotEmpty) {
         setState(() => _error = r.failed.join('\n'));
@@ -214,6 +221,17 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
             ),
             const SizedBox(height: AkSpace.s3),
             AkTextField(controller: _job, label: 'Fonction (facultatif)'),
+            // Proposé seulement tant que le cabinet n'a aucun associé ; en cas d'erreur de lecture, la case reste cachée.
+            if (ref.watch(cabinetHasPartnerProvider).value == false)
+              Padding(
+                padding: const EdgeInsets.only(top: AkSpace.s3),
+                child: AkCheckbox(
+                  key: const Key('invite-first-partner'),
+                  value: _firstPartner,
+                  label: 'Premier associé du cabinet (rôle Associé)',
+                  onChanged: _busy ? null : (v) => setState(() => _firstPartner = v),
+                ),
+              ),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: AkSpace.s3),
