@@ -3,7 +3,6 @@ import 'package:akonta/src/application/providers/repositories.dart';
 import 'package:akonta/src/core/password_policy.dart';
 import 'package:akonta/src/application/providers/session_providers.dart';
 import 'package:akonta/src/domain/admin_models.dart';
-import 'package:akonta/src/domain/entity_models.dart';
 import 'package:akonta/src/domain/models.dart';
 import 'package:akonta/src/presentation/dashboard/dashboard_screen.dart';
 import 'package:akonta/src/domain/repositories/auth_repository.dart';

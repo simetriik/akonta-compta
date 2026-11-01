@@ -19,6 +19,15 @@ void main() {
     expect(submitted, isFalse);
   });
 
+  testWidgets('à la création, un bandeau dit que seule la dénomination est obligatoire et le défaut de longueur est rappelé', (tester) async {
+    tester.view.physicalSize = const Size(1400, 2200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: EntityForm(defaultAccountLength: 7, onSubmit: (_) async {}))));
+    expect(find.textContaining('Seule la dénomination est obligatoire'), findsOneWidget);
+    expect(find.textContaining('(7 chiffres)'), findsOneWidget);
+  });
+
   group('référentiel comptable', () {
     testWidgets('une forme juridique associative pré-sélectionne le SYCEBNL et la valeur part à la création', (tester) async {
       EntityInput? sent;
