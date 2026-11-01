@@ -36,6 +36,38 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
   }
   String? _error;
 
+  /// Ouvre la fenêtre du premier exercice (dates déjà proposées) ; une fois créé, enchaîne sur les journaux.
+  Future<void> _openFiscalYear() async {
+    final entity = _entity;
+    if (entity == null || !mounted) return;
+    final fy = await showDialog<FiscalYear>(context: context, builder: (_) => FiscalYearDialog(entity: entity));
+    if (fy == null || !mounted) return;
+    setState(() => _fiscalYear = fy);
+    await _goToJournals();
+  }
+
+  /// Le plan de comptes est copié à la création du dossier : on passe directement aux journaux, en chargeant ce qu'il faut.
+  Future<void> _goToJournals() async {
+    try {
+      final templates = await ref.read(entitiesServiceProvider).journalTemplates();
+      final accounts = await ref.read(entitiesServiceProvider).treasuryAccounts(_entity!.id);
+      if (!mounted) return;
+      setState(() {
+        _journalCodes.addAll(templates.where((t) => t.isDefaultChecked && t.type != 'opening').map((t) => t.code));
+        _class5 = accounts;
+        // Banque : comptes 52 ; caisse : comptes 57 ; le premier est proposé d'office (modifiable).
+        for (final t in templates.where((t) => t.isTreasury)) {
+          final options = _treasuryOptions(t);
+          if (options.isNotEmpty) _treasuryAccounts[t.code] ??= options.first.id;
+        }
+        _error = null;
+        _step = 3;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = errorText(e));
+    }
+  }
+
   static const titles = ['Fiche entité', 'Exercice', 'Plan de comptes', 'Journaux', 'Soldes d\'ouverture'];
 
   @override
@@ -74,16 +106,17 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
             padding: EdgeInsets.symmetric(horizontal: pad),
             child: AkBanner(kind: AkBannerKind.danger, child: Text(_error!)),
           ),
-        Expanded(child: _body(cabinet?.id)),
+        Expanded(child: _body(cabinet?.id, cabinet?.defaultAccountLength)),
       ],
     );
   }
 
-  Widget _body(String? cabinetId) {
+  Widget _body(String? cabinetId, int? defaultAccountLength) {
     switch (_step) {
       case 0:
         return EntityForm(
           submitLabel: 'Créer le dossier et continuer',
+          defaultAccountLength: defaultAccountLength,
           onSubmit: (input) async {
             if (cabinetId == null) throw const AppError.business('Cabinet inconnu : reconnectez-vous.');
             final e = await ref.read(entitiesServiceProvider).create(cabinetId, input);
@@ -95,6 +128,7 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
               _accountCount = count;
               _step = 1;
             });
+            WidgetsBinding.instance.addPostFrameCallback((_) => _openFiscalYear());
           },
         );
       case 1:
@@ -112,49 +146,9 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
               Row(
                 children: [
                   if (_fiscalYear == null)
-                    AkButton.primary(
-                      'Créer l\'exercice',
-                      key: const Key('wizard-create-fy'),
-                      onPressed: () async {
-                        final fy = await showDialog<FiscalYear>(
-                          context: context,
-                          builder: (_) => FiscalYearDialog(entity: _entity!),
-                        );
-                        if (fy != null) setState(() => _fiscalYear = fy);
-                      },
-                    ),
-                  if (_fiscalYear != null) AkButton.primary('Continuer', onPressed: () => setState(() => _step = 2)),
+                    AkButton.primary('Créer l\'exercice', key: const Key('wizard-create-fy'), onPressed: _openFiscalYear),
+                  if (_fiscalYear != null) AkButton.primary('Continuer', onPressed: _goToJournals),
                 ],
-              ),
-            ],
-          ),
-        );
-      case 2:
-        return _StepCard(
-          title: 'Plan de comptes',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Le plan de référence SYSCOHADA révisé a été copié : ${_accountCount ?? '…'} comptes à ${_entity!.accountLength} chiffres. Vous pourrez le subdiviser à tout moment dans Référentiels.',
-              ),
-              const SizedBox(height: 12),
-              AkButton.primary(
-                'Continuer',
-                onPressed: () async {
-                  final templates = await ref.read(entitiesServiceProvider).journalTemplates();
-                  final accounts = await ref.read(entitiesServiceProvider).treasuryAccounts(_entity!.id);
-                  setState(() {
-                    _journalCodes.addAll(templates.where((t) => t.isDefaultChecked && t.type != 'opening').map((t) => t.code));
-                    _class5 = accounts;
-                    // Banque : comptes 52 ; caisse : comptes 57 ; le premier est proposé d'office (modifiable).
-                    for (final t in templates.where((t) => t.isTreasury)) {
-                      final options = _treasuryOptions(t);
-                      if (options.isNotEmpty) _treasuryAccounts[t.code] ??= options.first.id;
-                    }
-                    _step = 3;
-                  });
-                },
               ),
             ],
           ),
@@ -166,6 +160,8 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text('Plan de comptes SYSCOHADA révisé copié : ${_accountCount ?? '…'} comptes à ${_entity!.accountLength} chiffres (subdivisables dans Référentiels).'),
+              const SizedBox(height: AkSpace.s2),
               const Text(
                 'Modèle du cabinet, coché par défaut et modifiable. Le journal des à-nouveaux est imposé. Un journal de banque ou de caisse est relié à son compte de trésorerie.',
               ),

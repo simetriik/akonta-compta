@@ -14,6 +14,7 @@ class EntityForm extends StatefulWidget {
     this.submitLabel = 'Enregistrer',
     this.canEditAccountingParams = true,
     this.accountLengthLocked = false,
+    this.defaultAccountLength,
   });
 
   final EntityDetail? initial;
@@ -21,6 +22,9 @@ class EntityForm extends StatefulWidget {
   final String submitLabel;
   final bool canEditAccountingParams;
   final bool accountLengthLocked;
+
+  /// Longueur de compte du cabinet, rappelée sous le champ pour dire ce qui s'applique s'il reste vide.
+  final int? defaultAccountLength;
 
   @override
   State<EntityForm> createState() => _EntityFormState();
@@ -100,6 +104,17 @@ class _EntityFormState extends State<EntityForm> {
       child: ListView(
         padding: EdgeInsets.all(akPageMargin(context)),
         children: [
+          // À la création : dire d'emblée que presque rien n'est obligatoire (R1 et R2 : rubriques de la fiche d'identification de la liasse DGI).
+          if (widget.initial == null) ...[
+            const AkBanner(
+              kind: AkBannerKind.info,
+              child: Text(
+                'Seule la dénomination est obligatoire. Tout le reste est facultatif et se complète plus tard dans la fiche du dossier. '
+                'R1 et R2 sont les rubriques de la fiche d\'identification de la liasse fiscale.',
+              ),
+            ),
+            const SizedBox(height: AkSpace.s3),
+          ],
           _Section(
             title: 'Identification (R1)',
             children: [
@@ -204,7 +219,11 @@ class _EntityFormState extends State<EntityForm> {
                     controller: _accountLength,
                     label: 'Longueur des comptes',
                     enabled: canEditLength,
-                    helper: widget.accountLengthLocked ? 'Figée : un exercice existe' : 'Défaut du cabinet si vide',
+                    helper: widget.accountLengthLocked
+                        ? 'Figée : un exercice existe'
+                        : widget.defaultAccountLength == null
+                        ? 'Laissez vide pour utiliser la valeur du cabinet'
+                        : 'Laissez vide pour utiliser la valeur du cabinet (${widget.defaultAccountLength} chiffres)',
                     keyboardType: TextInputType.number,
                     validator: (v) {
                       if ((v ?? '').trim().isEmpty) return null;

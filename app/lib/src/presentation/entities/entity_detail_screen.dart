@@ -79,6 +79,7 @@ class _FicheTab extends ConsumerWidget {
       initial: entity,
       canEditAccountingParams: perms?.has('cabinet.settings') ?? false,
       accountLengthLocked: fys.isNotEmpty,
+      defaultAccountLength: ref.watch(currentCabinetProvider).value?.defaultAccountLength,
       onSubmit: (input) async {
         await ref.read(entitiesServiceProvider).update(entity.id, input);
         ref.invalidate(entityProvider(entity.id));
