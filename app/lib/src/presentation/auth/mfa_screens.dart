@@ -185,7 +185,7 @@ class MfaScaffold extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(child: AkLogo(height: 56)),
+                const Center(child: AkLogo(height: 72, symbolOnly: true)),
                 const SizedBox(height: AkSpace.s6),
                 AkCard(
                   padding: const EdgeInsets.all(AkSpace.s8),

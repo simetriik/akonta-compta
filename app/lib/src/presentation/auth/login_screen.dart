@@ -86,7 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(child: AkLogo(height: 72)),
+                const Center(child: AkLogo(height: 88, symbolOnly: true)),
                 const SizedBox(height: AkSpace.s8),
                 AkCard(
                   padding: const EdgeInsets.all(AkSpace.s8),
