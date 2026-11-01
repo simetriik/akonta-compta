@@ -7,6 +7,7 @@ import 'package:akonta/design/design.dart';
 import '../../domain/models.dart';
 import '../../application/providers/repositories.dart';
 import '../../application/providers/session_providers.dart';
+import '../../application/rules/member_rules.dart';
 import 'notification_bell.dart';
 import 'offline_gate.dart';
 import '../auth/change_password.dart';
@@ -31,9 +32,12 @@ class AppShell extends ConsumerWidget {
     (route: '/referentiels', icon: Icons.account_tree_outlined, label: 'Référentiels', perm: 'references.manage', admin: false),
     (route: '/import', icon: Icons.upload_file_outlined, label: 'Import Perfecto', perm: 'import.perfecto', admin: false),
     (route: '/cabinet', icon: Icons.apartment_outlined, label: 'Cabinet', perm: 'cabinet.settings', admin: true),
-    (route: '/utilisateurs', icon: Icons.manage_accounts_outlined, label: 'Collaborateurs', perm: 'users.manage', admin: true),
+    (route: '/utilisateurs', icon: Icons.manage_accounts_outlined, label: 'Collaborateurs', perm: membersManage, admin: true),
     (route: '/journal-erreurs', icon: Icons.bug_report_outlined, label: 'Journal des erreurs', perm: techAdminOnly, admin: true),
   ];
+
+  /// Pseudo-permission : l'entrée apparaît pour qui peut gérer des membres (administrateur technique ou associé).
+  static const membersManage = 'members.manage';
 
   /// Pseudo-permission : l'entrée n'apparaît que pour l'administrateur technique (rôle `tech_admin`).
   static const techAdminOnly = 'tech.errors';
@@ -65,6 +69,7 @@ class AppShell extends ConsumerWidget {
       final p = d.perm;
       if (p == null) return true;
       if (p == techAdminOnly) return perms.roles.any((r) => r.code == 'tech_admin');
+      if (p == membersManage) return MemberRules.canOpenMembers(perms);
       if (perms.cabinetWide.contains(p)) return true;
       return perms.byEntity.values.any((set) => set.contains(p));
     }).toList();

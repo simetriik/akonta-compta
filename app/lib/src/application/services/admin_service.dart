@@ -26,9 +26,9 @@ class AdminService {
   }
 
   /// [firstPartner] : donne le rôle Associé à l'invité (permis une seule fois par cabinet, vérifié par la base).
-  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv, bool firstPartner = false}) async {
+  Future<InviteResult> invite({String? email, String? fullName, String? jobTitle, String? csv, bool firstPartner = false, String? role, String? entityId}) async {
     _online.require('L\'administration');
-    return _repository.invite(email: email, fullName: fullName, jobTitle: jobTitle, csv: csv, firstPartner: firstPartner);
+    return _repository.invite(email: email, fullName: fullName, jobTitle: jobTitle, csv: csv, firstPartner: firstPartner, role: role, entityId: entityId);
   }
 
   Future<TemporaryAccess> resetPassword(String userId) async {
@@ -74,6 +74,16 @@ class AdminService {
   Future<void> addAssignment({required String cabinetId, required String userId, required String roleId, String? entityId}) async {
     _online.require('L\'administration');
     return _repository.addAssignment(cabinetId: cabinetId, userId: userId, roleId: roleId, entityId: entityId);
+  }
+
+  Future<void> designatePartner(String userId) async {
+    _online.require('L\'administration');
+    return _repository.designatePartner(userId);
+  }
+
+  Future<void> revokePartner(String userId) async {
+    _online.require('L\'administration');
+    return _repository.revokePartner(userId);
   }
 
   Future<List<TeamCandidate>> teamCandidates(String entityId, {String? role}) async {

@@ -18,9 +18,9 @@ select tests.assign(:'busy_id', :'a_id', 'assistant', :'e1_id');
 insert into public.documents (cabinet_id, entity_id, storage_path, file_name, mime_type, size_bytes, sha256, captured_by)
 values (:'a_id', :'e1_id', (:'a_id' || '/' || :'e1_id' || '/b.pdf'), 'b.pdf', 'application/pdf', 10, repeat('a', 64), :'busy_id');
 
--- L'associé n'a pas users.manage
-select tests.authenticate_as(:'partner_id', 'aal2');
-select ok(tests.fails_with(format('select public.delete_member(%L)', :'fresh_id'), '42501'), 'associé : suppression refusée');
+-- Un assistant n'a aucun droit de gestion (l'associé, lui, gère son équipe : voir 320_team_management)
+select tests.authenticate_as(:'busy_id', 'aal1');
+select ok(tests.fails_with(format('select public.delete_member(%L)', :'fresh_id'), '42501'), 'assistant : suppression refusée');
 select tests.clear_auth();
 
 select tests.authenticate_as(:'admin_id', 'aal2');
