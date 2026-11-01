@@ -7,6 +7,7 @@ import 'package:akonta/src/domain/entity_models.dart';
 import 'package:akonta/src/domain/models.dart';
 import 'package:akonta/src/domain/repositories/closing_repository.dart';
 import 'package:akonta/src/presentation/closing/tax_step.dart';
+import 'package:akonta/src/application/providers/session_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,7 +56,8 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [closingRepositoryProvider.overrideWithValue(repo)],
+        overrides: [
+          currentUserIdProvider.overrideWithValue('test-user'),closingRepositoryProvider.overrideWithValue(repo)],
         child: MaterialApp(theme: buildAkontaTheme(), home: Scaffold(body: TaxStep(entity: entity, fy: fy))),
       ),
     );

@@ -100,6 +100,7 @@ class _NoSuggestions implements SuggestionsRepository {
 }
 
 List<Override> _common() => [
+  currentUserIdProvider.overrideWithValue('golden-user'), // les services sont liés à l'utilisateur connecté
   currentEntityProvider.overrideWith(_FixedEntity.new),
   suggestionsRepositoryProvider.overrideWithValue(_NoSuggestions()),
   fiscalYearsProvider.overrideWith((ref, id) async => _fiscalYears),
