@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,9 +13,9 @@ import '../../core/formatting.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
-import 'launch_url.dart';
+import 'document_preview.dart';
 import '../../application/providers/documents_providers.dart';
-import '../../application/providers/entries_providers.dart';
+import '../../domain/entry_models.dart';
 import '../../domain/documents_models.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
@@ -318,7 +320,6 @@ class DocumentViewer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.ak;
-    final repo = ref.watch(documentsServiceProvider);
     final size = MediaQuery.sizeOf(context);
     final d = document;
     return AkDialog(
@@ -333,88 +334,100 @@ class DocumentViewer extends ConsumerWidget {
           ),
           Text('SHA-256 ${d.sha256}', style: AkText.code.copyWith(color: t.textMuted)),
           const SizedBox(height: AkSpace.s3),
-          Container(
-            height: size.height < 704 ? size.height - 280 : 480,
-            decoration: BoxDecoration(color: t.surfaceSunken, borderRadius: AkRadius.mdAll),
-            clipBehavior: Clip.antiAlias,
-            child: d.isImage
-                ? FutureBuilder<Uint8List>(
-                    future: repo.download(d),
-                    builder: (_, snap) => snap.hasData ? InteractiveViewer(child: Image.memory(snap.data!)) : const AkLoading(),
-                  )
-                : FutureBuilder<String>(
-                    future: repo.signedUrl(d),
-                    builder: (_, snap) => Center(
-                      child: snap.hasData
-                          ? AkButton.primary('Ouvrir le PDF (lien signé, 10 min)', icon: Icons.open_in_new, onPressed: () => _open(snap.data!))
-                          : const AkLoading(),
-                    ),
-                  ),
-          ),
+          DocumentPreview(document: d, height: size.height < 704 ? size.height - 280 : 480),
         ],
       ),
       actions: [AkButton.secondary('Fermer', onPressed: () => Navigator.pop(context))],
     );
   }
 
-  Future<void> _open(String url) => launchExternalUrl(url);
 }
 
-/// Sélection d'une écriture du dossier pour rattachement.
-class _EntryPicker extends ConsumerWidget {
+/// Choix d'une écriture du dossier pour y rattacher la pièce : tout l'exercice, avec recherche (libellé, référence, montant).
+class _EntryPicker extends ConsumerStatefulWidget {
   const _EntryPicker({required this.entity});
 
   final EntitySummary entity;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_EntryPicker> createState() => _EntryPickerState();
+}
+
+class _EntryPickerState extends ConsumerState<_EntryPicker> {
+  final _search = TextEditingController();
+  Timer? _debounce;
+  late Future<List<EntryModel>> _entries = _load('');
+
+  Future<List<EntryModel>> _load(String q) =>
+      ref.read(entriesServiceProvider).list(widget.entity.id, EntryFilter(search: q.trim().isEmpty ? null : q.trim()), fiscalYearId: widget.entity.fiscalYearId, limit: 100);
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String q) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _entries = _load(q));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final t = context.ak;
-    final entries = ref.watch(entriesListProvider(entity.id));
     return AkDialog(
       title: 'Rattacher à une écriture',
       size: AkDialogSize.m,
       content: SizedBox(
-        height: 420,
-        child: AsyncView(
-          value: entries,
-          builder: (list) {
-            if (list.isEmpty) return const AkEmptyState('Aucune écriture dans le mois filtré (changez le filtre dans Saisie).');
-            return ListView(
-              children: [
-                for (final e in list)
-                  InkWell(
-                    onTap: () => Navigator.pop(context, e.id),
-                    child: Container(
-                      constraints: BoxConstraints(minHeight: akIsTouch(context) ? AkSpace.rowTouch : AkSpace.rowCompact + 8),
-                      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: 6),
-                      decoration: BoxDecoration(
-                        border: Border(bottom: BorderSide(color: t.border)),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+        height: 460,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AkTextField(key: const Key('entry-picker-search'), controller: _search, label: 'Rechercher (libellé, référence, montant)', onChanged: _onChanged),
+            const SizedBox(height: AkSpace.s2),
+            Expanded(
+              child: FutureBuilder<List<EntryModel>>(
+                future: _entries,
+                builder: (context, snap) {
+                  if (snap.hasError) return AkErrorMessage(errorText(snap.error!));
+                  if (!snap.hasData) return const AkLoading();
+                  final list = snap.data!;
+                  if (list.isEmpty) return const AkEmptyState('Aucune écriture ne correspond.');
+                  return ListView(
+                    children: [
+                      for (final e in list)
+                        InkWell(
+                          onTap: () => Navigator.pop(context, e.id),
+                          child: Container(
+                            constraints: BoxConstraints(minHeight: akIsTouch(context) ? AkSpace.rowTouch : AkSpace.rowCompact + 8),
+                            padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: 6),
+                            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.border))),
+                            child: Row(
                               children: [
-                                Text(
-                                  e.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AkText.table.copyWith(color: t.text),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(e.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.table.copyWith(color: t.text)),
+                                      Text('${Fmt.date(e.entryDate)} · ${e.numberLabel}', style: AkText.code.copyWith(color: t.textMuted)),
+                                    ],
+                                  ),
                                 ),
-                                Text('${Fmt.date(e.entryDate)} · ${e.numberLabel}', style: AkText.code.copyWith(color: t.textMuted)),
+                                const SizedBox(width: AkSpace.s2),
+                                AkAmountText(Fmt.fcfa(e.totalDebit, showZero: true)),
                               ],
                             ),
                           ),
-                          const SizedBox(width: AkSpace.s2),
-                          AkAmountText(Fmt.fcfa(e.totalDebit, showZero: true)),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            );
-          },
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
       actions: [AkButton.secondary('Annuler', onPressed: () => Navigator.pop(context))],

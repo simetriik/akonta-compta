@@ -1,4 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:akonta/design/design.dart';
+import 'package:akonta/src/application/connectivity/connectivity.dart';
+import 'package:akonta/src/application/providers/services.dart';
+import 'package:akonta/src/application/services/documents_service.dart';
+import 'package:akonta/src/domain/documents_models.dart';
+import 'package:akonta/src/domain/repositories/documents_repository.dart';
+import 'package:akonta/src/domain/repositories/outbox_repository.dart';
 import 'package:akonta/src/domain/models.dart';
 import 'package:akonta/src/domain/reference_models.dart';
 import 'package:akonta/src/presentation/entries/entry_editor_screen.dart';
@@ -8,6 +16,38 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:akonta/src/application/providers/references_providers.dart';
 import 'package:akonta/src/application/providers/session_providers.dart';
+
+/// Faux dépôt de pièces : une seule pièce PDF dans la boîte de réception du dossier.
+class _FakeDocuments implements DocumentsRepository {
+  static final doc = DocumentModel(
+    id: 'd1',
+    entityId: 'e1',
+    storagePath: 'c/e1/d1.pdf',
+    fileName: 'facture.pdf',
+    mimeType: 'application/pdf',
+    sizeBytes: 2048,
+    sha256: 'a' * 64,
+    capturedVia: 'desktop',
+    capturedAt: DateTime(2026, 11, 2),
+  );
+
+  @override
+  Future<List<DocumentModel>> list(String entityId, {bool inboxOnly = false}) async => [doc];
+
+  @override
+  Future<String> signedUrl(DocumentModel d) async => 'https://exemple.test/facture.pdf';
+
+  @override
+  Future<Uint8List> download(DocumentModel d) async => Uint8List(0);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeOutbox implements OutboxRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 /// Dossier courant pré-sélectionné pour les tests.
 class _FixedEntity extends CurrentEntityNotifier {
@@ -24,15 +64,16 @@ void main() {
   ];
   const journals = [Journal(id: 'j1', code: 'OD', label: 'Opérations diverses', type: 'misc', isActive: true)];
 
-  Widget app() => ProviderScope(
+  Widget app({String? documentId}) => ProviderScope(
         overrides: [
           currentEntityProvider.overrideWith(_FixedEntity.new),
           accountsProvider.overrideWith((ref, id) async => accounts),
           thirdPartiesProvider.overrideWith((ref, id) async => const <ThirdParty>[]),
           journalsProvider.overrideWith((ref, id) async => journals),
-          permissionsProvider.overrideWith((ref) async => const PermissionSet(byEntity: {'e1': {'entries.draft', 'entries.validate'}}, cabinetWide: {}, roles: [])),
+          permissionsProvider.overrideWith((ref) async => const PermissionSet(byEntity: {'e1': {'entries.draft', 'entries.validate', 'documents.attach'}}, cabinetWide: {}, roles: [])),
+          documentsServiceProvider.overrideWithValue(DocumentsService(_FakeDocuments(), const OnlinePolicy(AlwaysOnline()), _FakeOutbox())),
         ],
-        child: const MaterialApp(home: Scaffold(body: EntryEditorScreen())),
+        child: MaterialApp(home: Scaffold(body: EntryEditorScreen(documentId: documentId))),
       );
 
   testWidgets('la grille affiche l\'écart puis l\'équilibre après contrepartie automatique', (tester) async {
@@ -67,5 +108,31 @@ void main() {
     expect(find.textContaining('Journal requis'), findsNothing);
     expect(find.textContaining('Libellé requis'), findsOneWidget);
     expect(find.textContaining('Au moins deux lignes'), findsOneWidget);
+  });
+
+  testWidgets('créer une écriture depuis une pièce : la pièce est jointe et s\'affiche à côté de la grille sur grand écran', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app(documentId: 'd1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pièces justificatives (1)'), findsOneWidget);
+    expect(find.text('facture.pdf'), findsWidgets);
+    expect(find.byKey(const Key('document-pane')), findsOneWidget);
+    // Fermer l'aperçu ne détache pas la pièce.
+    await tester.tap(find.byKey(const Key('document-pane-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('document-pane')), findsNothing);
+    expect(find.text('Pièces justificatives (1)'), findsOneWidget);
+  });
+
+  testWidgets('sur écran étroit, la pièce jointe s\'ouvre dans une fenêtre et non à côté de la grille', (tester) async {
+    tester.view.physicalSize = const Size(900, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app(documentId: 'd1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pièces justificatives (1)'), findsOneWidget);
+    expect(find.byKey(const Key('document-pane')), findsNothing);
   });
 }

@@ -17,7 +17,12 @@ import '../../application/providers/references_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import '../../application/offline/outbox_codec.dart';
+import '../../application/providers/documents_providers.dart';
+import '../../domain/documents_models.dart';
+import '../documents/document_preview.dart';
+import '../documents/documents_screen.dart' show DocumentViewer;
 import 'entry_balance_bar.dart';
+import 'entry_documents_panel.dart';
 import 'entry_grid.dart';
 import 'entry_shortcuts_dialog.dart';
 import 'entry_template_picker.dart';
@@ -26,21 +31,25 @@ import '../../application/entries/entry_editor_logic.dart';
 /// Saisie d'une écriture (grille au clavier) : journal, date, référence, libellé ; lignes compte / tiers / libellé / débit / crédit ;
 /// autocomplétion, contrepartie automatique (Ctrl+B), modèles d'écritures, équilibre affiché, validation (§10.4).
 class EntryEditorScreen extends StatelessWidget {
-  const EntryEditorScreen({super.key, this.entryId});
+  const EntryEditorScreen({super.key, this.entryId, this.documentId});
 
   final String? entryId;
 
+  /// Pièce de départ (« Créer l'écriture depuis cette pièce ») : elle s'affiche à côté de la grille et se rattache à l'enregistrement.
+  final String? documentId;
+
   @override
   Widget build(BuildContext context) => RequireEntity(
-    builder: (entity) => _Editor(entity: entity, entryId: entryId),
+    builder: (entity) => _Editor(entity: entity, entryId: entryId, documentId: documentId),
   );
 }
 
 class _Editor extends ConsumerStatefulWidget {
-  const _Editor({required this.entity, this.entryId});
+  const _Editor({required this.entity, this.entryId, this.documentId});
 
   final EntitySummary entity;
   final String? entryId;
+  final String? documentId;
 
   @override
   ConsumerState<_Editor> createState() => _EditorState();
@@ -53,6 +62,8 @@ class _EditorState extends ConsumerState<_Editor> {
   bool _busy = false;
   List<String> _errors = const [];
   String? _loadError;
+  List<DocumentModel> _pending = const []; // pièces choisies pour une écriture pas encore enregistrée
+  DocumentModel? _viewed; // pièce affichée à côté de la grille
   late final _date = TextEditingController(text: Fmt.date(_draft.entryDate));
   late final _reference = TextEditingController();
   late final _label = TextEditingController();
@@ -73,6 +84,14 @@ class _EditorState extends ConsumerState<_Editor> {
         _reference.text = _draft.reference;
         _label.text = _draft.label;
         if (_draft.lines.length < 2) _draft.lines.add(DraftLine());
+      } else if (widget.documentId != null) {
+        // Écriture créée depuis une pièce : on l'affiche et on la rattachera à l'enregistrement.
+        final docs = await ref.read(documentsServiceProvider).list(widget.entity.id);
+        final doc = docs.where((d) => d.id == widget.documentId).firstOrNull;
+        if (doc != null) {
+          _pending = [doc];
+          _viewed = doc;
+        }
       }
       _loadError = null;
     } catch (e) {
@@ -101,6 +120,17 @@ class _EditorState extends ConsumerState<_Editor> {
 
   bool get _readOnly => _loaded != null && !_loaded!.isDraft;
 
+  Widget _withViewer(Widget? pane, Widget main) => pane == null
+      ? main
+      : Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: main),
+            const SizedBox(width: AkSpace.s4),
+            SizedBox(width: 440, child: pane),
+          ],
+        );
+
   Future<void> _save({bool validate = false}) async {
     _draft.reference = _reference.text;
     _draft.label = _label.text;
@@ -115,6 +145,7 @@ class _EditorState extends ConsumerState<_Editor> {
       setState(() => _errors = errors);
       return;
     }
+    if (validate && !await _confirmWithoutDocument()) return;
     setState(() {
       _busy = true;
       _errors = const [];
@@ -124,6 +155,7 @@ class _EditorState extends ConsumerState<_Editor> {
       final repo = ref.read(entriesServiceProvider);
       final id = await repo.saveDraft(cabinet!.id, widget.entity.id, _draft);
       _draft.id = id;
+      await _attachPending(id);
       if (validate) {
         final n = await repo.validate(id);
         if (mounted) showAkToast(context, 'Écriture validée : n° $n');
@@ -142,6 +174,75 @@ class _EditorState extends ConsumerState<_Editor> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Écriture sur le serveur : pièces à rattacher d'office (aucune pièce en attente pour un brouillon enregistré hors connexion).
+  Future<void> _attachPending(String id) async {
+    if (_pending.isEmpty || isLocalDraftId(id)) return;
+    final failed = <String>[];
+    for (final d in _pending) {
+      try {
+        await ref.read(documentsServiceProvider).attach(id, d.id);
+      } catch (e) {
+        failed.add('${d.fileName} : ${errorText(e)}');
+      }
+    }
+    _pending = const [];
+    ref.invalidate(documentsProvider(widget.entity.id));
+    if (failed.isNotEmpty && mounted) showAkToast(context, 'Pièce non rattachée :\n${failed.join('\n')}', kind: AkToastKind.warning);
+  }
+
+  /// Avertissement non bloquant à la validation sans pièce justificative (réglable par cabinet, D-040).
+  Future<bool> _confirmWithoutDocument() async {
+    final cabinet = await ref.read(currentCabinetProvider.future);
+    if (cabinet == null || !cabinet.warnMissingDocument) return true;
+    var count = _pending.length;
+    final id = _draft.id ?? widget.entryId;
+    if (id != null && !isLocalDraftId(id)) {
+      try {
+        count += (await ref.read(documentsServiceProvider).forEntry(id)).length;
+      } catch (_) {
+        return true; // hors connexion ou lecture impossible : on ne bloque pas la validation
+      }
+    }
+    if (count > 0 || !mounted) return true;
+    return showAkConfirm(
+      context,
+      title: 'Aucune pièce jointe',
+      message: 'Cette écriture n\'a pas de pièce justificative (facture, reçu, relevé). La valider quand même ? Une écriture validée ne se modifie plus.',
+      confirmLabel: 'Valider quand même',
+    );
+  }
+
+  /// Affiche la pièce à côté de la grille sur grand écran, dans une fenêtre sinon.
+  void _view(DocumentModel d) {
+    if (MediaQuery.sizeOf(context).width >= _viewerBreakpoint) {
+      setState(() => _viewed = d);
+    } else {
+      showDialog<void>(context: context, builder: (_) => DocumentViewer(document: d));
+    }
+  }
+
+  static const _viewerBreakpoint = 1180.0;
+
+  Widget _viewerPane(BuildContext context, DocumentModel d) {
+    final t = context.ak;
+    return AkCard(
+      key: const Key('document-pane'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(d.fileName, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.bodyStrong.copyWith(color: t.text))),
+              AkIconButton(key: const Key('document-pane-close'), icon: Icons.close, tooltip: 'Fermer l\'aperçu', dense: true, onPressed: () => setState(() => _viewed = null)),
+            ],
+          ),
+          const SizedBox(height: AkSpace.s2),
+          DocumentPreview(document: d, height: 560),
+        ],
+      ),
+    );
   }
 
   Future<void> _delete() async {
@@ -233,6 +334,7 @@ class _EditorState extends ConsumerState<_Editor> {
     final mobile = akIsCompact(context);
     final gutter = akPageMargin(context);
     final title = _loaded == null ? 'Nouvelle écriture' : 'Écriture ${_loaded!.numberLabel}';
+    final showViewer = _viewed != null && MediaQuery.sizeOf(context).width >= _viewerBreakpoint;
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyB, control: true): () => setState(_draft.autoBalance),
@@ -250,8 +352,10 @@ class _EditorState extends ConsumerState<_Editor> {
                   padding: EdgeInsets.fromLTRB(gutter, AkSpace.s4, gutter, AkSpace.s4),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: AkSpace.pageMaxWidth),
-                      child: Column(
+                      constraints: BoxConstraints(maxWidth: AkSpace.pageMaxWidth + (showViewer ? 460 : 0)),
+                      child: _withViewer(
+                        showViewer ? _viewerPane(context, _viewed!) : null,
+                        Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Row(
@@ -322,6 +426,17 @@ class _EditorState extends ConsumerState<_Editor> {
                             onUseEntry: _useSuggestedEntry,
                             onUseTemplate: _useSuggestedTemplate,
                             onUseAccount: _useSuggestedAccount,
+                          ),
+                          const SizedBox(height: AkSpace.s3),
+                          EntryDocumentsPanel(
+                            entityId: widget.entity.id,
+                            entryId: (_draft.id ?? widget.entryId) != null && !isLocalDraftId((_draft.id ?? widget.entryId)!) ? (_draft.id ?? widget.entryId) : null,
+                            pending: _pending,
+                            onPendingChanged: (list) => setState(() => _pending = list),
+                            onView: _view,
+                            viewedId: _viewed?.id,
+                            canAttach: perms.has('documents.attach', entityId: widget.entity.id),
+                            canDetach: !_readOnly,
                           ),
                           const SizedBox(height: AkSpace.s3),
                           AkCard(
@@ -443,6 +558,7 @@ class _EditorState extends ConsumerState<_Editor> {
                               ),
                             ),
                         ],
+                      ),
                       ),
                     ),
                   ),
