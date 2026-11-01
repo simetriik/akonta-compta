@@ -1,7 +1,11 @@
 import 'package:akonta/design/design.dart';
 import 'package:akonta/src/application/providers/repositories.dart';
 import 'package:akonta/src/core/password_policy.dart';
+import 'package:akonta/src/application/providers/session_providers.dart';
 import 'package:akonta/src/domain/admin_models.dart';
+import 'package:akonta/src/domain/entity_models.dart';
+import 'package:akonta/src/domain/models.dart';
+import 'package:akonta/src/presentation/dashboard/dashboard_screen.dart';
 import 'package:akonta/src/domain/repositories/auth_repository.dart';
 import 'package:akonta/src/presentation/admin/users_screen.dart';
 import 'package:akonta/src/presentation/auth/change_password.dart';
@@ -77,7 +81,38 @@ void main() {
     const access = TemporaryAccess(email: 'associe@akonta.test', password: 'Kx7mPq2RvT9n');
     await tester.pumpWidget(MaterialApp(theme: buildAkontaTheme(), home: const Scaffold(body: TemporaryAccessDialog(title: 'Compte créé', accesses: [access]))));
     expect(find.text('Kx7mPq2RvT9n'), findsOneWidget);
-    expect(find.textContaining('ne seront plus affichés'), findsOneWidget);
+    expect(find.textContaining('ne sera plus affiché'), findsOneWidget);
     expect(TemporaryAccessDialog.message(access), allOf(contains('associe@akonta.test'), contains('Kx7mPq2RvT9n'), contains('première connexion')));
+    expect(TemporaryAccessDialog.message(access, address: 'https://akonta.example'), contains('Adresse : https://akonta.example'));
+  });
+
+  group('tableau de bord vide', () {
+    Future<void> pumpEmpty(WidgetTester tester, Set<String> cabinetWide) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            entityDashboardProvider.overrideWith((ref) async => <EntitySummary>[]),
+            permissionsProvider.overrideWith((ref) async => PermissionSet(byEntity: const {}, cabinetWide: cabinetWide, roles: const [])),
+          ],
+          child: MaterialApp(theme: buildAkontaTheme(), home: const Scaffold(body: DashboardScreen())),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('l\'associé est invité à créer le premier dossier', (tester) async {
+      await pumpEmpty(tester, {'entities.manage'});
+      expect(find.byKey(const Key('first-entity')), findsOneWidget);
+    });
+
+    testWidgets('l\'administrateur est orienté vers les collaborateurs', (tester) async {
+      await pumpEmpty(tester, {'users.manage'});
+      expect(find.byKey(const Key('first-users')), findsOneWidget);
+    });
+
+    testWidgets('un collaborateur sans dossier est invité à demander une affectation', (tester) async {
+      await pumpEmpty(tester, {});
+      expect(find.textContaining('Demandez à l\'associé'), findsOneWidget);
+    });
   });
 }

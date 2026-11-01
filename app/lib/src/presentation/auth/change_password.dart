@@ -64,6 +64,7 @@ class _ChangePasswordFormState extends ConsumerState<ChangePasswordForm> {
               obscureText: _hide,
               autofillHints: const [AutofillHints.newPassword],
               validator: PasswordPolicy.validate,
+              textInputAction: TextInputAction.next,
               helper: '12 caractères minimum, avec minuscule, majuscule et chiffre',
               autofocus: true,
               suffix: AkIconButton(
@@ -81,6 +82,8 @@ class _ChangePasswordFormState extends ConsumerState<ChangePasswordForm> {
               obscureText: _hide,
               autofillHints: const [AutofillHints.newPassword],
               validator: (v) => PasswordPolicy.validateConfirmation(v, _password.text),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _busy ? null : _submit(),
             ),
             if (_error != null)
               Padding(

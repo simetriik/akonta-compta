@@ -223,6 +223,10 @@ class _EditorState extends ConsumerState<_Editor> {
     if (_loading) return const AkLoading();
     if (_loadError != null) return AkErrorMessage(_loadError!, onRetry: _retryLoad);
     final journals = (ref.watch(journalsProvider(widget.entity.id)).value ?? const []).where((j) => j.isActive).toList();
+    // Nouvelle écriture : journal d'opérations diverses (à défaut, le premier) proposé d'office.
+    if (_loaded == null && _draft.journalId == null && journals.isNotEmpty) {
+      _draft.journalId = journals.firstWhere((j) => j.code == 'OD', orElse: () => journals.first).id;
+    }
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final canValidate = perms.has('entries.validate', entityId: widget.entity.id);
     final t = context.ak;

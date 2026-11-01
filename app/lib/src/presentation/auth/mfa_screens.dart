@@ -119,8 +119,14 @@ class _MfaEnrollScreenState extends ConsumerState<MfaEnrollScreen> {
       children: [
         Text(
           widget.mandatory
-              ? 'Votre rôle exige une application d\'authentification (TOTP) : Google Authenticator, Aegis, Microsoft Authenticator…'
+              ? 'Votre rôle exige une vérification en deux étapes, pour protéger la comptabilité de vos clients. À faire une seule fois :'
               : 'Protégez votre compte avec une application d\'authentification (recommandé).',
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          '1. Installez sur votre téléphone une application d\'authentification (Google Authenticator, Microsoft Authenticator ou Aegis).\n'
+          '2. Dans l\'application, ajoutez un compte et scannez le QR code ci-dessous (ou saisissez la clé manuelle).\n'
+          '3. Tapez ici le code à 6 chiffres affiché par l\'application, puis confirmez.',
         ),
         const SizedBox(height: 16),
         if (e == null && _error == null) const AkLoading(),

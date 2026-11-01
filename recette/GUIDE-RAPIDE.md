@@ -35,20 +35,15 @@ Si un collègue n'arrive pas à ouvrir la page : autoriser le port **8080** dans
 Compte de départ (administrateur) : `admin.recette@akonta.test` / `Recette-Admin-2027!`
 La double authentification (code à 6 chiffres, application type Google Authenticator) est demandée à la première connexion.
 
-## C. Créer les utilisateurs
+## C. Créer les utilisateurs (sans terminal)
 
-1. L'administrateur invite : `associe@akonta.test` en cochant « Premier associé du cabinet » (case proposée tant que le cabinet n'a pas d'associé), puis `chef@akonta.test`, `assistant@akonta.test`, `stagiaire@akonta.test` (l'associé leur donne ensuite leur rôle dans Cabinet > Affectations).
-2. Les e-mails d'invitation ne partent pas vraiment : ils tombent dans la boîte de test de l'hôte, `http://127.0.0.1:55324`. Ne pas s'en servir.
-3. L'hôte fixe le mot de passe de chacun (12 caractères minimum) :
-```bash
-recette/definir-mot-de-passe.sh associe@akonta.test
-```
-(même commande pour les trois autres). Donner ensuite le mot de passe à la personne.
-4. L'invitation ne donne aucun rôle. L'hôte donne le rôle **Associé** à la personne concernée :
-```bash
-recette/definir-role-associe.sh associe@akonta.test
-```
-L'associé crée ensuite le dossier (étape 2), puis affecte le chef de mission, l'assistant et le stagiaire à ce dossier dans Cabinet > Affectations. Il doit s'être connecté avec son code à 6 chiffres, sinon il n'a aucun droit.
+1. Connecté en administrateur : **Collaborateurs > Ajouter un collaborateur**. Pour le premier, cocher « Premier associé du cabinet » (la case disparaît dès qu'un associé existe) : `associe@akonta.test`.
+2. L'application affiche **une seule fois** un mot de passe provisoire. Cliquer sur « Copier le message » et l'envoyer à la personne (WhatsApp, SMS…). Aucun e-mail n'est nécessaire.
+3. À sa première connexion, la personne choisit son propre mot de passe, puis (associé et administrateur) active la double authentification en suivant les trois étapes affichées.
+4. Mot de passe perdu : l'administrateur clique sur l'icône clé de la personne pour en générer un nouveau. Chacun peut aussi changer le sien (menu en haut à droite).
+5. L'associé ouvre le dossier (étape 2), puis affecte le chef de mission, l'assistant et le stagiaire dans Cabinet > Affectations. Il doit s'être connecté avec son code à 6 chiffres, sinon il n'a aucun droit.
+
+Les scripts `definir-mot-de-passe.sh` et `definir-role-associe.sh` restent comme secours de l'hôte ; ils ne sont plus nécessaires.
 
 ## D. Dérouler la recette
 

@@ -30,7 +30,7 @@ class AppShell extends ConsumerWidget {
     (route: '/referentiels', icon: Icons.account_tree_outlined, label: 'Référentiels', perm: 'references.manage', admin: false),
     (route: '/import', icon: Icons.upload_file_outlined, label: 'Import Perfecto', perm: 'import.perfecto', admin: false),
     (route: '/cabinet', icon: Icons.apartment_outlined, label: 'Cabinet', perm: 'cabinet.settings', admin: true),
-    (route: '/utilisateurs', icon: Icons.manage_accounts_outlined, label: 'Utilisateurs', perm: 'users.manage', admin: true),
+    (route: '/utilisateurs', icon: Icons.manage_accounts_outlined, label: 'Collaborateurs', perm: 'users.manage', admin: true),
     (route: '/journal-erreurs', icon: Icons.bug_report_outlined, label: 'Journal des erreurs', perm: techAdminOnly, admin: true),
   ];
 
@@ -47,6 +47,13 @@ class AppShell extends ConsumerWidget {
     final profileState = ref.watch(currentProfileProvider);
     if (profileState.hasValue && profileState.value == null && ref.watch(currentUserProvider) != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(authRepositoryProvider).signOut());
+    }
+    // Un seul dossier accessible (ou dossier qui vient d'être créé) : on le choisit à la place de l'utilisateur.
+    final accessible = ref.watch(entityDashboardProvider).value;
+    if (accessible != null && accessible.length == 1 && ref.watch(currentEntityProvider) == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (ref.read(currentEntityProvider) == null) ref.read(currentEntityProvider.notifier).select(accessible.first);
+      });
     }
     final t = context.ak;
     final location = GoRouterState.of(context).uri.path;
