@@ -7,6 +7,7 @@ import '../../core/formatting.dart';
 import '../../domain/entity_models.dart';
 import '../widgets/async_view.dart';
 import 'entity_form.dart';
+import 'team_tab.dart';
 import '../../application/providers/entities_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
@@ -25,7 +26,7 @@ class EntityDetailScreen extends ConsumerWidget {
       value: entity,
       onRetry: () => ref.invalidate(entityProvider(entityId)),
       builder: (e) => DefaultTabController(
-        length: 4,
+        length: 5,
         child: Column(
           children: [
             Padding(
@@ -42,6 +43,7 @@ class EntityDetailScreen extends ConsumerWidget {
                   tabAlignment: TabAlignment.start,
                   tabs: [
                     Tab(text: 'Fiche'),
+                    Tab(text: 'Équipe'),
                     Tab(text: 'Dirigeants'),
                     Tab(text: 'Exercices et périodes'),
                     Tab(text: 'Historique'),
@@ -53,6 +55,7 @@ class EntityDetailScreen extends ConsumerWidget {
               child: TabBarView(
                 children: [
                   _FicheTab(entity: e),
+                  TeamTab(entityId: e.id),
                   _DirectorsTab(entity: e),
                   FiscalYearsTab(entity: e),
                   _HistoryTab(entityId: e.id),

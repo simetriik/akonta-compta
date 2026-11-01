@@ -7,6 +7,7 @@ import '../../core/errors/errors.dart';
 import '../../domain/entity_models.dart';
 import 'entity_detail_screen.dart';
 import 'entity_form.dart';
+import 'team_tab.dart';
 import '../../application/providers/entities_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
@@ -61,14 +62,14 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
           if (options.isNotEmpty) _treasuryAccounts[t.code] ??= options.first.id;
         }
         _error = null;
-        _step = 3;
+        _step = 2;
       });
     } catch (e) {
       if (mounted) setState(() => _error = errorText(e));
     }
   }
 
-  static const titles = ['Fiche entité', 'Exercice', 'Plan de comptes', 'Journaux', 'Soldes d\'ouverture'];
+  static const titles = ['Fiche entité', 'Exercice', 'Journaux', 'Équipe', 'Soldes d\'ouverture'];
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +154,7 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
             ],
           ),
         );
-      case 3:
+      case 2:
         final templates = ref.watch(journalTemplatesProvider).value ?? const <JournalTemplate>[];
         return _StepCard(
           title: 'Journaux',
@@ -220,13 +221,27 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
                     if (created.isNotEmpty) ref.read(currentEntityProvider.notifier).select(created.first);
                     setState(() {
                       _error = null;
-                      _step = 4;
+                      _step = 3;
                     });
                   } catch (e) {
                     setState(() => _error = errorText(e));
                   }
                 },
               ),
+            ],
+          ),
+        );
+      case 3:
+        return _StepCard(
+          title: 'Qui travaille sur ce dossier ?',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Facultatif : vous pourrez toujours modifier l\'équipe plus tard, dans l\'onglet « Équipe » du dossier.'),
+              const SizedBox(height: AkSpace.s3),
+              TeamTab(entityId: _entity!.id, embedded: true),
+              const SizedBox(height: AkSpace.s3),
+              Align(alignment: Alignment.centerLeft, child: AkButton.primary('Continuer', key: const Key('wizard-team-continue'), onPressed: () => setState(() => _step = 4))),
             ],
           ),
         );

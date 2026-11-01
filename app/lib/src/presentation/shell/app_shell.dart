@@ -7,6 +7,7 @@ import 'package:akonta/design/design.dart';
 import '../../domain/models.dart';
 import '../../application/providers/repositories.dart';
 import '../../application/providers/session_providers.dart';
+import 'notification_bell.dart';
 import 'offline_gate.dart';
 import '../auth/change_password.dart';
 
@@ -382,7 +383,6 @@ class _TopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.ak;
-    final toCorrect = entity?.toCorrectCount ?? 0;
     return Container(
       height: AkSpace.topbarHeight,
       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4),
@@ -393,18 +393,7 @@ class _TopBar extends ConsumerWidget {
           const SizedBox(width: AkSpace.s2),
           AkIconButton(icon: Icons.search, tooltip: 'Changer de dossier (Ctrl K)', onPressed: onPick),
           const Spacer(),
-          if (toCorrect > 0)
-            Tooltip(
-              message: '$toCorrect écriture(s) à corriger',
-              child: InkWell(
-                borderRadius: AkRadius.mdAll,
-                onTap: () => context.go('/saisie'),
-                child: Padding(
-                  padding: const EdgeInsets.all(AkSpace.s2),
-                  child: Badge(label: Text('$toCorrect'), backgroundColor: t.dangerSolid, textColor: t.onDanger, child: const Icon(Icons.notifications_outlined)),
-                ),
-              ),
-            ),
+          NotificationBell(entity: entity),
           if (profile != null) _UserMenu(profile: profile!, onSignOut: onSignOut),
         ],
       ),

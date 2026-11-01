@@ -275,69 +275,97 @@ class AssignmentDialog extends ConsumerStatefulWidget {
 class _AssignmentDialogState extends ConsumerState<AssignmentDialog> {
   String? _user;
   String? _role;
-  String? _entity;
+  final _entities = <String>{};
   String? _error;
+  bool _busy = false;
+
+  /// Affecte le collaborateur à chaque dossier coché. Un dossier refusé (ex. il a déjà un chef de mission) n'empêche pas les autres.
+  Future<void> _submit(String cabinetId, List<({String id, String name})> all) async {
+    if (_user == null || _role == null || _entities.isEmpty) {
+      setState(() => _error = 'Choisissez le collaborateur, le rôle et au moins un dossier.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final failures = <String>[];
+    for (final e in all.where((e) => _entities.contains(e.id))) {
+      try {
+        await ref.read(adminServiceProvider).addAssignment(cabinetId: cabinetId, userId: _user!, roleId: _role!, entityId: e.id);
+      } catch (err) {
+        failures.add('${e.name} : ${errorText(err)}');
+      }
+    }
+    ref.invalidate(assignmentsProvider);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (failures.isEmpty) {
+      Navigator.pop(context);
+    } else {
+      setState(() => _error = 'Non affecté :\n${failures.join('\n')}');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final profiles = ref.watch(profilesProvider).value ?? const <Profile>[];
     final roles = ref.watch(rolesProvider).value ?? const <RoleDef>[];
-    final entities = ref.watch(adminEntitiesProvider).value ?? const [];
+    final entities = ref.watch(adminEntitiesProvider).value ?? const <({String id, String name})>[];
     final cabinet = ref.watch(currentCabinetProvider).value;
     // L'associé n'attribue que ces trois rôles, tous rattachés à un dossier (règle appliquée par la base, D-037).
     final assignable = roles.where((r) => AssignableRoles.codes.contains(r.code)).toList();
     return AkDialog(
       title: 'Affecter un collaborateur',
       size: AkDialogSize.s,
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AkDropdown<String>(
-            value: _user,
-            label: 'Collaborateur',
-            items: [for (final p in profiles.where((p) => p.isActive)) AkOption(p.id, p.fullName.isEmpty ? p.email : p.fullName)],
-            onChanged: (v) => setState(() => _user = v),
-          ),
-          const SizedBox(height: AkSpace.s3),
-          AkDropdown<String>(
-            value: _role,
-            label: 'Rôle',
-            items: [for (final r in assignable) AkOption(r.id, r.name)],
-            onChanged: (v) => setState(() => _role = v),
-          ),
-          const SizedBox(height: AkSpace.s3),
-          AkDropdown<String>(
-            value: _entity,
-            label: 'Dossier',
-            items: [for (final e in entities) AkOption(e.id, e.name)],
-            onChanged: (v) => setState(() => _entity = v),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: AkSpace.s3),
-              child: AkBanner(kind: AkBannerKind.danger, child: Text(_error!)),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AkDropdown<String>(
+              value: _user,
+              label: 'Collaborateur',
+              items: [for (final p in profiles.where((p) => p.isActive)) AkOption(p.id, p.fullName.isEmpty ? p.email : p.fullName)],
+              onChanged: (v) => setState(() => _user = v),
             ),
-        ],
+            const SizedBox(height: AkSpace.s3),
+            AkDropdown<String>(
+              value: _role,
+              label: 'Rôle',
+              items: [for (final r in assignable) AkOption(r.id, r.name)],
+              onChanged: (v) => setState(() => _role = v),
+            ),
+            const SizedBox(height: AkSpace.s3),
+            Text('Dossiers', style: AkText.bodyStrong.copyWith(color: context.ak.text)),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final e in entities)
+                    AkCheckbox(
+                      key: Key('assign-entity-${e.id}'),
+                      value: _entities.contains(e.id),
+                      label: e.name,
+                      onChanged: (v) => setState(() => v ? _entities.add(e.id) : _entities.remove(e.id)),
+                    ),
+                  if (entities.isEmpty) const Text('Aucun dossier pour l\'instant.'),
+                ],
+              ),
+            ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AkSpace.s3),
+                child: AkBanner(kind: AkBannerKind.danger, child: Text(_error!)),
+              ),
+          ],
+        ),
       ),
       actions: [
-        AkButton.secondary('Annuler', onPressed: () => Navigator.pop(context)),
-        AkButton.primary(
-          'Affecter',
-          onPressed: () async {
-            if (_user == null || _role == null || _entity == null || cabinet == null) {
-              setState(() => _error = 'Renseignez le collaborateur, le rôle et le dossier.');
-              return;
-            }
-            try {
-              await ref.read(adminServiceProvider).addAssignment(cabinetId: cabinet.id, userId: _user!, roleId: _role!, entityId: _entity);
-              ref.invalidate(assignmentsProvider);
-              if (context.mounted) Navigator.pop(context);
-            } catch (e) {
-              setState(() => _error = errorText(e));
-            }
-          },
-        ),
+        AkButton.secondary('Annuler', onPressed: _busy ? null : () => Navigator.pop(context)),
+        AkButton.primary('Affecter', key: const Key('assign-submit'), loading: _busy, onPressed: cabinet == null ? null : () => _submit(cabinet.id, entities)),
       ],
     );
   }

@@ -33,6 +33,12 @@ abstract interface class AdminRepository {
 
   Future<void> removeAssignment(String id);
 
+  /// Collaborateurs affectables à ce dossier ; [role] précise le rôle visé (ex. `manager`).
+  Future<List<TeamCandidate>> teamCandidates(String entityId, {String? role});
+
+  /// Remplace le chef de mission d'un dossier (associé) : retire l'ancien et pose le nouveau en une opération.
+  Future<void> replaceManager({required String entityId, required String userId});
+
   /// Réaffectation en masse : tous les dossiers d'un collaborateur passent à un autre (même rôle).
   Future<int> reassignAll({required String cabinetId, required String fromUserId, required String toUserId});
 

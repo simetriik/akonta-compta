@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models.dart';
 import '../../domain/admin_models.dart';
+import '../rules/team_rules.dart';
 import 'services.dart';
 
 final profilesProvider = FutureProvider<List<Profile>>((ref) => ref.watch(adminServiceProvider).profiles());
@@ -16,3 +17,14 @@ final permissionDefsProvider = FutureProvider<List<PermissionDef>>((ref) => ref.
 final assignmentsProvider = FutureProvider<List<Assignment>>((ref) => ref.watch(adminServiceProvider).assignments());
 
 final adminEntitiesProvider = FutureProvider<List<({String id, String name})>>((ref) => ref.watch(adminServiceProvider).entities());
+
+/// Équipe d'un dossier : affectations rattachées à ce dossier (chef de mission, assistants, stagiaires).
+final teamProvider = FutureProvider.autoDispose.family<List<Assignment>, String>((ref, entityId) async {
+  final all = await ref.watch(adminServiceProvider).assignments();
+  return TeamRules.teamOf(all, entityId);
+});
+
+/// Collaborateurs affectables à un dossier, pour un rôle donné (`null` : tous rôles).
+final teamCandidatesProvider = FutureProvider.autoDispose.family<List<TeamCandidate>, ({String entityId, String? role})>(
+  (ref, key) => ref.watch(adminServiceProvider).teamCandidates(key.entityId, role: key.role),
+);
