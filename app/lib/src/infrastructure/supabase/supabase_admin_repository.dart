@@ -117,6 +117,15 @@ class SupabaseAdminRepository implements AdminRepository {
       _client.from('assignments').insert({'cabinet_id': cabinetId, 'user_id': userId, 'role_id': roleId, 'entity_id': entityId});
 
   @override
+  Future<List<TeamCandidate>> teamCandidates(String entityId, {String? role}) async {
+    final rows = await _client.rpc('team_candidates', params: {'p_entity': entityId, 'p_role': role}) as List<dynamic>;
+    return [for (final r in rows) TeamCandidate(id: r['id'] as String, fullName: (r['full_name'] as String?) ?? '', email: r['email'] as String)];
+  }
+
+  @override
+  Future<void> replaceManager({required String entityId, required String userId}) => _client.rpc('replace_manager', params: {'p_entity': entityId, 'p_user': userId});
+
+  @override
   Future<void> removeAssignment(String id) => _client.from('assignments').delete().eq('id', id);
 
   /// Réaffectation en masse : tous les dossiers d'un collaborateur passent à un autre (même rôle).

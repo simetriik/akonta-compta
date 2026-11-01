@@ -76,6 +76,16 @@ class AdminService {
     return _repository.addAssignment(cabinetId: cabinetId, userId: userId, roleId: roleId, entityId: entityId);
   }
 
+  Future<List<TeamCandidate>> teamCandidates(String entityId, {String? role}) async {
+    _online.require('L\'administration');
+    return _repository.teamCandidates(entityId, role: role);
+  }
+
+  Future<void> replaceManager({required String entityId, required String userId}) async {
+    _online.require('L\'administration');
+    return _repository.replaceManager(entityId: entityId, userId: userId);
+  }
+
   Future<void> removeAssignment(String id) async {
     _online.require('L\'administration');
     return _repository.removeAssignment(id);

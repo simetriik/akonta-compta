@@ -71,6 +71,17 @@ class TemporaryAccess {
   final String password;
 }
 
+/// Collaborateur affectable à un dossier (fonction `team_candidates` de la base : ni associé, ni déjà dans l'équipe).
+class TeamCandidate {
+  const TeamCandidate({required this.id, required this.fullName, required this.email});
+
+  final String id;
+  final String fullName;
+  final String email;
+
+  String get label => fullName.isEmpty ? email : fullName;
+}
+
 class InviteResult {
   const InviteResult({required this.invited, required this.failed, required this.parseErrors});
 
@@ -85,5 +96,5 @@ abstract final class AssignableRoles {
   static const codes = {'manager', 'assistant', 'trainee'};
 
   /// Droits d'administration, jamais accordables à un rôle depuis l'application.
-  static const reservedPermissions = {'users.manage', 'team.manage', 'roles.manage', 'assignments.manage'};
+  static const reservedPermissions = {'users.manage', 'team.manage', 'team.assign', 'roles.manage', 'assignments.manage'};
 }
