@@ -8,6 +8,8 @@ interface InvitePayload {
   full_name?: string;
   job_title?: string | null;
   csv?: string;
+  /** Donne le rôle Associé à l'invité : permis une seule fois, tant que le cabinet n'a aucun associé (Q-016). */
+  first_partner?: boolean;
   redirect_to?: string;
 }
 
@@ -32,6 +34,13 @@ Deno.serve(async (req) => {
     return error("email et full_name, ou csv, requis");
   }
 
+  if (payload.first_partner) {
+    if (payload.csv || rows.length !== 1) return error("Le premier associé s'invite seul, sans import CSV");
+    const { data: hasPartner, error: partnerError } = await caller.rpc("cabinet_has_partner");
+    if (partnerError) return error(`Vérification impossible : ${partnerError.message}`, 500);
+    if (hasPartner) return error("Le cabinet a déjà un associé : c'est lui qui affecte les rôles", 409);
+  }
+
   const admin = serviceClient();
   const invited: { email: string; user_id: string }[] = [];
   const failed: { email: string; error: string }[] = [];
@@ -40,13 +49,26 @@ Deno.serve(async (req) => {
       data: { cabinet_id: ctx.cabinetId, full_name: row.fullName, job_title: row.jobTitle },
       redirectTo: payload.redirect_to,
     });
-    if (inviteError || !data.user) failed.push({ email: row.email, error: inviteError?.message ?? "inconnu" });
-    else invited.push({ email: row.email, user_id: data.user.id });
+    if (inviteError || !data.user) {
+      failed.push({ email: row.email, error: inviteError?.message ?? "inconnu" });
+      continue;
+    }
+    if (payload.first_partner) {
+      // La règle (un seul premier associé par cabinet) est appliquée par la base, sous verrou.
+      const { error: grantError } = await admin.rpc("grant_first_partner", {
+        p_cabinet: ctx.cabinetId, p_user: data.user.id, p_by: ctx.userId,
+      });
+      if (grantError) {
+        failed.push({ email: row.email, error: `invité sans rôle Associé : ${grantError.message}` });
+        continue;
+      }
+    }
+    invited.push({ email: row.email, user_id: data.user.id });
   }
   // Piste d'audit (au nom de l'appelant)
   await caller.rpc("log_audit_event", {
     p_action: "invite_users",
-    p_payload: { invited: invited.map((i) => i.email), failed: failed.map((f) => f.email) },
+    p_payload: { invited: invited.map((i) => i.email), failed: failed.map((f) => f.email), first_partner: payload.first_partner === true },
   });
   return json({ invited, failed, parse_errors: parseErrors });
 });

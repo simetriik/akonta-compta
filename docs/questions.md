@@ -64,7 +64,7 @@
 ## Q-016 — Aucun rôle donné aux utilisateurs invités (associé inclus)
 - **Constat** : la fonction `invite-user` crée le compte et le profil mais aucune ligne dans `assignments`. Un utilisateur invité n'a donc aucun droit. L'écran Cabinet > Affectations est réservé à l'associé, qui n'a lui-même aucun rôle : impasse. L'administrateur technique ne voit pas les données comptables et n'a pas d'écran pour affecter. Constaté le 30 oct. 2026 sur l'instance de recette (seul `admin.recette` avait une affectation).
 - **Hypothèse appliquée** : pour la recette, l'hôte insère à la main l'affectation `partner` (portée cabinet) de l'associé ; l'associé affecte ensuite les autres depuis l'application.
-- **À décider** : l'invitation doit-elle porter le rôle (choisi par l'administrateur ou l'associé) et créer l'affectation ? À trancher avant la recette avec ABC.
+- **Décidé le 1er nov. 2026 (D-034)** : l'administrateur technique peut inviter le premier associé (case dans le dialogue d'invitation), une seule fois par cabinet ; le script `recette/definir-role-associe.sh` reste un secours. Les autres rôles sont affectés par l'associé.
 
 ## Q-017 — Associations (SYCEBNL) : besoin réel du cabinet
 - **Constat** : la conception range SYCEBNL hors V1. L'utilisateur souhaite l'ajouter à Akonta (31 oct. 2026) ; voir D-022.
