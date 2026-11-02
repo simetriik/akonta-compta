@@ -8,6 +8,7 @@ import '../../domain/repositories/entities_repository.dart';
 import '../../domain/repositories/entries_repository.dart';
 import '../../domain/repositories/import_repository.dart';
 import '../../domain/repositories/inventory_repository.dart';
+import '../../domain/repositories/client_access_repository.dart';
 import '../../domain/repositories/invoices_repository.dart';
 import '../../domain/repositories/lettering_repository.dart';
 import '../../domain/repositories/reconciliation_repository.dart';
@@ -36,6 +37,9 @@ final entriesRepositoryProvider = Provider<EntriesRepository>(
   (ref) => throw UnimplementedError('entriesRepositoryProvider doit être fourni par la composition'),
 );
 final importRepositoryProvider = Provider<ImportRepository>((ref) => throw UnimplementedError('importRepositoryProvider doit être fourni par la composition'));
+final clientAccessRepositoryProvider = Provider<ClientAccessRepository>(
+  (ref) => throw UnimplementedError('clientAccessRepositoryProvider doit être fourni par la composition'),
+);
 final invoicesRepositoryProvider = Provider<InvoicesRepository>(
   (ref) => throw UnimplementedError('invoicesRepositoryProvider doit être fourni par la composition'),
 );

@@ -33,6 +33,7 @@ EntryModel entryModelFromJson(Map<String, dynamic> j) {
       status: j['status'] as String,
       reviewStatus: j['review_status'] as String,
       reviewComment: j['review_comment'] as String?,
+      returnedComment: j['returned_comment'] as String?,
       isGenerated: (j['is_generated'] as bool?) ?? false,
       reversalOf: j['reversal_of'] as String?,
       reversedBy: j['reversed_by'] as String?,

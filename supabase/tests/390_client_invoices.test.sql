@@ -1,7 +1,7 @@
 -- Accès des clients (D-044) : factures. Le gérant voit et émet celles de son dossier, le saisisseur les siennes
 -- (et n'émet que si le droit lui est accordé), plus rien quand l'accès est suspendu ou fermé.
 begin;
-select plan(11);
+select plan(15);
 
 select tests.create_cabinet('Cabinet A') as id \gset a_
 select tests.create_user('partner@a.test', :'a_id', 'Associé') as id \gset partner_
@@ -20,6 +20,8 @@ select tests.assign(:'saisie_id', :'a_id', 'client_saisie', :'e1_id');
 select tests.assign(:'gerant2_id', :'a_id', 'client_gerant', :'e2_id');
 select public.set_client_access(:'e1_id', 'active');
 select public.set_client_access(:'e2_id', 'active');
+insert into public.fiscal_years (cabinet_id, entity_id, start_date, end_date) values (:'a_id', :'e1_id', '2026-01-01', '2026-12-31');
+select public.create_journals_from_template(:'e1_id', null);
 
 insert into public.emcf_devices (cabinet_id, entity_id, nim, label, mode) values (:'a_id', :'e1_id', 'XX01000001', 'Boutique 1', 'test') returning id as id \gset d1_
 insert into public.emcf_devices (cabinet_id, entity_id, nim, label, mode) values (:'a_id', :'e2_id', 'XX01000002', 'Boutique 2', 'test') returning id as id \gset d2_
@@ -65,6 +67,18 @@ select tests.clear_auth();
 select public.set_client_access(:'e1_id', 'disabled');
 select tests.authenticate_as(:'gerant_id', 'aal2');
 select is((select count(*) from public.invoices), 0::bigint, 'fermé : aucune facture visible');
+select tests.clear_auth();
+
+-- Tableau de bord : le client ne reçoit que ses compteurs de brouillard et l'état de l'accès
+select public.set_client_access(:'e1_id', 'active');
+select tests.make_entry(:'e1_id', 'VT', '2026-02-01', 'Brouillard client', '[{"account":"5210000","debit":10},{"account":"7011000","credit":10}]', :'gerant_id') as id \gset dr_
+select tests.make_entry(:'e1_id', 'VT', '2026-02-02', 'Validée cabinet', '[{"account":"5210000","debit":20},{"account":"7011000","credit":20}]', :'assist_id') as id \gset va_
+select public.validate_entry(:'va_id');
+select tests.authenticate_as(:'gerant_id', 'aal2');
+select is((select count(*) from public.entity_dashboard()), 1::bigint, 'le client voit son dossier au tableau de bord');
+select is((select draft_count from public.entity_dashboard()), 1::bigint, 'compteur de brouillards : le sien seulement');
+select is((select coalesce(unreviewed_count, 0) + coalesce(inbox_count, 0) from public.entity_dashboard()), 0::bigint, 'aucun compteur sur la validation ni sur la revue');
+select is((select client_access from public.entity_dashboard()), 'active', 'l''état de l''accès est exposé');
 select tests.clear_auth();
 
 select * from finish();

@@ -11,6 +11,7 @@ import 'team_tab.dart';
 import '../../application/providers/entities_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
+import 'client_access_tab.dart';
 
 /// Dossier : fiche, dirigeants, exercices et périodes (verrouillage), historique.
 class EntityDetailScreen extends ConsumerWidget {
@@ -26,7 +27,7 @@ class EntityDetailScreen extends ConsumerWidget {
       value: entity,
       onRetry: () => ref.invalidate(entityProvider(entityId)),
       builder: (e) => DefaultTabController(
-        length: 5,
+        length: 6,
         child: Column(
           children: [
             Padding(
@@ -44,6 +45,7 @@ class EntityDetailScreen extends ConsumerWidget {
                   tabs: [
                     Tab(text: 'Fiche'),
                     Tab(text: 'Équipe'),
+                    Tab(text: 'Clients'),
                     Tab(text: 'Dirigeants'),
                     Tab(text: 'Exercices et périodes'),
                     Tab(text: 'Historique'),
@@ -56,6 +58,7 @@ class EntityDetailScreen extends ConsumerWidget {
                 children: [
                   _FicheTab(entity: e),
                   TeamTab(entityId: e.id),
+                  ClientAccessTab(entityId: e.id),
                   _DirectorsTab(entity: e),
                   FiscalYearsTab(entity: e),
                   _HistoryTab(entityId: e.id),

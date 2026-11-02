@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
 import '../application/providers/repositories.dart';
 import '../infrastructure/supabase/supabase_admin_repository.dart';
+import '../infrastructure/supabase/supabase_client_access_repository.dart';
 import '../infrastructure/supabase/supabase_closing_repository.dart';
 import '../infrastructure/supabase/supabase_consultation_repository.dart';
 import '../infrastructure/supabase/supabase_documents_repository.dart';
@@ -27,6 +28,7 @@ void registerSupabaseErrorClassifier() {
 /// Branche chaque port sur son adaptateur Supabase (production et recette).
 List<Override> supabaseOverrides() => [
   adminRepositoryProvider.overrideWith((ref) => SupabaseAdminRepository(ref.watch(supabaseClientProvider))),
+  clientAccessRepositoryProvider.overrideWith((ref) => SupabaseClientAccessRepository(ref.watch(supabaseClientProvider))),
   closingRepositoryProvider.overrideWith((ref) => SupabaseClosingRepository(ref.watch(supabaseClientProvider))),
   consultationRepositoryProvider.overrideWith((ref) => SupabaseConsultationRepository(ref.watch(supabaseClientProvider))),
   documentsRepositoryProvider.overrideWith((ref) => SupabaseDocumentsRepository(ref.watch(supabaseClientProvider))),

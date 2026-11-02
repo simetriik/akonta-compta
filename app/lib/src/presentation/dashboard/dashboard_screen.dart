@@ -7,6 +7,7 @@ import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../domain/models.dart';
 import '../../application/providers/session_providers.dart';
+import 'client_home_screen.dart';
 
 /// Tableau de bord des dossiers : chef de mission, dernier mois saisi, brouillards, écritures non revues (§10.2).
 class DashboardScreen extends ConsumerWidget {
@@ -14,6 +15,8 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Un client du cabinet a son propre accueil : jamais le tableau de bord du personnel.
+    if (ref.watch(permissionsProvider).value?.isClient ?? false) return const ClientHomeScreen();
     final data = ref.watch(entityDashboardProvider);
     final pad = akPageMargin(context);
     return data.when(

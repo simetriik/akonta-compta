@@ -30,6 +30,7 @@ import 'references/references_screen.dart';
 import 'shell/app_shell.dart';
 import '../application/providers/repositories.dart';
 import '../application/providers/session_providers.dart';
+import '../application/rules/client_rules.dart';
 import '../domain/auth_models.dart';
 
 /// Rafraîchit le routeur quand la session change de nature (connexion, déconnexion, TOTP vérifié),
@@ -83,6 +84,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (perms.requiresMfa) return state.matchedLocation == '/mfa/activation' ? null : '/mfa/activation';
       }
       if (onMfa) return '/';
+      // Client du cabinet : seulement l'accueil, la saisie du brouillard, les pièces et les factures (D-044).
+      final perms = await ref.read(permissionsProvider.future);
+      if (perms.isClient && !ClientRules.allows(state.matchedLocation)) return '/';
       return null;
     },
     routes: [
