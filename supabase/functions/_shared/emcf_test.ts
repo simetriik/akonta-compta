@@ -3,7 +3,7 @@
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1";
 import {
   baseUrl, buildInvoiceRequest, compareTotals, EmcfClient, EmcfError, emcfErrorMessage, type InvoiceRow, type InvoiceTotals, type LineRow,
-  parseDgiDateTime,
+  parseDgiDateTime, buildInvoiceDocument, type ConfirmedInvoiceRow,
 } from "./emcf.ts";
 import { cancelPending, confirmPending, runIssue, type StorePort } from "./emcf_flow.ts";
 
@@ -211,4 +211,23 @@ Deno.test("flux : annulation d'une demande en cours", async () => {
     assertEquals(calls.length, 1);
     assert(calls[0].startsWith("cancelled:"));
   } finally { await mock.close(); }
+});
+
+Deno.test("document PDF d'une facture confirmée : montants de la DGI, éléments de sécurité reproduits", () => {
+  const confirmed: ConfirmedInvoiceRow = {
+    ...invoice, is_test: true, total: 4950, commercial_message: null,
+    dgi_response: { taa: 1350, tab: 3600, hab: 3051, vab: 549, total: 4950, aib: 0, tb: 18 },
+    code_mecef: "X537-E4DB-AJUU-HHXN-FWIS-FEKJ", qr_code: "F;XX01000001;X537E4DBAJUUHHXNFWISFEKJ;3201900000001;20261104131708",
+    counters: "1/1 FV", dgi_nim: "XX01000001", dgi_datetime: "04/11/2026 13:17:08",
+  };
+  const doc = buildInvoiceDocument(confirmed, lines, [{ name: "ESPECES", amount: 4950 }], { name: "SARL Démo", tax_id: "3201900000001", address: "Cotonou" }) as {
+    total: number; ht_b: number; vat_b: number; lines: { amount: number }[]; security: { code_mecef: string; counters: string }; aib_rate: number;
+  };
+  assertEquals([doc.total, doc.ht_b, doc.vat_b], [4950, 3051, 549]);
+  assertEquals(doc.lines.map((l) => l.amount), [3600, 1350]);
+  assertEquals(doc.security.code_mecef, "X537-E4DB-AJUU-HHXN-FWIS-FEKJ");
+  assertEquals(doc.aib_rate, 0);
+  assertEquals((buildInvoiceDocument({ ...confirmed, aib: "B" }, lines, [], { name: "S", tax_id: null, address: null }) as { aib_rate: number }).aib_rate, 5);
+  try { buildInvoiceDocument({ ...confirmed, code_mecef: null }, lines, [], { name: "S", tax_id: null, address: null }); throw new Error("non levée"); }
+  catch (e) { assertEquals((e as Error).message, "La facture n'est pas confirmée."); }
 });

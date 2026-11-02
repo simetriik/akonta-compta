@@ -1,13 +1,18 @@
 // Émission de factures normalisées auprès de l'e-MCF de la DGI (D-043). Le jeton de l'e-MCF reste ici : il est lu avec la clé
 // de service et n'est jamais renvoyé à l'application. L'appelant agit sous RLS (droit invoices.issue ou emcf.manage sur le dossier).
-// Actions : set_token, issue, resume, cancel.
+// Actions : set_token, issue, resume, cancel, pdf (facture confirmée au format PDF, avec QR code).
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { callerClient, error, json, requirePermission, serviceClient } from "../_shared/auth.ts";
 import {
   baseUrl, EmcfClient, EmcfError, type EmcfMode, type ExpectedTotals, type InvoiceRow, type LineRow,
   type PaymentRow,
 } from "../_shared/emcf.ts";
+import { buildInvoiceDocument, type ConfirmedInvoiceRow, type EntityRow } from "../_shared/emcf.ts";
+import { exportResponseHeaders } from "../_shared/documents.ts";
 import { cancelPending, confirmPending, type IssueOutcome, runIssue, type StorePort } from "../_shared/emcf_flow.ts";
+
+const SERVICE_URL = Deno.env.get("DOCUMENTS_SERVICE_URL") ?? "http://host.containers.internal:8100";
+const SERVICE_KEY = Deno.env.get("DOCUMENTS_SERVICE_KEY") ?? "";
 
 interface Payload { action?: string; device_id?: string; token?: string; invoice_id?: string }
 
@@ -21,7 +26,8 @@ Deno.serve(async (req) => {
   switch (body.action) {
     case "set_token": return await setToken(caller, body);
     case "issue": case "resume": case "cancel": return await handleInvoice(caller, body);
-    default: return error("Action inconnue (set_token, issue, resume, cancel)");
+    case "pdf": return await invoicePdf(caller, body);
+    default: return error("Action inconnue (set_token, issue, resume, cancel, pdf)");
   }
 });
 
@@ -95,6 +101,29 @@ async function handleInvoice(caller: SupabaseClient, body: Payload): Promise<Res
     return error(`Émission interrompue : ${(e as Error).message}`, 500);
   }
   return json({ invoice_id: inv.id, ...outcome }, outcome.state === "confirmed" || outcome.state === "draft" && body.action === "cancel" ? 200 : 202);
+}
+
+/** PDF d'une facture confirmée : l'accès au dossier suffit (RLS), aucune permission d'émission n'est requise. */
+async function invoicePdf(caller: SupabaseClient, body: Payload): Promise<Response> {
+  if (!body.invoice_id) return error("invoice_id requis");
+  const { data: inv } = await caller.from("invoices").select("*").eq("id", body.invoice_id).maybeSingle();
+  if (!inv) return error("Facture inaccessible", 403);
+  if (inv.status !== "confirmed") return error("Seule une facture confirmée a un PDF.", 409);
+  const [{ data: lines }, { data: payments }, { data: entity }] = await Promise.all([
+    caller.from("invoice_lines").select("*").eq("invoice_id", inv.id).order("position"),
+    caller.from("invoice_payments").select("*").eq("invoice_id", inv.id),
+    caller.from("entities").select("name, tax_id, address").eq("id", inv.entity_id).single(),
+  ]);
+  if (!entity) return error("Dossier inaccessible", 403);
+  const payload = buildInvoiceDocument(inv as ConfirmedInvoiceRow, (lines ?? []) as LineRow[], (payments ?? []) as PaymentRow[], entity as EntityRow);
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${SERVICE_URL}/pdf/invoice`, {
+      method: "POST", headers: { "content-type": "application/json", "X-Akonta-Service-Key": SERVICE_KEY }, body: JSON.stringify(payload),
+    });
+  } catch { return error("Le service de documents est injoignable.", 502); }
+  if (!upstream.ok) return error(`Le service de documents a refusé la facture (HTTP ${upstream.status}).`, 502);
+  return new Response(await upstream.arrayBuffer(), { status: 200, headers: exportResponseHeaders(`facture-${inv.code_mecef}.pdf`) });
 }
 
 function toExpected(row: Record<string, unknown>): ExpectedTotals {

@@ -176,3 +176,43 @@ export class EmcfClient {
   /** Relit une demande en attente. */
   details(uid: string): Promise<Record<string, unknown>> { return this.call("GET", `/api/invoice/${encodeURIComponent(uid)}`); }
 }
+
+/** Ligne `invoices` confirmée telle que lue en base (champs utiles au document). */
+export interface ConfirmedInvoiceRow extends InvoiceRow {
+  is_test: boolean;
+  dgi_response: InvoiceTotals | null;
+  total: number | null;
+  code_mecef: string | null;
+  qr_code: string | null;
+  counters: string | null;
+  dgi_nim: string | null;
+  dgi_datetime: string | null;
+  commercial_message: string | null;
+}
+export interface EntityRow { name: string; tax_id: string | null; address: string | null }
+
+const AIB_RATES: Record<string, number> = { A: 1, B: 5 };
+
+/** Charge utile du service de documents (`POST /pdf/invoice`) pour une facture confirmée. Les montants sont ceux de la DGI. */
+export function buildInvoiceDocument(inv: ConfirmedInvoiceRow, lines: LineRow[], payments: PaymentRow[], entity: EntityRow): Record<string, unknown> {
+  if (!inv.code_mecef || !inv.qr_code || !inv.dgi_response) throw new Error("La facture n'est pas confirmée.");
+  const t = inv.dgi_response;
+  return {
+    invoice_type: inv.type,
+    is_test: inv.is_test,
+    seller: { name: entity.name, ifu: inv.seller_ifu, address: entity.address ?? undefined },
+    client: { name: inv.client_name ?? undefined, ifu: inv.client_ifu ?? undefined, contact: inv.client_contact ?? undefined, address: inv.client_address ?? undefined },
+    operator: inv.operator_name,
+    reference: inv.reference ?? undefined,
+    lines: lines.map((l) => ({
+      code: l.code ?? undefined, name: l.name, quantity: Number(l.quantity), price: Number(l.price), tax_group: l.tax_group,
+      amount: Math.round(Number(l.price) * Number(l.quantity)),
+    })),
+    total_a: t.taa ?? 0, total_b: t.tab ?? 0, ht_b: t.hab ?? 0, vat_b: t.vab ?? 0, vat_rate: t.tb ?? 18,
+    aib: t.aib ?? 0, aib_rate: inv.aib ? AIB_RATES[inv.aib] : 0,
+    total: t.total ?? inv.total ?? 0,
+    payments: payments.map((p) => ({ name: p.name, amount: Number(p.amount) })),
+    security: { code_mecef: inv.code_mecef, qr_code: inv.qr_code, counters: inv.counters ?? "", nim: inv.dgi_nim ?? "", date_time: inv.dgi_datetime ?? "" },
+    commercial_message: inv.commercial_message ?? undefined,
+  };
+}
