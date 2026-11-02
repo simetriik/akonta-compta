@@ -98,3 +98,16 @@ export async function cancelPending(uid: string, dgi: DgiPort, store: StorePort)
   await store.markCancelled("Annulée avant confirmation.");
   return { state: "draft", reason: "Annulée avant confirmation." };
 }
+
+/** Sort de la génération de l'écriture comptable après une émission réussie : n'altère jamais l'émission (la facture est normalisée quoi qu'il arrive). */
+export type EntryOutcome =
+  | { state: "generated"; entry_id: string }
+  | { state: "skipped"; message: string }
+  | { state: "failed"; message: string };
+
+export function entryOutcome(isTest: boolean, result: { data: unknown; error: { message: string } | null }): EntryOutcome {
+  if (isTest) return { state: "skipped", message: "Facture de test : aucune écriture comptable." };
+  if (result.error) return { state: "failed", message: result.error.message };
+  if (!result.data) return { state: "failed", message: "Aucune écriture n'a été générée." };
+  return { state: "generated", entry_id: String(result.data) };
+}

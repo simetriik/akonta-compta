@@ -1,6 +1,7 @@
 // Émission de factures normalisées auprès de l'e-MCF de la DGI (D-043). Le jeton de l'e-MCF reste ici : il est lu avec la clé
 // de service et n'est jamais renvoyé à l'application. L'appelant agit sous RLS (droit invoices.issue ou emcf.manage sur le dossier).
-// Actions : set_token, issue, resume, cancel, pdf (facture confirmée au format PDF, avec QR code).
+// Actions : set_token, issue, resume, cancel, pdf (facture confirmée au format PDF, avec QR code), generate_entry
+// (écriture de vente en brouillard ; tentée automatiquement après une confirmation, sans jamais bloquer l'émission).
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { callerClient, error, json, requirePermission, serviceClient } from "../_shared/auth.ts";
 import {
@@ -9,7 +10,7 @@ import {
 } from "../_shared/emcf.ts";
 import { buildInvoiceDocument, type ConfirmedInvoiceRow, type EntityRow } from "../_shared/emcf.ts";
 import { exportResponseHeaders } from "../_shared/documents.ts";
-import { cancelPending, confirmPending, type IssueOutcome, runIssue, type StorePort } from "../_shared/emcf_flow.ts";
+import { cancelPending, confirmPending, type EntryOutcome, entryOutcome, type IssueOutcome, runIssue, type StorePort } from "../_shared/emcf_flow.ts";
 
 const SERVICE_URL = Deno.env.get("DOCUMENTS_SERVICE_URL") ?? "http://host.containers.internal:8100";
 const SERVICE_KEY = Deno.env.get("DOCUMENTS_SERVICE_KEY") ?? "";
@@ -27,7 +28,8 @@ Deno.serve(async (req) => {
     case "set_token": return await setToken(caller, body);
     case "issue": case "resume": case "cancel": return await handleInvoice(caller, body);
     case "pdf": return await invoicePdf(caller, body);
-    default: return error("Action inconnue (set_token, issue, resume, cancel, pdf)");
+    case "generate_entry": return await generateEntry(caller, body);
+    default: return error("Action inconnue (set_token, issue, resume, cancel, pdf, generate_entry)");
   }
 });
 
@@ -100,7 +102,21 @@ async function handleInvoice(caller: SupabaseClient, body: Payload): Promise<Res
   } catch (e) {
     return error(`Émission interrompue : ${(e as Error).message}`, 500);
   }
-  return json({ invoice_id: inv.id, ...outcome }, outcome.state === "confirmed" || outcome.state === "draft" && body.action === "cancel" ? 200 : 202);
+  // Facture normalisée : on tente l'écriture de vente en brouillard (échec possible sans conséquence sur l'émission).
+  let entry: EntryOutcome | undefined;
+  if (outcome.state === "confirmed") {
+    entry = entryOutcome(inv.is_test as boolean, await caller.rpc("generate_invoice_entry", { p_invoice: inv.id }));
+  }
+  return json({ invoice_id: inv.id, ...outcome, entry }, outcome.state === "confirmed" || outcome.state === "draft" && body.action === "cancel" ? 200 : 202);
+}
+
+/** (Re)génère l'écriture de vente d'une facture confirmée, à la demande (paramètres complétés après coup, par exemple). */
+async function generateEntry(caller: SupabaseClient, body: Payload): Promise<Response> {
+  if (!body.invoice_id) return error("invoice_id requis");
+  const { data: inv } = await caller.from("invoices").select("id, entity_id, is_test, status").eq("id", body.invoice_id).maybeSingle();
+  if (!inv) return error("Facture inaccessible", 403);
+  const result = entryOutcome(inv.is_test as boolean, await caller.rpc("generate_invoice_entry", { p_invoice: inv.id }));
+  return json({ invoice_id: inv.id, entry: result }, result.state === "generated" ? 200 : 422);
 }
 
 /** PDF d'une facture confirmée : l'accès au dossier suffit (RLS), aucune permission d'émission n'est requise. */
