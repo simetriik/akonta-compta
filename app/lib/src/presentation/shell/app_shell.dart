@@ -25,6 +25,7 @@ class AppShell extends ConsumerWidget {
     (route: '/saisie', icon: Icons.edit_square, label: 'Saisie', perm: 'entries.draft', admin: false),
     (route: '/consultation', icon: Icons.menu_book_outlined, label: 'Consultation', perm: 'ledger.read', admin: false),
     (route: '/pieces', icon: Icons.receipt_long_outlined, label: 'Pièces', perm: 'documents.attach', admin: false),
+    (route: '/factures', icon: Icons.receipt_outlined, label: 'Factures', perm: 'invoices.issue', admin: false),
     (route: '/lettrage', icon: Icons.link_outlined, label: 'Lettrage', perm: 'lettering.manage', admin: false),
     (route: '/rapprochement', icon: Icons.account_balance_outlined, label: 'Rapprochement', perm: 'reconciliation.manage', admin: false),
     (route: '/inventaire', icon: Icons.inventory_2_outlined, label: 'Inventaire', perm: 'inventory.prepare', admin: false),

@@ -15,6 +15,8 @@ import 'consultation/consultation_screen.dart';
 import 'closing/closing_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'documents/documents_screen.dart';
+import 'invoices/invoice_screen.dart';
+import 'invoices/invoices_screen.dart';
 import 'entities/entities_screen.dart';
 import 'entries/entries_screen.dart';
 import 'entries/entry_editor_screen.dart';
@@ -102,6 +104,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/saisie/:id', builder: (_, state) => EntryEditorScreen(entryId: state.pathParameters['id']!)),
           GoRoute(path: '/consultation', builder: (_, _) => const ConsultationScreen()),
           GoRoute(path: '/pieces', builder: (_, _) => const DocumentsScreen()),
+          GoRoute(path: '/factures', builder: (_, _) => const InvoicesScreen()),
+          GoRoute(path: '/factures/nouvelle', builder: (_, _) => const InvoiceScreen()),
+          GoRoute(path: '/factures/:id', builder: (_, state) => InvoiceScreen(invoiceId: state.pathParameters['id']!)),
           GoRoute(path: '/lettrage', builder: (_, _) => const LetteringScreen()),
           GoRoute(path: '/rapprochement', builder: (_, _) => const ReconciliationScreen()),
           GoRoute(path: '/inventaire', builder: (_, _) => const InventoryScreen()),

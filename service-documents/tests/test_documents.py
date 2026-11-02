@@ -136,3 +136,47 @@ def test_financial_statements_pdf(client, auth, header):
     }
     r = client.post("/pdf/financial-statements", json=doc, headers=auth)
     assert r.status_code == 200 and r.content.startswith(b"%PDF")
+
+
+def _invoice_payload(**overrides):
+    payload = {
+        "invoice_type": "FV", "is_test": True,
+        "seller": {"name": "SARL Démo", "ifu": "3201900000001", "address": "Cotonou"},
+        "client": {"name": "Supermarché SARL", "ifu": "3201900000002"},
+        "operator": "Jacques",
+        "lines": [
+            {"name": "Jus d'orange", "quantity": 2, "price": 1800, "tax_group": "B", "amount": 3600},
+            {"name": "Lait 1/1 EX", "quantity": 3, "price": 450, "tax_group": "A", "amount": 1350},
+        ],
+        "total_a": 1350, "total_b": 3600, "ht_b": 3051, "vat_b": 549, "total": 4950,
+        "payments": [{"name": "ESPECES", "amount": 4950}],
+        "security": {"code_mecef": "X537-E4DB-AJUU-HHXN-FWIS-FEKJ",
+                     "qr_code": "F;IN01000005;X537E4DBAJUUHHXNFWISFEKJ;3201900000001;20261104131708",
+                     "counters": "64/64 FV", "nim": "IN01000005", "date_time": "04/11/2026 13:17:08"},
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_invoice_pdf(client, auth):
+    r = client.post("/pdf/invoice", json=_invoice_payload(), headers=auth)
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/pdf"
+    assert r.content.startswith(b"%PDF")
+    assert "X537-E4DB" in r.headers["content-disposition"]
+
+
+def test_invoice_pdf_requires_service_key(client):
+    assert client.post("/pdf/invoice", json=_invoice_payload()).status_code == 401
+
+
+def test_invoice_pdf_credit_note_and_production(client, auth):
+    payload = _invoice_payload(invoice_type="FA", is_test=False, reference="X537E4DBAJUUHHXNFWISFEKJ", aib=50, aib_rate=1)
+    r = client.post("/pdf/invoice", json=payload, headers=auth)
+    assert r.status_code == 200 and r.content.startswith(b"%PDF")
+
+
+def test_invoice_pdf_rejects_unknown_tax_group(client, auth):
+    payload = _invoice_payload()
+    payload["lines"][0]["tax_group"] = "C"   # hors périmètre déclaré à la DGI (seuls A et B)
+    assert client.post("/pdf/invoice", json=payload, headers=auth).status_code == 422
