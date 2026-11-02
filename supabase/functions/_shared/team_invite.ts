@@ -1,6 +1,9 @@
-// Règles propres à la création de comptes par un associé (droit team.manage) : il ne crée que l'équipe, avec un rôle et un
+// Règles propres à la création de comptes par un associé (droit team.manage) : il crée l'équipe et les clients, avec un rôle et un
 // dossier cohérents. La base applique les mêmes règles ; ceci évite de créer un compte pour le défaire ensuite.
 export const TEAM_ROLES = ["manager", "assistant", "trainee"] as const;
+/** Rôles des clients du cabinet (D-044) : ils visent toujours un dossier précis. */
+export const CLIENT_ROLES = ["client_gerant", "client_saisie"] as const;
+const ASSIGNABLE_ROLES: readonly string[] = [...TEAM_ROLES, ...CLIENT_ROLES];
 
 export interface TeamInviteRequest {
   csv?: string;
@@ -16,7 +19,7 @@ export function validateInvite(req: TeamInviteRequest, isAdmin: boolean): string
   }
   if (req.first_partner) return "Réservé à l'administrateur technique";
   if (req.csv) return "L'import CSV est réservé à l'administrateur technique";
-  if (req.role && !(TEAM_ROLES as readonly string[]).includes(req.role)) return "Rôle non attribuable : chef de mission, assistant ou stagiaire seulement";
+  if (req.role && !ASSIGNABLE_ROLES.includes(req.role)) return "Rôle non attribuable : chef de mission, assistant, stagiaire ou rôle client seulement";
   if (req.role && !req.entity_id) return "Un rôle d'équipe s'attribue sur un dossier précis";
   if (!req.role && req.entity_id) return "Choisissez aussi le rôle de la personne sur ce dossier";
   return null;

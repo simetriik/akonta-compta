@@ -25,3 +25,13 @@ Deno.test("un rôle d'équipe va avec un dossier, et inversement", () => {
   assertNotEquals(validateInvite({ role: "assistant" }, false), null);
   assertNotEquals(validateInvite({ entity_id: "e1" }, false), null);
 });
+
+Deno.test("l'associé invite un client sur un dossier précis, pas sans dossier", () => {
+  assertEquals(validateInvite({ role: "client_gerant", entity_id: "e1" }, false), null);
+  assertEquals(validateInvite({ role: "client_saisie", entity_id: "e1" }, false), null);
+  assertNotEquals(validateInvite({ role: "client_saisie" }, false), null);
+});
+
+Deno.test("l'administrateur technique ne crée pas de compte client", () => {
+  assertNotEquals(validateInvite({ role: "client_gerant", entity_id: "e1" }, true), null);
+});
