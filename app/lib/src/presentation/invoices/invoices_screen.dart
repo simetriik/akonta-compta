@@ -11,6 +11,7 @@ import '../../domain/models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
 import 'emcf_devices_dialog.dart';
+import 'invoice_settings_dialog.dart';
 import 'invoice_status_badge.dart';
 
 /// Factures normalisées e-MECeF du dossier courant : liste, nouvelle facture, gestion des e-MCF (D-043).
@@ -32,6 +33,7 @@ class _InvoicesBody extends ConsumerWidget {
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final canIssue = perms.has('invoices.issue', entityId: entity.id);
     final canManageDevices = perms.has('emcf.manage', entityId: entity.id);
+    final canSetAccounts = perms.has('references.manage', entityId: entity.id);
     final invoices = ref.watch(invoicesProvider(entity.id));
     final devices = ref.watch(emcfDevicesProvider(entity.id)).value;
     final hasDevice = devices?.any((d) => d.isActive) ?? false;
@@ -44,6 +46,8 @@ class _InvoicesBody extends ConsumerWidget {
           actions: [
             if (canManageDevices)
               AkButton.secondary('e-MCF', key: const Key('manage-devices'), icon: Icons.settings_input_antenna, onPressed: () => showEmcfDevicesDialog(context, entity)),
+            if (canSetAccounts)
+              AkButton.secondary('Comptabilité', key: const Key('invoice-settings'), icon: Icons.account_tree_outlined, onPressed: () => showInvoiceSettingsDialog(context, entity)),
             if (canIssue)
               AkButton.primary('Nouvelle facture', key: const Key('new-invoice'), icon: Icons.add, onPressed: hasDevice ? () => context.go('/factures/nouvelle') : null),
           ],

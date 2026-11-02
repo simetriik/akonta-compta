@@ -7,7 +7,10 @@ import 'package:akonta/src/application/providers/repositories.dart';
 import 'package:akonta/src/application/providers/services.dart';
 import 'package:akonta/src/application/providers/session_providers.dart';
 import 'package:akonta/src/domain/invoice_models.dart';
+import 'package:akonta/src/application/providers/references_providers.dart';
 import 'package:akonta/src/domain/models.dart';
+import 'package:akonta/src/domain/reference_models.dart';
+import 'package:akonta/src/presentation/invoices/invoice_settings_dialog.dart';
 import 'package:akonta/src/domain/repositories/invoices_repository.dart';
 import 'package:akonta/src/presentation/invoices/invoice_editor.dart';
 import 'package:akonta/src/presentation/invoices/invoice_view.dart';
@@ -21,6 +24,10 @@ class _Repo implements InvoicesRepository {
   InvoiceDraft? saved;
   String? issued;
   IssueResult result = const IssueResult(state: IssueState.confirmed);
+  InvoiceEntryLink? link;
+  EntryOutcome entryResult = const EntryOutcome(state: EntryState.generated, entryId: 'e1');
+  bool entryGenerated = false;
+  InvoiceAccountSettings? savedSettings;
 
   @override
   Future<List<EmcfDevice>> devices(String entityId) async => [const EmcfDevice(id: 'd1', entityId: 'e1', nim: 'XX01000001', label: 'Boutique', mode: 'test', isActive: true)];
@@ -56,15 +63,26 @@ class _Repo implements InvoicesRepository {
   Future<String> createCreditNote(String originalId) async => 'avoir1';
   @override
   Future<(String, Uint8List)> pdf(String id) async => ('f.pdf', Uint8List(0));
+  @override
+  Future<InvoiceAccountSettings?> accountSettings(String entityId) async => null;
+  @override
+  Future<void> saveAccountSettings(String cabinetId, InvoiceAccountSettings settings) async => savedSettings = settings;
+  @override
+  Future<InvoiceEntryLink?> invoiceEntry(String invoiceId) async => link;
+  @override
+  Future<EntryOutcome> generateEntry(String invoiceId) async {
+    entryGenerated = true;
+    return entryResult;
+  }
 }
 
-Invoice _confirmed({String type = 'FV'}) => Invoice(
+Invoice _confirmed({String type = 'FV', bool isTest = true}) => Invoice(
       id: 'i1',
       entityId: 'e1',
       deviceId: 'd1',
       type: type,
       status: InvoiceStatus.confirmed,
-      isTest: true,
+      isTest: isTest,
       operatorName: 'Jacques',
       createdAt: DateTime(2026, 11, 4),
       clientName: 'Supermarché SARL',
@@ -78,26 +96,34 @@ Invoice _confirmed({String type = 'FV'}) => Invoice(
       lines: const [InvoiceLine(name: 'Jus d\'orange', price: 1800, quantity: 2, taxGroup: 'B'), InvoiceLine(name: 'Lait 1/1 EX', price: 450, quantity: 3, taxGroup: 'A')],
     );
 
+const _accounts = [
+  Account(id: 'a-client', code: '4111000', label: 'Clients', classNo: 4, normalSide: 'debit', isCollective: true, isLetterable: true, allowPosting: true, isActive: true),
+  Account(id: 'a-sales', code: '7011000', label: 'Ventes de marchandises', classNo: 7, normalSide: 'credit', isCollective: false, isLetterable: false, allowPosting: true, isActive: true),
+  Account(id: 'a-vat', code: '4431000', label: 'TVA facturée sur ventes', classNo: 4, normalSide: 'credit', isCollective: false, isLetterable: false, allowPosting: true, isActive: true),
+  Account(id: 'a-aib', code: '4428000', label: 'Autres impôts et taxes', classNo: 4, normalSide: 'credit', isCollective: false, isLetterable: false, allowPosting: true, isActive: true),
+];
+
 void main() {
   setUpAll(() => initializeDateFormatting('fr_FR'));
 
-  Future<_Repo> pump(WidgetTester tester, Widget home, {Set<String> perms = const {'invoices.issue'}}) async {
+  Future<_Repo> pump(WidgetTester tester, Widget home, {Set<String> perms = const {'invoices.issue'}, _Repo? repo}) async {
     tester.view.physicalSize = const Size(1400, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    final repo = _Repo();
+    final repository = repo ?? _Repo();
     await tester.pumpWidget(ProviderScope(
       overrides: [
-        invoicesRepositoryProvider.overrideWithValue(repo),
+        invoicesRepositoryProvider.overrideWithValue(repository),
+        accountsProvider('e1').overrideWith((ref) async => _accounts),
         onlinePolicyProvider.overrideWithValue(const OnlinePolicy(AlwaysOnline())),
         permissionsProvider.overrideWith((ref) async => PermissionSet(byEntity: {'e1': perms}, cabinetWide: const {}, roles: const [])),
         currentProfileProvider.overrideWith((ref) async => const Profile(id: 'u1', cabinetId: 'c1', email: 'a@b.test', fullName: 'Awa Chef', isActive: true)),
-        emcfDevicesProvider('e1').overrideWith((ref) async => await repo.devices('e1')),
+        emcfDevicesProvider('e1').overrideWith((ref) async => await repository.devices('e1')),
       ],
       child: MaterialApp(theme: buildAkontaTheme(), home: Scaffold(body: home)),
     ));
     await tester.pumpAndSettle();
-    return repo;
+    return repository;
   }
 
   testWidgets('l\'éditeur reprend l\'opérateur du profil et calcule les totaux en direct (exemple de la DGI)', (tester) async {
@@ -192,5 +218,43 @@ void main() {
     await pump(tester, InvoiceView(invoice: _confirmed()), perms: const {});
     expect(find.byKey(const Key('credit-note')), findsNothing);
     expect(find.byKey(const Key('invoice-pdf')), findsOneWidget, reason: 'consulter et télécharger ne demande que l\'accès au dossier');
+  });
+
+  testWidgets('facture de production sans écriture : on peut la générer, et un échec montre le motif', (tester) async {
+    final repo = _Repo()..entryResult = const EntryOutcome(state: EntryState.failed, message: 'Définissez d\'abord les comptes de facturation du dossier (paramètres de facturation)');
+    await pump(tester, InvoiceView(invoice: _confirmed(isTest: false)), perms: const {'invoices.issue', 'entries.draft'}, repo: repo);
+    expect(find.byKey(const Key('invoice-entry')), findsOneWidget);
+    expect(find.text('Aucune écriture comptable pour cette facture.'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('generate-entry')));
+    await tester.pumpAndSettle();
+    expect(repo.entryGenerated, isTrue);
+    expect(tester.widget<Text>(find.byKey(const Key('entry-error'))).data, contains('comptes de facturation'));
+  });
+
+  testWidgets('facture déjà comptabilisée : état de l\'écriture et accès à celle-ci', (tester) async {
+    final repo = _Repo()..link = const InvoiceEntryLink(entryId: 'e9', isValidated: true, number: 12);
+    await pump(tester, InvoiceView(invoice: _confirmed(isTest: false)), perms: const {'invoices.issue', 'entries.draft'}, repo: repo);
+    expect(find.text('Écriture validée n° 12.'), findsOneWidget);
+    expect(find.byKey(const Key('open-entry')), findsOneWidget);
+    expect(find.byKey(const Key('generate-entry')), findsNothing);
+  });
+
+  testWidgets('facture de test : aucune carte d\'écriture comptable', (tester) async {
+    await pump(tester, InvoiceView(invoice: _confirmed()), perms: const {'invoices.issue', 'entries.draft'});
+    expect(find.byKey(const Key('invoice-entry')), findsNothing);
+  });
+
+  testWidgets('sans droit de saisie, pas de bouton de génération', (tester) async {
+    await pump(tester, InvoiceView(invoice: _confirmed(isTest: false)));
+    expect(find.byKey(const Key('generate-entry')), findsNothing);
+  });
+
+  testWidgets('paramètres de comptabilisation : comptes usuels préremplis, enregistrement avec le compte AIB choisi', (tester) async {
+    final repo = await pump(tester, const InvoiceSettingsDialog(entity: EntitySummary(id: 'e1', name: 'SARL Démo')), perms: const {'references.manage'});
+    await tester.tap(find.byKey(const Key('save-invoice-settings')));
+    await tester.pumpAndSettle();
+    final s = repo.savedSettings!;
+    expect([s.clientAccountId, s.salesExemptAccountId, s.salesTaxableAccountId, s.vatAccountId, s.aibAccountId], ['a-client', 'a-sales', 'a-sales', 'a-vat', null]);
+    expect(s.entityId, 'e1');
   });
 }

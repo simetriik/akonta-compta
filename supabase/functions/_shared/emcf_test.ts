@@ -5,7 +5,7 @@ import {
   baseUrl, buildInvoiceRequest, compareTotals, EmcfClient, EmcfError, emcfErrorMessage, type InvoiceRow, type InvoiceTotals, type LineRow,
   parseDgiDateTime, buildInvoiceDocument, type ConfirmedInvoiceRow,
 } from "./emcf.ts";
-import { cancelPending, confirmPending, runIssue, type StorePort } from "./emcf_flow.ts";
+import { cancelPending, confirmPending, entryOutcome, runIssue, type StorePort } from "./emcf_flow.ts";
 
 const TOKEN = "jeton.de.test";
 
@@ -230,4 +230,11 @@ Deno.test("document PDF d'une facture confirmée : montants de la DGI, élément
   assertEquals((buildInvoiceDocument({ ...confirmed, aib: "B" }, lines, [], { name: "S", tax_id: null, address: null }) as { aib_rate: number }).aib_rate, 5);
   try { buildInvoiceDocument({ ...confirmed, code_mecef: null }, lines, [], { name: "S", tax_id: null, address: null }); throw new Error("non levée"); }
   catch (e) { assertEquals((e as Error).message, "La facture n'est pas confirmée."); }
+});
+
+Deno.test("écriture après émission : générée, ignorée en test, échec sans conséquence sur l'émission", () => {
+  assertEquals(entryOutcome(false, { data: "e1", error: null }), { state: "generated", entry_id: "e1" });
+  assertEquals(entryOutcome(true, { data: "e1", error: null }).state, "skipped");
+  assertEquals(entryOutcome(false, { data: null, error: { message: "Définissez d'abord les comptes" } }), { state: "failed", message: "Définissez d'abord les comptes" });
+  assertEquals(entryOutcome(false, { data: null, error: null }).state, "failed");
 });

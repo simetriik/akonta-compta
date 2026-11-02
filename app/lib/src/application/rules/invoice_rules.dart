@@ -1,4 +1,5 @@
 import '../../domain/invoice_models.dart';
+import '../../domain/reference_models.dart';
 
 /// Taux de TVA du groupe B affiché à l'écran (la DGI renvoie le taux officiel à l'émission).
 const int defaultVatRate = 18;
@@ -40,4 +41,17 @@ List<String> draftProblems(InvoiceDraft d, {bool forIssue = false}) {
     }
   }
   return out;
+}
+
+/// Comptes proposés pour comptabiliser les factures : clients (411), ventes (classe 7), TVA facturée (443), AIB (impôts et taxes, 44).
+abstract final class InvoiceAccounts {
+  static bool _usable(Account a) => a.allowPosting && a.isActive;
+
+  static List<Account> clients(List<Account> all) => all.where((a) => _usable(a) && a.code.startsWith('411')).toList();
+  static List<Account> sales(List<Account> all) => all.where((a) => _usable(a) && a.classNo == 7).toList();
+  static List<Account> vat(List<Account> all) => all.where((a) => _usable(a) && a.code.startsWith('443')).toList();
+  static List<Account> aib(List<Account> all) => all.where((a) => _usable(a) && a.code.startsWith('44')).toList();
+
+  /// Compte par défaut d'une liste : le premier dont le numéro commence par [prefix].
+  static Account? byPrefix(List<Account> list, String prefix) => list.where((a) => a.code.startsWith(prefix)).firstOrNull;
 }

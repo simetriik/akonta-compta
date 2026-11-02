@@ -36,4 +36,16 @@ abstract interface class InvoicesRepository {
 
   /// PDF de la facture normalisée (nom du fichier, contenu).
   Future<(String, Uint8List)> pdf(String id);
+
+  /// Paramètres de comptabilisation en vigueur (le plus récent), ou null s'ils ne sont pas définis.
+  Future<InvoiceAccountSettings?> accountSettings(String entityId);
+
+  /// Enregistre les paramètres (remplace ceux de la même date d'effet).
+  Future<void> saveAccountSettings(String cabinetId, InvoiceAccountSettings settings);
+
+  /// Écriture liée à la facture, ou null si elle n'a pas été générée.
+  Future<InvoiceEntryLink?> invoiceEntry(String invoiceId);
+
+  /// (Re)génère l'écriture de vente en brouillard d'une facture confirmée.
+  Future<EntryOutcome> generateEntry(String invoiceId);
 }

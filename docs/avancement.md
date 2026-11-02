@@ -94,3 +94,7 @@ Parcours dans le navigateur intégré (`flutter run -d web-server`, fenêtre 144
 - Livré : schéma SQL (e-MCF, jetons, factures FV et FA, lignes, paiements, taux versionnés, avoir, enregistrement atomique), Edge Function `emcf-invoice`, PDF avec QR code, module Flutter (liste, éditeur, vue, e-MCF). Détail et points non vérifiés dans D-043.
 - Tests : pgTAP `340` (23) et `350` (11), Deno `emcf_test` (13) contre un faux e-MCF, pytest (4 nouveaux), Flutter (17 nouveaux). Essai réel de bout en bout contre la base locale : 12 contrôles réussis.
 - Reste (tranches suivantes) : essai avec un vrai jeton de test de la DGI et les 20 cas de l'auto-déclaration ; écriture de vente en brouillon à partir d'une facture confirmée (SYSCOHADA et SYCEBNL) ; rôles et accès des clients du cabinet.
+
+## Facturation e-MECeF, tranche 2 : pont comptable (2 nov. 2026, branche `feat/emcf-accounting-bridge`)
+- Une facture confirmée de production génère une écriture de vente en brouillard (SYSCOHADA et SYCEBNL), validée ensuite par le comptable. Paramètres de comptes par dossier, génération automatique après l'émission ou à la demande. Détail et hypothèses (AIB) dans D-043.
+- Tests : pgTAP `360` (21), Deno (1 nouveau), Flutter (5 nouveaux). Essai réel de bout en bout contre la base locale et un faux e-MCF : écriture équilibrée à 4 950, client rapproché par IFU, brouillard marqué « générée », facture de test ignorée.

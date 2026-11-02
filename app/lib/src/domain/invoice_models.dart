@@ -171,11 +171,55 @@ enum IssueState {
 }
 
 class IssueResult {
-  const IssueResult({required this.state, this.message, this.gaps = const []});
+  const IssueResult({required this.state, this.message, this.gaps = const [], this.entry});
 
   final IssueState state;
   final String? message;
   final List<String> gaps;
+
+  /// Sort de la génération de l'écriture comptable après une confirmation (jamais bloquant pour l'émission).
+  final EntryOutcome? entry;
+}
+
+/// Résultat de la génération de l'écriture de vente d'une facture confirmée.
+enum EntryState { generated, failed, skipped }
+
+class EntryOutcome {
+  const EntryOutcome({required this.state, this.message, this.entryId});
+
+  final EntryState state;
+  final String? message;
+  final String? entryId;
+}
+
+/// Écriture de vente liée à une facture : brouillard ou validée (avec son numéro).
+class InvoiceEntryLink {
+  const InvoiceEntryLink({required this.entryId, required this.isValidated, this.number});
+
+  final String entryId;
+  final bool isValidated;
+  final int? number;
+}
+
+/// Comptes utilisés pour comptabiliser les factures d'un dossier (en vigueur à `validFrom`).
+class InvoiceAccountSettings {
+  const InvoiceAccountSettings({
+    required this.entityId,
+    required this.validFrom,
+    required this.clientAccountId,
+    required this.salesExemptAccountId,
+    required this.salesTaxableAccountId,
+    required this.vatAccountId,
+    this.aibAccountId,
+  });
+
+  final String entityId;
+  final DateTime validFrom;
+  final String clientAccountId;
+  final String salesExemptAccountId;
+  final String salesTaxableAccountId;
+  final String vatAccountId;
+  final String? aibAccountId;
 }
 
 /// Totaux affichés pendant la saisie (aperçu) : même règle que le calcul de contrôle de la base. La DGI reste la référence.

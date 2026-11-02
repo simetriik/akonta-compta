@@ -28,6 +28,7 @@ class InvoiceView extends ConsumerStatefulWidget {
 class _InvoiceViewState extends ConsumerState<InvoiceView> {
   bool _busy = false;
   String? _message;
+  String? _entryMessage;
 
   Invoice get inv => widget.invoice;
 
@@ -58,6 +59,12 @@ class _InvoiceViewState extends ConsumerState<InvoiceView> {
       if (mounted) context.go('/factures/$id');
     }, 'La création de l\'avoir');
   }
+
+  Future<void> _generateEntry() => _run(() async {
+        final outcome = await ref.read(invoicesServiceProvider).generateEntry(inv.id);
+        ref.invalidate(invoiceEntryProvider(inv.id));
+        if (mounted) setState(() => _entryMessage = outcome.state == EntryState.generated ? null : outcome.message);
+      }, 'La génération de l\'écriture');
 
   Future<void> _pendingAction(bool resume) => _run(() async {
         final service = ref.read(invoicesServiceProvider);
@@ -136,6 +143,7 @@ class _InvoiceViewState extends ConsumerState<InvoiceView> {
         if (inv.status == InvoiceStatus.confirmed) ...[
           const SizedBox(height: AkSpace.s3),
           _security(t),
+          if (!inv.isTest) ...[const SizedBox(height: AkSpace.s3), _entryCard(perms)],
         ],
         const SizedBox(height: AkSpace.s4),
         Wrap(spacing: AkSpace.s2, runSpacing: AkSpace.s2, alignment: WrapAlignment.end, children: [
@@ -149,6 +157,35 @@ class _InvoiceViewState extends ConsumerState<InvoiceView> {
           ],
         ]),
       ],
+    );
+  }
+
+  /// Écriture de vente liée à la facture : ouverture si elle existe, sinon génération à la demande (droit de saisie requis).
+  Widget _entryCard(PermissionSet perms) {
+    final link = ref.watch(invoiceEntryProvider(inv.id));
+    final canDraft = perms.has('entries.draft', entityId: inv.entityId);
+    return AkCard(
+      key: const Key('invoice-entry'),
+      child: link.when(
+        loading: () => const AkLoading(),
+        error: (e, _) => Text(errorText(e)),
+        data: (l) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const AkSectionTitle('Écriture comptable'),
+          const SizedBox(height: AkSpace.s2),
+          if (l != null) ...[
+            Text(l.isValidated ? 'Écriture validée n° ${l.number}.' : 'Écriture de vente en brouillard : le comptable doit la valider.'),
+            const SizedBox(height: AkSpace.s2),
+            AkButton.secondary('Ouvrir l\'écriture', key: const Key('open-entry'), icon: Icons.open_in_new, onPressed: () => context.go('/saisie/${l.entryId}')),
+          ] else ...[
+            const Text('Aucune écriture comptable pour cette facture.'),
+            if (_entryMessage != null) ...[const SizedBox(height: AkSpace.s2), AkBanner(kind: AkBannerKind.warning, child: Text(_entryMessage!, key: const Key('entry-error')))],
+            if (canDraft) ...[
+              const SizedBox(height: AkSpace.s2),
+              AkButton.primary('Générer l\'écriture', key: const Key('generate-entry'), icon: Icons.auto_fix_high_outlined, loading: _busy, onPressed: _busy ? null : _generateEntry),
+            ],
+          ],
+        ]),
+      ),
     );
   }
 
