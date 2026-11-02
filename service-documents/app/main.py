@@ -3,9 +3,9 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
 
-from . import dgi, excel, pdf, pdf_sycebnl
+from . import dgi, excel, pdf, pdf_invoice, pdf_sycebnl
 from .config import Settings, get_settings
-from .models import AgedBalanceDocument, FinancialStatementsDocument, JournalDocument, LedgerDocument, ReconciliationDocument, SycebnlStatementsDocument, TrialBalanceDocument
+from .models import AgedBalanceDocument, FinancialStatementsDocument, InvoiceDocument, JournalDocument, LedgerDocument, ReconciliationDocument, SycebnlStatementsDocument, TrialBalanceDocument
 
 app = FastAPI(title="Akonta — service de documents", version="0.1.0")
 
@@ -31,6 +31,12 @@ def _file(content: bytes, media_type: str, filename: str) -> Response:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "service": "akonta-documents"}
+
+
+@app.post("/pdf/invoice", dependencies=[Depends(require_service_key)])
+def pdf_invoice_route(doc: InvoiceDocument, settings: Settings = Depends(get_settings)) -> Response:
+    _check_size(len(doc.lines), settings)
+    return _file(pdf_invoice.invoice_pdf(doc), PDF, f"facture-{doc.security.code_mecef}.pdf")
 
 
 @app.post("/pdf/trial-balance", dependencies=[Depends(require_service_key)])

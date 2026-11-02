@@ -153,3 +153,55 @@ class SycebnlStatementsDocument(BaseModel):
     previous_cash_flow: list[StatementPostRow] = Field(default_factory=list)
     notes: list[NoteRow] = Field(default_factory=list)
     has_previous: bool = False
+
+
+class InvoiceParty(BaseModel):
+    name: str | None = None
+    ifu: str | None = None
+    contact: str | None = None
+    address: str | None = None
+
+
+class InvoiceLineDoc(BaseModel):
+    code: str | None = None
+    name: str
+    quantity: float
+    price: int            # prix unitaire TTC
+    tax_group: Literal["A", "B"]
+    amount: int           # quantité × prix, arrondi : montant TTC de la ligne
+
+
+class InvoicePaymentDoc(BaseModel):
+    name: str
+    amount: int
+
+
+class InvoiceSecurity(BaseModel):
+    """Éléments de sécurité renvoyés par l'e-MCF : à reproduire à l'identique sur la facture normalisée."""
+    code_mecef: str
+    qr_code: str
+    counters: str
+    nim: str
+    date_time: str
+
+
+class InvoiceDocument(BaseModel):
+    """Facture normalisée e-MECeF (FV ou FA) prête à imprimer."""
+    invoice_type: Literal["FV", "FA"]
+    is_test: bool = True
+    seller: InvoiceParty
+    client: InvoiceParty = Field(default_factory=InvoiceParty)
+    operator: str
+    reference: str | None = None            # code MECeF/DGI de la facture d'origine (avoir)
+    lines: list[InvoiceLineDoc] = Field(default_factory=list)
+    total_a: int = 0                        # total du groupe A (exonéré)
+    total_b: int = 0                        # total du groupe B (taxable)
+    ht_b: int = 0
+    vat_b: int = 0
+    vat_rate: int = 18
+    aib: int = 0
+    aib_rate: int = 0
+    total: int
+    payments: list[InvoicePaymentDoc] = Field(default_factory=list)
+    security: InvoiceSecurity
+    commercial_message: str | None = None
