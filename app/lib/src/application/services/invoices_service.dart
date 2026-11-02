@@ -67,4 +67,18 @@ class InvoicesService {
     _online.require('Le PDF de la facture');
     return _repository.pdf(id);
   }
+
+  Future<InvoiceAccountSettings?> accountSettings(String entityId) => _repository.accountSettings(entityId);
+
+  Future<void> saveAccountSettings(String cabinetId, InvoiceAccountSettings settings) async {
+    _online.require('Le paramétrage de la facturation');
+    return _repository.saveAccountSettings(cabinetId, settings);
+  }
+
+  Future<InvoiceEntryLink?> invoiceEntry(String invoiceId) => _repository.invoiceEntry(invoiceId);
+
+  Future<EntryOutcome> generateEntry(String invoiceId) async {
+    _online.require('La génération de l\'écriture');
+    return _repository.generateEntry(invoiceId);
+  }
 }

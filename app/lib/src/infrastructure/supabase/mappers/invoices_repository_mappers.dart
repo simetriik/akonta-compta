@@ -80,5 +80,36 @@ IssueResult issueResultFromJson(Map<String, dynamic> j) {
     'pending' => IssueState.pending,
     _ => IssueState.draft,
   };
-  return IssueResult(state: state, message: j['reason'] as String?, gaps: [for (final g in (j['gaps'] as List? ?? const [])) g as String]);
+  return IssueResult(state: state, message: j['reason'] as String?, gaps: [for (final g in (j['gaps'] as List? ?? const [])) g as String], entry: entryOutcomeFromJson(j['entry']));
+}
+
+InvoiceAccountSettings invoiceAccountSettingsFromJson(Map<String, dynamic> j) => InvoiceAccountSettings(
+      entityId: j['entity_id'] as String,
+      validFrom: DateTime.parse(j['valid_from'] as String),
+      clientAccountId: j['client_account_id'] as String,
+      salesExemptAccountId: j['sales_exempt_account_id'] as String,
+      salesTaxableAccountId: j['sales_taxable_account_id'] as String,
+      vatAccountId: j['vat_account_id'] as String,
+      aibAccountId: j['aib_account_id'] as String?,
+    );
+
+Map<String, dynamic> invoiceAccountSettingsToJson(String cabinetId, InvoiceAccountSettings s) => {
+      'cabinet_id': cabinetId,
+      'entity_id': s.entityId,
+      'valid_from': s.validFrom.toIso8601String().substring(0, 10),
+      'client_account_id': s.clientAccountId,
+      'sales_exempt_account_id': s.salesExemptAccountId,
+      'sales_taxable_account_id': s.salesTaxableAccountId,
+      'vat_account_id': s.vatAccountId,
+      'aib_account_id': s.aibAccountId,
+    };
+
+EntryOutcome? entryOutcomeFromJson(Object? j) {
+  if (j is! Map<String, dynamic>) return null;
+  final state = switch (j['state']) {
+    'generated' => EntryState.generated,
+    'skipped' => EntryState.skipped,
+    _ => EntryState.failed,
+  };
+  return EntryOutcome(state: state, message: j['message'] as String?, entryId: j['entry_id'] as String?);
 }

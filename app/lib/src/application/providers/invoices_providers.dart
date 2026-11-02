@@ -8,3 +8,7 @@ final invoicesProvider = FutureProvider.family<List<Invoice>, String>((ref, enti
 final invoiceProvider = FutureProvider.family<Invoice, String>((ref, id) => ref.watch(invoicesServiceProvider).invoice(id));
 
 final emcfDevicesProvider = FutureProvider.family<List<EmcfDevice>, String>((ref, entityId) => ref.watch(invoicesServiceProvider).devices(entityId));
+
+final invoiceEntryProvider = FutureProvider.family<InvoiceEntryLink?, String>((ref, invoiceId) => ref.watch(invoicesServiceProvider).invoiceEntry(invoiceId));
+
+final invoiceAccountSettingsProvider = FutureProvider.family<InvoiceAccountSettings?, String>((ref, entityId) => ref.watch(invoicesServiceProvider).accountSettings(entityId));

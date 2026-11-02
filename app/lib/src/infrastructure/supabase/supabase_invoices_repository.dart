@@ -75,6 +75,34 @@ class SupabaseInvoicesRepository implements InvoicesRepository {
     return (name, res.data as Uint8List);
   }
 
+  @override
+  Future<InvoiceAccountSettings?> accountSettings(String entityId) async {
+    final rows = await _client.from('invoice_account_settings').select().eq('entity_id', entityId).order('valid_from', ascending: false).limit(1);
+    return rows.isEmpty ? null : invoiceAccountSettingsFromJson(rows.first);
+  }
+
+  @override
+  Future<void> saveAccountSettings(String cabinetId, InvoiceAccountSettings settings) =>
+      _client.from('invoice_account_settings').upsert(invoiceAccountSettingsToJson(cabinetId, settings), onConflict: 'entity_id,valid_from');
+
+  @override
+  Future<InvoiceEntryLink?> invoiceEntry(String invoiceId) async {
+    final rows = await _client.rpc('invoice_entry', params: {'p_invoice': invoiceId}) as List;
+    if (rows.isEmpty) return null;
+    final r = rows.first as Map<String, dynamic>;
+    return InvoiceEntryLink(entryId: r['entry_id'] as String, isValidated: r['status'] == 'validated', number: (r['number'] as num?)?.toInt());
+  }
+
+  @override
+  Future<EntryOutcome> generateEntry(String invoiceId) async {
+    final res = await _client.functions.invoke('emcf-invoice', body: {'action': 'generate_entry', 'invoice_id': invoiceId});
+    // 422 : l'Edge Function a répondu avec le motif (paramètres absents, facture de test…) : on le rend sans lever d'erreur.
+    final data = res.data;
+    final outcome = data is Map<String, dynamic> ? entryOutcomeFromJson(data['entry']) : null;
+    if (outcome == null) throw FunctionException(status: res.status, details: res.data);
+    return outcome;
+  }
+
   /// Appelle l'Edge Function et renvoie son corps JSON ; les refus (4xx) deviennent des erreurs classées par le classeur Supabase.
   Future<Map<String, dynamic>> _invoke(Map<String, dynamic> body) async {
     final res = await _client.functions.invoke('emcf-invoice', body: body);

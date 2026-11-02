@@ -55,6 +55,17 @@ class _Repo implements InvoicesRepository {
   Future<String> createCreditNote(String originalId) async => 'avoir1';
   @override
   Future<(String, Uint8List)> pdf(String id) async => ('f.pdf', Uint8List(0));
+  @override
+  Future<InvoiceAccountSettings?> accountSettings(String entityId) async => null;
+  @override
+  Future<void> saveAccountSettings(String cabinetId, InvoiceAccountSettings settings) async => calls.add('settings');
+  @override
+  Future<InvoiceEntryLink?> invoiceEntry(String invoiceId) async => null;
+  @override
+  Future<EntryOutcome> generateEntry(String invoiceId) async {
+    calls.add('entry');
+    return const EntryOutcome(state: EntryState.generated, entryId: 'e1');
+  }
 }
 
 void main() {
@@ -80,6 +91,8 @@ void main() {
       () => service.setToken('d1', 't'),
       () => service.saveDraft('c', const InvoiceDraft(entityId: 'e', deviceId: 'd', type: 'FV', operatorName: 'x', lines: [])),
       () => service.deleteDraft('i1'),
+      () => service.generateEntry('i1'),
+      () => service.saveAccountSettings('c', InvoiceAccountSettings(entityId: 'e', validFrom: DateTime(2026), clientAccountId: 'a', salesExemptAccountId: 'b', salesTaxableAccountId: 'b', vatAccountId: 'v')),
       () => service.createDevice(cabinetId: 'c', entityId: 'e', nim: 'XX01000001', label: 'x', mode: 'test'),
     ]) {
       await expectLater(action(), throwsA(isA<AppError>().having((e) => e.kind, 'kind', AppErrorKind.offline)));
@@ -91,5 +104,7 @@ void main() {
     final service = InvoicesService(_Repo(), OnlinePolicy(_Net(false)));
     expect(await service.invoices('e'), isEmpty);
     expect(await service.devices('e'), isEmpty);
+    expect(await service.accountSettings('e'), isNull);
+    expect(await service.invoiceEntry('i1'), isNull);
   });
 }
