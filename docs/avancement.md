@@ -99,7 +99,7 @@ Parcours dans le navigateur intégré (`flutter run -d web-server`, fenêtre 144
 - Une facture confirmée de production génère une écriture de vente en brouillard (SYSCOHADA et SYCEBNL), validée ensuite par le comptable. Paramètres de comptes par dossier, génération automatique après l'émission ou à la demande. Détail et hypothèses (AIB) dans D-043.
 - Tests : pgTAP `360` (21), Deno (1 nouveau), Flutter (5 nouveaux). Essai réel de bout en bout contre la base locale et un faux e-MCF : écriture équilibrée à 4 950, client rapproché par IFU, brouillard marqué « générée », facture de test ignorée.
 
-## Accès des clients, étape 1 : base de données (5 nov. 2026, branche `feat/client-access`)
-- Décision D-044. Rôles client, interrupteur d'accès par dossier (audité), lecture étroite (brouillard et factures du client seulement), écriture bornée par l'état d'accès, motif « à corriger » renvoyé par le comptable.
-- Faille existante corrigée au passage : trois fonctions `security definer` écrivaient dans n'importe quel dossier sans contrôle de droit (prouvé par un test avant correction).
-- Tests : pgTAP 41 fichiers (680 assertions) dont `370`, `380`, `390` nouveaux. Reste : invitation des comptes, écrans Flutter, dépôt de pièces.
+## Accès des clients, tranche 3 complète (5 nov. 2026, branche `feat/client-access`)
+- Décision D-044. Rôles client, interrupteur par dossier (audité), lecture étroite (brouillard, factures, pièces déposées), écriture bornée par l'état d'accès, motif « à corriger », invitation des comptes, accueil et onglet « Clients » dans l'application.
+- Faille existante corrigée au passage : trois fonctions `security definer` écrivaient dans n'importe quel dossier sans contrôle de droit (prouvé par un test avant correction) ; et `documents.attach` ouvrait toutes les pièces du dossier à un client.
+- Tests : pgTAP 43 fichiers (707 assertions) dont `370`, `380`, `390`, `400` nouveaux ; Flutter 296 ; Deno 34 ; essai réel par l'API 31 contrôles (`scripts/e2e-client-access.ts`).
