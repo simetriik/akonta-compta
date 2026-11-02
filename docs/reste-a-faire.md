@@ -68,3 +68,11 @@ Mis à jour le 31 oct. 2026. Ce fichier rassemble ce qui a été décidé, étud
 ## 6. Autres évolutions déjà identifiées
 - Hors V1 d'après la conception : missions du cabinet et lien eABC, relevés PDF, stock permanent, saisie par les clients, système minimal de trésorerie, multi-cabinets commercial.
 - Chapitres 3 (projets de développement, tableau emplois-ressources) et 4 (système minimal de trésorerie) du SYCEBNL : non traités.
+
+## 7. Facturation e-MECeF et accès des clients (D-043, ouvert le 2 nov. 2026)
+- **Essai avec la DGI** : obtenir l'accès à la plateforme e-MECeF TEST et un jeton ; exécuter les cas de l'auto-déclaration (`intrants/emcf-dgi/06-auto-declaration-sfe.md`) ; lire le QR code avec un téléphone ; lever les points AIB et paiement (voir D-043).
+- **Tranche 2 — pont comptable** : une facture confirmée (hors test) génère une écriture de vente en brouillard, marquée « générée » ; table paramétrable et versionnée des groupes de taxe vers les comptes (TVA collectée, AIB, ventes), par entité, pour SYSCOHADA et SYCEBNL ; un avoir génère l'écriture inverse.
+- **Tranche 3 — clients du cabinet** : rôles `client_gerant` et `client_saisie`, accès limité au brouillon et aux factures de leur entité, comptes sur invitation, TOTP pour qui émet, interrupteur de suspension par entité, message de retour « à corriger », dépôt de pièces.
+- **Agrément** : demander à la DGI le délai et le coût, si un SaaS multi-clients est approuvé une fois pour tous ou client par client, et comment un éditeur obtient la plateforme de test (courriel à emecefbenin@finances.bj, à envoyer par Dansi). Toute modification du module de facturation après approbation exige une nouvelle auto-déclaration : isoler et versionner ce module.
+- **Plus tard** : types exportation (EV, EA), TPS, régime d'exception, taxe spécifique et taxe de séjour (aujourd'hui « non utilisés » : interdits après approbation tant qu'ils ne sont pas redéclarés) ; reprise hors connexion d'une facture en cours ; import de factures émises par un autre SFE.
+

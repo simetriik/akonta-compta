@@ -88,3 +88,9 @@ Parcours dans le navigateur intégré (`flutter run -d web-server`, fenêtre 144
 - Tests : contrastes étendus (rail, statuts, toast, contrôles à 3:1), garde-fou étendu (`SnackBar`, `ListTile`, `RadioListTile`), goldens régénérés (`docs/design/identite-bleu-nuit/`).
 - Reste : voir D-016 (PDF du service Python, réglage manuel du thème, `TabBar`/`PopupMenuButton`).
 
+
+## Facturation e-MECeF, tranche 1 (2 nov. 2026, branche `feat/emcf-invoicing`)
+- Décision D-043 : l'option A (SFE intégré à Akonta) est lancée, après accord d'un responsable de la DGI ; la DGI fait ses tests de conformité une fois le développement terminé. Documentation de la DGI lue et convertie dans `intrants/emcf-dgi/` (fichiers 00 à 06).
+- Livré : schéma SQL (e-MCF, jetons, factures FV et FA, lignes, paiements, taux versionnés, avoir, enregistrement atomique), Edge Function `emcf-invoice`, PDF avec QR code, module Flutter (liste, éditeur, vue, e-MCF). Détail et points non vérifiés dans D-043.
+- Tests : pgTAP `340` (23) et `350` (11), Deno `emcf_test` (13) contre un faux e-MCF, pytest (4 nouveaux), Flutter (17 nouveaux). Essai réel de bout en bout contre la base locale : 12 contrôles réussis.
+- Reste (tranches suivantes) : essai avec un vrai jeton de test de la DGI et les 20 cas de l'auto-déclaration ; écriture de vente en brouillon à partir d'une facture confirmée (SYSCOHADA et SYCEBNL) ; rôles et accès des clients du cabinet.
