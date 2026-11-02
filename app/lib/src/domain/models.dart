@@ -47,6 +47,7 @@ class AssignedRole {
     required this.requiresMfa,
     required this.grantsAllEntities,
     required this.accountingAccess,
+    this.isClient = false,
   });
 
   final String roleId;
@@ -56,6 +57,9 @@ class AssignedRole {
   final bool requiresMfa;
   final bool grantsAllEntities;
   final bool accountingAccess;
+
+  /// Rôle d'un client du cabinet : accès limité à son brouillard et à ses factures (D-044).
+  final bool isClient;
 }
 
 /// Permissions unitaires de l'utilisateur : par dossier, et de portée cabinet.
@@ -77,7 +81,10 @@ class PermissionSet {
 
   bool get requiresMfa => roles.any((r) => r.requiresMfa);
   bool get hasAccountingAccess => roles.any((r) => r.accountingAccess);
-  bool get isTechAdminOnly => roles.isNotEmpty && roles.every((r) => !r.accountingAccess);
+  bool get isTechAdminOnly => roles.isNotEmpty && roles.every((r) => !r.accountingAccess && !r.isClient);
+
+  /// Compte d'un client du cabinet : tous ses rôles sont des rôles client.
+  bool get isClient => roles.isNotEmpty && roles.every((r) => r.isClient);
 }
 
 class EntitySummary {
@@ -93,6 +100,7 @@ class EntitySummary {
     this.unreviewedCount = 0,
     this.toCorrectCount = 0,
     this.inboxCount = 0,
+    this.clientAccess = 'disabled',
   });
 
   final String id;
@@ -106,6 +114,12 @@ class EntitySummary {
   final int unreviewedCount;
   final int toCorrectCount;
   final int inboxCount;
+
+  /// État de l'accès des clients à ce dossier : `disabled`, `active` ou `suspended` (D-044).
+  final String clientAccess;
+
+  /// Vrai pour un client dont l'accès à ce dossier n'est pas actif : il peut lire, plus créer (la base le refuse aussi).
+  bool isClientSuspended(PermissionSet? perms) => (perms?.isClient ?? false) && clientAccess != 'active';
 
   /// Libellé « dossier » affiché partout : entité + exercice (conception §2).
   String get dossierLabel => fiscalYearLabel == null ? name : '$name · $fiscalYearLabel';

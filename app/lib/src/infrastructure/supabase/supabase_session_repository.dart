@@ -26,7 +26,7 @@ class SupabaseSessionRepository implements SessionRepository {
   Future<PermissionSet> permissions(String userId) async {
     final assignments = await _client
         .from('assignments')
-        .select('role_id, entity_id, roles(code, name, requires_mfa, grants_all_entities, accounting_access)')
+        .select('role_id, entity_id, roles(code, name, requires_mfa, grants_all_entities, accounting_access, is_client)')
         .eq('user_id', userId);
     final roles = assignments.map((j) => assignedRoleFromJson(j)).toList();
     if (roles.isEmpty) return PermissionSet.empty;

@@ -5,6 +5,7 @@ import '../services/admin_service.dart';
 import '../services/closing_service.dart';
 import '../services/consultation_service.dart';
 import '../services/documents_service.dart';
+import '../services/client_access_service.dart';
 import '../services/invoices_service.dart';
 import '../services/entities_service.dart';
 import '../services/entries_service.dart';
@@ -39,6 +40,9 @@ final adminServiceProvider = Provider<AdminService>((ref) => AdminService(ref.wa
 final closingServiceProvider = Provider<ClosingService>((ref) => ClosingService(ref.watch(closingRepositoryProvider), ref.watch(onlinePolicyProvider)));
 final consultationServiceProvider = Provider<ConsultationService>(
   (ref) => ConsultationService(ref.watch(consultationRepositoryProvider), ref.watch(onlinePolicyProvider)),
+);
+final clientAccessServiceProvider = Provider<ClientAccessService>(
+  (ref) => ClientAccessService(ref.watch(clientAccessRepositoryProvider), ref.watch(onlinePolicyProvider)),
 );
 final invoicesServiceProvider = Provider<InvoicesService>(
   (ref) => InvoicesService(ref.watch(invoicesRepositoryProvider), ref.watch(onlinePolicyProvider)),

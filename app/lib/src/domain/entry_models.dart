@@ -50,6 +50,7 @@ class EntryModel {
     required this.status,
     required this.reviewStatus,
     this.reviewComment,
+    this.returnedComment,
     required this.isGenerated,
     this.reversalOf,
     this.reversedBy,
@@ -70,6 +71,9 @@ class EntryModel {
   final String status;
   final String reviewStatus;
   final String? reviewComment;
+
+  /// Motif renvoyé par le comptable sur un brouillard de client (D-044).
+  final String? returnedComment;
   final bool isGenerated;
   final String? reversalOf;
   final String? reversedBy;

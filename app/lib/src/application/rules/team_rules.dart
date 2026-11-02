@@ -22,7 +22,8 @@ abstract final class TeamRules {
   /// Équipe du dossier : affectations rattachées à ce dossier, chef de mission d'abord.
   static List<Assignment> teamOf(List<Assignment> all, String entityId) {
     const order = {'manager': 0, 'assistant': 1, 'trainee': 2};
-    final team = all.where((a) => a.entityId == entityId).toList();
+    // Les comptes clients ont leur propre onglet : ils ne font pas partie de l'équipe du cabinet.
+    final team = all.where((a) => a.entityId == entityId && !a.roleCode.startsWith('client_')).toList();
     team.sort((a, b) {
       final byRole = (order[a.roleCode] ?? 9).compareTo(order[b.roleCode] ?? 9);
       return byRole != 0 ? byRole : a.userName.toLowerCase().compareTo(b.userName.toLowerCase());

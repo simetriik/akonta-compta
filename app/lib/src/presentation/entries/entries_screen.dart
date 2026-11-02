@@ -62,7 +62,7 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
             child: AkPageHead(
               title: 'Saisie',
               subtitle: 'Écritures du dossier courant',
-              actions: [AkButton.primary('Nouvelle écriture', key: const Key('new-entry'), icon: Icons.add, onPressed: () => context.go('/saisie/nouvelle'))],
+              actions: [if (!widget.entity.isClientSuspended(ref.watch(permissionsProvider).value)) AkButton.primary('Nouvelle écriture', key: const Key('new-entry'), icon: Icons.add, onPressed: () => context.go('/saisie/nouvelle'))],
             ),
           ),
           Expanded(
@@ -340,10 +340,11 @@ class _EntryTile extends StatelessWidget {
               if (onReverse != null) const PopupMenuItem(value: 'reverse', child: Text('Contre-passer…')),
             ],
           );
-    final comment = entry.reviewComment != null
+    final note = entry.returnedComment != null ? 'À corriger : ${entry.returnedComment}' : (entry.reviewComment != null ? 'Revue : ${entry.reviewComment}' : null);
+    final comment = note != null
         ? Padding(
             padding: const EdgeInsets.only(bottom: AkSpace.s2),
-            child: Text('Revue : ${entry.reviewComment}', style: AkText.caption.copyWith(color: t.danger)),
+            child: Text(note, style: AkText.caption.copyWith(color: t.danger)),
           )
         : null;
     final check = onSelect == null ? const SizedBox(width: 40) : AkCheckbox(dense: true, value: selected, onChanged: onSelect);

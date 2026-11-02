@@ -26,6 +26,7 @@ import 'entry_documents_panel.dart';
 import 'entry_grid.dart';
 import 'entry_shortcuts_dialog.dart';
 import 'entry_template_picker.dart';
+import 'return_draft_dialog.dart';
 import '../../application/entries/entry_editor_logic.dart';
 
 /// Saisie d'une écriture (grille au clavier) : journal, date, référence, libellé ; lignes compte / tiers / libellé / débit / crédit ;
@@ -243,6 +244,10 @@ class _EditorState extends ConsumerState<_Editor> {
         ],
       ),
     );
+  }
+
+  Future<void> _returnToClient() async {
+    if (await showReturnDraftDialog(context, ref, _loaded!.id) && mounted) context.go('/saisie');
   }
 
   Future<void> _delete() async {
@@ -532,6 +537,11 @@ class _EditorState extends ConsumerState<_Editor> {
                               padding: const EdgeInsets.only(top: AkSpace.s3),
                               child: AkBanner(kind: AkBannerKind.warning, child: Text('Revue : ${_loaded!.reviewComment}')),
                             ),
+                          DraftReturnArea(
+                            entry: _loaded,
+                            canReturn: canValidate && widget.entity.clientAccess != 'disabled' && _loaded?.createdBy != ref.watch(currentUserIdProvider),
+                            onReturn: _returnToClient,
+                          ),
                           if (!_readOnly && !mobile)
                             Padding(
                               padding: const EdgeInsets.only(top: AkSpace.s3),

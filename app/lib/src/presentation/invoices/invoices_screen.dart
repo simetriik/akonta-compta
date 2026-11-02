@@ -31,7 +31,7 @@ class _InvoicesBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.ak;
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
-    final canIssue = perms.has('invoices.issue', entityId: entity.id);
+    final canIssue = perms.has('invoices.issue', entityId: entity.id) && !entity.isClientSuspended(perms);
     final canManageDevices = perms.has('emcf.manage', entityId: entity.id);
     final canSetAccounts = perms.has('references.manage', entityId: entity.id);
     final invoices = ref.watch(invoicesProvider(entity.id));

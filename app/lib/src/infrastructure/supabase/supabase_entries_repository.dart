@@ -10,7 +10,7 @@ class SupabaseEntriesRepository implements EntriesRepository {
 
   final SupabaseClient _client;
 
-  static const _select = 'id, entity_id, journal_id, entry_date, number, reference, label, status, review_status, review_comment, is_generated, reversal_of, reversed_by, created_by, '
+  static const _select = 'id, entity_id, journal_id, entry_date, number, reference, label, status, review_status, review_comment, returned_comment, is_generated, reversal_of, reversed_by, created_by, '
       'journals(code), entry_lines(id, line_no, account_id, third_party_id, label, debit, credit, currency_code, amount_currency, exchange_rate, letter_code, accounts(code, label), third_parties(code))';
 
   @override

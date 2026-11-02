@@ -30,6 +30,7 @@ AssignedRole assignedRoleFromJson(Map<String, dynamic> j) {
       requiresMfa: role['requires_mfa'] as bool,
       grantsAllEntities: role['grants_all_entities'] as bool,
       accountingAccess: role['accounting_access'] as bool,
+      isClient: (role['is_client'] as bool?) ?? false,
     );
   }
 
@@ -45,4 +46,5 @@ EntitySummary entitySummaryFromJson(Map<String, dynamic> j) => EntitySummary(
         unreviewedCount: (j['unreviewed_count'] as num?)?.toInt() ?? 0,
         toCorrectCount: (j['to_correct_count'] as num?)?.toInt() ?? 0,
         inboxCount: (j['inbox_count'] as num?)?.toInt() ?? 0,
+        clientAccess: (j['client_access'] as String?) ?? 'disabled',
       );
