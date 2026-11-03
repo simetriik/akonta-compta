@@ -1,5 +1,5 @@
 import { assertEquals, assertNotEquals } from "jsr:@std/assert@1";
-import { validateInvite } from "./team_invite.ts";
+import { actsAsAdmin, validateInvite } from "./team_invite.ts";
 
 Deno.test("l'administrateur crée un compte sans rôle d'équipe", () => {
   assertEquals(validateInvite({}, true), null);
@@ -34,4 +34,19 @@ Deno.test("l'associé invite un client sur un dossier précis, pas sans dossier"
 
 Deno.test("l'administrateur technique ne crée pas de compte client", () => {
   assertNotEquals(validateInvite({ role: "client_gerant", entity_id: "e1" }, true), null);
+});
+
+Deno.test("un associé qui cumule users.manage invite un client en tant qu'associé", () => {
+  const both = { isAdmin: true, isPartner: true };
+  const req = { role: "client_saisie", entity_id: "e1" };
+  assertEquals(actsAsAdmin(both, req), false);
+  assertEquals(validateInvite(req, actsAsAdmin(both, req)), null);
+});
+
+Deno.test("le cumul des droits ne donne pas à l'associé l'import CSV ni les comptes sans rôle de l'administrateur", () => {
+  const both = { isAdmin: true, isPartner: true };
+  assertEquals(actsAsAdmin(both, { csv: "x" }), true);
+  assertEquals(actsAsAdmin(both, {}), true);
+  assertEquals(actsAsAdmin({ isAdmin: true, isPartner: false }, { role: "assistant", entity_id: "e1" }), true);
+  assertEquals(actsAsAdmin({ isAdmin: false, isPartner: true }, { role: "assistant", entity_id: "e1" }), false);
 });

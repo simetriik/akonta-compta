@@ -12,6 +12,15 @@ export interface TeamInviteRequest {
   entity_id?: string;
 }
 
+/**
+ * Rôle tenu pour cette demande. Un associé qui cumule `users.manage` agit en associé dès qu'il donne un rôle sur un dossier
+ * (le rôle d'équipe ou client est son affaire) ; sinon l'administrateur technique garde la main (CSV, premier associé).
+ */
+export function actsAsAdmin(caller: { isAdmin: boolean; isPartner: boolean }, req: TeamInviteRequest): boolean {
+  if (!caller.isAdmin) return false;
+  return !(caller.isPartner && (req.role || req.entity_id));
+}
+
 /** Message d'erreur si la demande dépasse ce que peut faire l'appelant, sinon null. */
 export function validateInvite(req: TeamInviteRequest, isAdmin: boolean): string | null {
   if (isAdmin) {
