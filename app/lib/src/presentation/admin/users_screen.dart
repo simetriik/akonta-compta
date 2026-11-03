@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
@@ -12,6 +11,7 @@ import '../../domain/admin_models.dart';
 import '../../domain/models.dart';
 import '../inventory/inventory_widgets.dart' show showErrorSnack;
 import '../widgets/async_view.dart';
+import '../widgets/copy_text.dart';
 import '../../application/providers/admin_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
@@ -441,25 +441,31 @@ class TemporaryAccessDialog extends StatelessWidget {
               ),
             for (final a in accesses) ...[
               const SizedBox(height: AkSpace.s3),
-              Row(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(a.email, style: AkText.bodyStrong.copyWith(color: t.text)),
-                        SelectableText(a.password, key: Key('temporary-password-${a.email}'), style: AkText.code.copyWith(color: t.text, fontSize: 18, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                  AkButton.secondary(
-                    'Copier le message',
-                    icon: Icons.copy_outlined,
-                    dense: true,
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: message(a, address: kIsWeb ? Uri.base.origin : null)));
-                      if (context.mounted) showAkToast(context, 'Message copié');
-                    },
+                  Text(a.email, style: AkText.bodyStrong.copyWith(color: t.text)),
+                  SelectableText(a.password, key: Key('temporary-password-${a.email}'), style: AkText.code.copyWith(color: t.text, fontSize: 18, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: AkSpace.s2),
+                  Wrap(
+                    spacing: AkSpace.s2,
+                    runSpacing: AkSpace.s2,
+                    children: [
+                      AkButton.secondary(
+                        'Copier le message',
+                        key: Key('copy-message-${a.email}'),
+                        icon: Icons.copy_outlined,
+                        dense: true,
+                        onPressed: () => copyWithFeedback(context, message(a, address: kIsWeb ? Uri.base.origin : null), successMessage: 'Message copié'),
+                      ),
+                      AkButton.secondary(
+                        'Copier le mot de passe',
+                        key: Key('copy-password-${a.email}'),
+                        icon: Icons.key_outlined,
+                        dense: true,
+                        onPressed: () => copyWithFeedback(context, a.password, successMessage: 'Mot de passe copié'),
+                      ),
+                    ],
                   ),
                 ],
               ),

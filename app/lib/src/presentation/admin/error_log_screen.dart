@@ -1,12 +1,12 @@
 import 'package:akonta/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../domain/models.dart';
 import '../../application/providers/session_providers.dart';
+import '../widgets/copy_text.dart';
 
 /// Journal technique des erreurs de cet appareil, réservé à l'administrateur technique : il retrouve ici, à partir de la référence
 /// communiquée par l'utilisateur, le détail que l'écran ne montre jamais. Le journal reste local : rien n'est envoyé ailleurs.
@@ -38,10 +38,7 @@ class ErrorLogScreen extends ConsumerWidget {
                   icon: Icons.copy_all_outlined,
                   onPressed: entries.isEmpty
                       ? null
-                      : () async {
-                          await Clipboard.setData(ClipboardData(text: ErrorLog.instance.export()));
-                          if (context.mounted) showAkToast(context, 'Journal copié.');
-                        },
+                      : () => copyWithFeedback(context, ErrorLog.instance.export(), successMessage: 'Journal copié.'),
                 ),
                 AkButton.secondary('Vider', key: const Key('error-log-clear'), icon: Icons.delete_outline, onPressed: entries.isEmpty ? null : ErrorLog.instance.clear),
               ],
@@ -86,10 +83,7 @@ class _EntryCard extends StatelessWidget {
               AkIconButton(
                 icon: Icons.copy_outlined,
                 tooltip: 'Copier ce détail',
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: entry.text));
-                  if (context.mounted) showAkToast(context, 'Détail copié.');
-                },
+                onPressed: () => copyWithFeedback(context, entry.text, successMessage: 'Détail copié.'),
               ),
             ],
           ),
