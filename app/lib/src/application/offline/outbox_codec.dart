@@ -70,6 +70,7 @@ EntryModel localDraftAsEntry(int outboxId, Map<String, dynamic> p) {
         accountId: draft.lines[i].accountId ?? '',
         accountCode: draft.lines[i].accountCode,
         accountLabel: draft.lines[i].accountLabel,
+        isCollective: draft.lines[i].isCollective,
         thirdPartyId: draft.lines[i].thirdPartyId,
         thirdPartyCode: draft.lines[i].thirdPartyCode,
         label: draft.lines[i].label,
