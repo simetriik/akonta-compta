@@ -1,4 +1,4 @@
-// Création de collaborateurs (module 1, §10.1) : un utilisateur ou une liste (import CSV eABC), ou nouveau mot de passe
+// Création de collaborateurs (module 1, §10.1) : un utilisateur ou une liste (import CSV), ou nouveau mot de passe
 // provisoire pour un membre existant. Aucun e-mail n'est nécessaire : le compte est créé avec un mot de passe provisoire
 // que l'administrateur technique reçoit une seule fois et transmet ; l'intéressé doit le changer à sa première connexion.
 // L'appelant détient « users.manage » (administrateur technique : tous les comptes) ou « team.manage » (associé : son équipe,

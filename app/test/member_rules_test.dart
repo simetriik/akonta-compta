@@ -97,7 +97,7 @@ void main() {
       expect(find.byKey(const Key('edit-member-p2')), findsNothing);
       expect(find.byKey(const Key('designate-partner-ast')), findsNothing);
       expect(find.byKey(const Key('member-roles-ast')), findsOneWidget);
-      expect(find.text('Importer un CSV eABC'), findsNothing);
+      expect(find.text('Importer des collaborateurs (CSV)'), findsNothing);
     });
 
     testWidgets('l\'administrateur désigne l\'assistante associée et peut retirer le rôle d\'un associé', (tester) async {
@@ -106,7 +106,7 @@ void main() {
       expect(find.byKey(const Key('revoke-partner-p2')), findsOneWidget);
       expect(find.byKey(const Key('designate-partner-p2')), findsNothing);
       expect(find.byKey(const Key('delete-member-me')), findsNothing);
-      expect(find.text('Importer un CSV eABC'), findsOneWidget);
+      expect(find.text('Importer des collaborateurs (CSV)'), findsOneWidget);
     });
   });
 }

@@ -1,4 +1,4 @@
-// Analyse du CSV d'utilisateurs exporté d'eABC : colonnes nom, e-mail, fonction (en-tête tolérante, séparateur ; ou ,).
+// Analyse d'un CSV d'utilisateurs : colonnes nom, e-mail, fonction (en-tête tolérante, séparateur ; ou ,).
 
 export interface UserRow {
   fullName: string;
