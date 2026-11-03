@@ -38,7 +38,7 @@ class UsersScreen extends ConsumerWidget {
             title: 'Collaborateurs',
             subtitle: '${list.where((p) => p.isActive).length} actif${list.where((p) => p.isActive).length > 1 ? 's' : ''} sur ${list.length}',
             actions: [
-              if (MemberRules.isAdmin(perms)) AkButton.secondary('Importer un CSV eABC', icon: Icons.upload_file_outlined, dense: true, onPressed: () => _importCsv(context, ref)),
+              if (MemberRules.isAdmin(perms)) AkButton.secondary('Importer des collaborateurs (CSV)', icon: Icons.upload_file_outlined, dense: true, onPressed: () => _importCsv(context, ref)),
               AkButton.primary(
                 'Ajouter un collaborateur',
                 key: const Key('invite-user'),
