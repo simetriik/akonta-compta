@@ -8,6 +8,7 @@ EntryLineModel entryLineModelFromJson(Map<String, dynamic> j) => EntryLineModel(
         accountId: j['account_id'] as String,
         accountCode: (j['accounts'] as Map)['code'] as String,
         accountLabel: (j['accounts'] as Map)['label'] as String,
+        isCollective: ((j['accounts'] as Map)['is_collective'] as bool?) ?? false,
         thirdPartyId: j['third_party_id'] as String?,
         thirdPartyCode: (j['third_parties'] as Map?)?['code'] as String?,
         label: j['label'] as String?,

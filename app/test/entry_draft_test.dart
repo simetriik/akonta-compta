@@ -1,4 +1,6 @@
+import 'package:akonta/src/application/offline/outbox_codec.dart';
 import 'package:akonta/src/domain/entry_models.dart';
+import 'package:akonta/src/infrastructure/supabase/mappers/entry_models_mappers.dart';
 import 'package:akonta/src/domain/reference_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -61,6 +63,61 @@ void main() {
       final lines = applyTemplate(template, baseAmount: 58475, rateOf: (_) => 0.18, resolveAccount: (c) => accounts[c]);
       expect(lines[1].debit, 10526); // 10525.5 → 10526
       expect(lines[2].credit, 69001);
+    });
+  });
+
+  group('réouverture d\'un brouillard (tiers oublié)', () {
+    // Ligne d'une écriture lue sur le serveur : le compte collectif porte `is_collective`.
+    Map<String, dynamic> serverLine({required bool collective}) => {
+          'id': 'l1',
+          'line_no': 1,
+          'account_id': 'a1',
+          'accounts': {'code': '4111000', 'label': 'Clients', 'is_collective': collective},
+          'third_party_id': null,
+          'third_parties': null,
+          'label': null,
+          'debit': 1000,
+          'credit': 0,
+        };
+
+    EntryModel entryWith(List<EntryLineModel> lines) => EntryModel(
+          id: 'e1',
+          entityId: 'ent',
+          journalId: 'j',
+          journalCode: 'VT',
+          entryDate: DateTime(2026, 11, 3),
+          label: 'Facture',
+          status: 'draft',
+          reviewStatus: 'not_reviewed',
+          isGenerated: false,
+          lines: lines,
+        );
+
+    test('la lecture serveur reprend l\'indicateur collectif du compte', () {
+      expect(entryLineModelFromJson(serverLine(collective: true)).isCollective, isTrue);
+      expect(entryLineModelFromJson(serverLine(collective: false)).isCollective, isFalse);
+    });
+
+    test('rouvert, le brouillard garde le champ Tiers et signale le tiers manquant par sa ligne', () {
+      final entry = entryWith([entryLineModelFromJson(serverLine(collective: true))]);
+      final draft = EntryDraft.fromEntry(entry);
+      expect(draft.lines.single.isCollective, isTrue);
+      expect(draft.validationErrors(), contains('Ligne 1 : Tiers requis sur un compte collectif'));
+      draft.lines.single
+        ..thirdPartyId = 't1'
+        ..thirdPartyCode = 'CHU';
+      expect(draft.validationErrors().where((e) => e.contains('Tiers')), isEmpty);
+    });
+
+    test('un brouillard conservé hors connexion garde aussi l\'indicateur collectif', () {
+      final draft = EntryDraft(journalId: 'j', label: 'Facture', lines: [
+        DraftLine(accountId: 'a1', accountCode: '4111000', isCollective: true, debit: 1000),
+        DraftLine(accountId: 'a2', accountCode: '7011000', credit: 1000),
+      ]);
+      final payload = encodeEntryDraft(cabinetId: 'c1', entityId: 'e1', draft: draft);
+      final read = localDraftAsEntry(1, payload);
+      expect(read.lines.map((l) => l.isCollective), [true, false]);
+      expect(EntryDraft.fromEntry(read).lines.first.isCollective, isTrue);
     });
   });
 }

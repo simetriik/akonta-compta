@@ -10,6 +10,7 @@ class EntryLineModel {
     required this.accountId,
     required this.accountCode,
     required this.accountLabel,
+    this.isCollective = false,
     this.thirdPartyId,
     this.thirdPartyCode,
     this.label,
@@ -26,6 +27,9 @@ class EntryLineModel {
   final String accountId;
   final String accountCode;
   final String accountLabel;
+
+  /// Compte collectif : la ligne exige un tiers (sans quoi le champ Tiers n'apparaîtrait pas à la réouverture d'un brouillard).
+  final bool isCollective;
   final String? thirdPartyId;
   final String? thirdPartyCode;
   final String? label;
@@ -172,7 +176,7 @@ class EntryDraft {
         label: e.label,
         lines: [
           for (final l in e.lines)
-            DraftLine(accountId: l.accountId, accountCode: l.accountCode, accountLabel: l.accountLabel, thirdPartyId: l.thirdPartyId, thirdPartyCode: l.thirdPartyCode ?? '', label: l.label ?? '', debit: l.debit, credit: l.credit),
+            DraftLine(accountId: l.accountId, accountCode: l.accountCode, accountLabel: l.accountLabel, isCollective: l.isCollective, thirdPartyId: l.thirdPartyId, thirdPartyCode: l.thirdPartyCode ?? '', label: l.label ?? '', debit: l.debit, credit: l.credit),
         ],
       );
 }
