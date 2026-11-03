@@ -6,7 +6,7 @@
 import { callerClient, error, json, requireAnyPermission, serviceClient } from "../_shared/auth.ts";
 import { parseUsersCsv, type UserRow } from "../_shared/csv.ts";
 import { generateTemporaryPassword } from "../_shared/passwords.ts";
-import { validateInvite } from "../_shared/team_invite.ts";
+import { actsAsAdmin, validateInvite } from "../_shared/team_invite.ts";
 
 interface InvitePayload {
   email?: string;
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
 
   if (payload.reset_user_id) return await resetPassword(caller, ctx, payload.reset_user_id);
 
-  const refusal = validateInvite(payload, ctx.isAdmin);
+  const refusal = validateInvite(payload, actsAsAdmin(ctx, payload));
   if (refusal) return error(refusal, 403);
   if (payload.role) {
     // Même règle que la base : l'appelant peut-il attribuer ce rôle sur ce dossier ?
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
 
 async function resetPassword(
   caller: ReturnType<typeof callerClient> & object,
-  ctx: { userId: string; cabinetId: string; isAdmin: boolean },
+  ctx: { userId: string; cabinetId: string },
   userId: string,
 ): Promise<Response> {
   if (userId === ctx.userId) return error("Pour changer votre propre mot de passe, utilisez « Mon compte »");
