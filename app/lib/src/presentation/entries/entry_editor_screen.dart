@@ -24,6 +24,7 @@ import '../documents/documents_screen.dart' show DocumentViewer;
 import 'entry_balance_bar.dart';
 import 'entry_documents_panel.dart';
 import 'entry_grid.dart';
+import 'entry_header_fields.dart';
 import 'entry_shortcuts_dialog.dart';
 import 'entry_template_picker.dart';
 import 'return_draft_dialog.dart';
@@ -61,6 +62,7 @@ class _EditorState extends ConsumerState<_Editor> {
   EntryModel? _loaded;
   bool _loading = true;
   bool _busy = false;
+  bool _piecesOpen = false; // mobile : le bloc des pièces est replié pour laisser la place à la grille
   List<String> _errors = const [];
   String? _loadError;
   List<DocumentModel> _pending = const []; // pièces choisies pour une écriture pas encore enregistrée
@@ -220,7 +222,10 @@ class _EditorState extends ConsumerState<_Editor> {
     if (MediaQuery.sizeOf(context).width >= _viewerBreakpoint) {
       setState(() => _viewed = d);
     } else {
-      showDialog<void>(context: context, builder: (_) => DocumentViewer(document: d));
+      showDialog<void>(
+        context: context,
+        builder: (_) => DocumentViewer(document: d),
+      );
     }
   }
 
@@ -235,8 +240,21 @@ class _EditorState extends ConsumerState<_Editor> {
         children: [
           Row(
             children: [
-              Expanded(child: Text(d.fileName, maxLines: 1, overflow: TextOverflow.ellipsis, style: AkText.bodyStrong.copyWith(color: t.text))),
-              AkIconButton(key: const Key('document-pane-close'), icon: Icons.close, tooltip: 'Fermer l\'aperçu', dense: true, onPressed: () => setState(() => _viewed = null)),
+              Expanded(
+                child: Text(
+                  d.fileName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AkText.bodyStrong.copyWith(color: t.text),
+                ),
+              ),
+              AkIconButton(
+                key: const Key('document-pane-close'),
+                icon: Icons.close,
+                tooltip: 'Fermer l\'aperçu',
+                dense: true,
+                onPressed: () => setState(() => _viewed = null),
+              ),
             ],
           ),
           const SizedBox(height: AkSpace.s2),
@@ -322,6 +340,18 @@ class _EditorState extends ConsumerState<_Editor> {
     WidgetsBinding.instance.addPostFrameCallback((_) => FocusManager.instance.primaryFocus?.nextFocus());
   }
 
+  /// Identifiant de l'écriture si elle existe déjà côté serveur (pas un brouillon local en attente d'envoi).
+  String? get _savedEntryId {
+    final id = _draft.id ?? widget.entryId;
+    return id != null && !isLocalDraftId(id) ? id : null;
+  }
+
+  /// Nombre de pièces jointes, affiché sur la ligne repliable du mobile.
+  int get _documentCount {
+    final id = _savedEntryId;
+    return id == null ? _pending.length : (ref.watch(entryDocumentsProvider(id)).value?.length ?? 0);
+  }
+
   Future<void> _showShortcuts() => showDialog<void>(context: context, builder: (_) => const EntryShortcutsDialog());
 
   @override
@@ -335,7 +365,6 @@ class _EditorState extends ConsumerState<_Editor> {
     }
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final canValidate = perms.has('entries.validate', entityId: widget.entity.id);
-    final t = context.ak;
     final mobile = akIsCompact(context);
     final gutter = akPageMargin(context);
     final title = _loaded == null ? 'Nouvelle écriture' : 'Écriture ${_loaded!.numberLabel}';
@@ -361,214 +390,186 @@ class _EditorState extends ConsumerState<_Editor> {
                       child: _withViewer(
                         showViewer ? _viewerPane(context, _viewed!) : null,
                         Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              AkIconButton(tooltip: 'Retour à la liste', icon: Icons.arrow_back, onPressed: () => context.go('/saisie')),
-                              const SizedBox(width: AkSpace.s1),
-                              Expanded(
-                                child: AkPageHead(
-                                  title: title,
-                                  subtitle: _readOnly ? 'Écriture validée : lecture seule' : 'Grille au clavier',
-                                  actions: [
-                                    if (!_readOnly) ...[
-                                      AkButton.secondary('Modèle', icon: Icons.auto_fix_high_outlined, onPressed: _applyTemplate),
-                                      AkButton.secondary('Contrepartie (Ctrl+B)', icon: Icons.balance, onPressed: () => setState(_draft.autoBalance)),
-                                      if (_draft.id != null) AkButton.dangerOutline('Supprimer', icon: Icons.delete_outline, onPressed: _busy ? null : _delete),
-                                    ],
-                                    AkButton.ghost('Raccourcis (F1)', icon: Icons.keyboard_outlined, onPressed: _showShortcuts),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AkSpace.s3),
-                          AkCard(
-                            child: Wrap(
-                              spacing: AkSpace.s3,
-                              runSpacing: AkSpace.s3,
-                              crossAxisAlignment: WrapCrossAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                SizedBox(
-                                  width: mobile ? double.infinity : 240,
-                                  child: AkDropdown<String>(
-                                    key: const Key('entry-journal'),
-                                    label: 'Journal',
-                                    value: _draft.journalId,
-                                    items: [for (final j in journals) AkOption(j.id, '${j.code} · ${j.label}')],
-                                    onChanged: _readOnly ? null : (v) => setState(() => _draft.journalId = v),
+                                AkIconButton(tooltip: 'Retour à la liste', icon: Icons.arrow_back, onPressed: () => context.go('/saisie')),
+                                const SizedBox(width: AkSpace.s1),
+                                Expanded(
+                                  child: AkPageHead(
+                                    title: title,
+                                    subtitle: _readOnly ? 'Écriture validée : lecture seule' : (mobile ? null : 'Grille au clavier'),
+                                    actions: mobile
+                                        ? const []
+                                        : [
+                                            if (!_readOnly) ...[
+                                              AkButton.secondary('Modèle', icon: Icons.auto_fix_high_outlined, onPressed: _applyTemplate),
+                                              AkButton.secondary('Contrepartie (Ctrl+B)', icon: Icons.balance, onPressed: () => setState(_draft.autoBalance)),
+                                              if (_draft.id != null)
+                                                AkButton.dangerOutline('Supprimer', icon: Icons.delete_outline, onPressed: _busy ? null : _delete),
+                                            ],
+                                            AkButton.ghost('Raccourcis (F1)', icon: Icons.keyboard_outlined, onPressed: _showShortcuts),
+                                          ],
                                   ),
-                                ),
-                                SizedBox(
-                                  width: mobile ? double.infinity : 160,
-                                  child: AkDateField(key: const Key('entry-date'), controller: _date, label: 'Date', enabled: !_readOnly),
-                                ),
-                                SizedBox(
-                                  width: mobile ? double.infinity : 180,
-                                  child: AkTextField(controller: _reference, label: 'Référence pièce', enabled: !_readOnly, mono: true),
-                                ),
-                                SizedBox(
-                                  width: mobile ? double.infinity : 420,
-                                  child: AkTextField(key: const Key('entry-label'), controller: _label, label: 'Libellé', enabled: !_readOnly),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: _loaded != null
-                                      ? AkStatusBadge(AkStatusBadge.of(status: _loaded!.status, reviewStatus: _loaded!.reviewStatus))
-                                      : const AkStatusBadge(AkEntryStatus.draft),
                                 ),
                               ],
                             ),
-                          ),
-                          EntrySuggestionsPanel(
-                            entityId: widget.entity.id,
-                            labelController: _label,
-                            referenceController: _reference,
-                            currentDraft: () => _draft,
-                            enabled: !_readOnly && !_loading,
-                            onUseEntry: _useSuggestedEntry,
-                            onUseTemplate: _useSuggestedTemplate,
-                            onUseAccount: _useSuggestedAccount,
-                          ),
-                          const SizedBox(height: AkSpace.s3),
-                          EntryDocumentsPanel(
-                            entityId: widget.entity.id,
-                            entryId: (_draft.id ?? widget.entryId) != null && !isLocalDraftId((_draft.id ?? widget.entryId)!) ? (_draft.id ?? widget.entryId) : null,
-                            pending: _pending,
-                            onPendingChanged: (list) => setState(() => _pending = list),
-                            onView: _view,
-                            viewedId: _viewed?.id,
-                            canAttach: perms.has('documents.attach', entityId: widget.entity.id),
-                            canDetach: !_readOnly,
-                          ),
-                          const SizedBox(height: AkSpace.s3),
-                          AkCard(
-                            padding: EdgeInsets.zero,
-                            clip: true,
-                            // Sur petit écran la grille défile horizontalement plutôt que de se comprimer.
-                            child: LayoutBuilder(
-                              builder: (context, c) {
-                                final withThird = _draft.lines.any((l) => l.isCollective);
-                                final grid = Column(
-                                  children: [
-                                    EntryGridHeader(withThirdParty: withThird),
-                                    for (var i = 0; i < _draft.lines.length; i++)
-                                      EntryLineRow(
-                                        key: ValueKey(_draft.lines[i]),
-                                        index: i,
-                                        line: _draft.lines[i],
-                                        entityId: widget.entity.id,
-                                        readOnly: _readOnly,
-                                        withThirdParty: withThird,
-                                        onChanged: () => setState(() {}),
-                                        onRemove: _readOnly || _draft.lines.length <= 2 ? null : () => setState(() => _draft.lines.removeAt(i)),
-                                        onEnterOnLast: i == _draft.lines.length - 1 ? _appendLine : null,
-                                      ),
-                                    // Pied de totaux : filet fort, montants alignés sur les colonnes Débit / Crédit.
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: t.surfaceSunken,
-                                        border: Border(top: BorderSide(color: t.borderControl, width: 2)),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2, vertical: AkSpace.s2),
-                                      child: Row(
-                                        children: [
-                                          const SizedBox(width: kEntryIndexWidth),
-                                          Expanded(
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
-                                              child: Text('Totaux', style: AkText.tableHead.copyWith(color: t.textStrong)),
-                                            ),
-                                          ),
-                                          const SizedBox(width: AkSpace.s2),
-                                          SizedBox(
-                                            width: kEntryAmountWidth,
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
-                                              child: AkAmountText(Fmt.fcfa(_draft.totalDebit, showZero: true), bold: true),
-                                            ),
-                                          ),
-                                          const SizedBox(width: AkSpace.s2),
-                                          SizedBox(
-                                            width: kEntryAmountWidth + AkSpace.s2,
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2),
-                                              child: AkAmountText(Fmt.fcfa(_draft.totalCredit, showZero: true), bold: true),
-                                            ),
-                                          ),
-                                          const SizedBox(width: kEntryRemoveWidth),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                                final minWidth = AkEntryGridCols.minWidth(withThirdParty: withThird);
-                                if (c.maxWidth >= minWidth) return AkEntryGridTheme(child: grid);
-                                return SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: SizedBox(
-                                    width: minWidth,
-                                    child: AkEntryGridTheme(child: grid),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          if (!_readOnly)
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: AkSpace.s2),
-                                child: AkButton.ghost('Ligne', icon: Icons.add, onPressed: _appendLine),
+                            if (mobile && !_readOnly)
+                              EntryMobileActions(
+                                onTemplate: _applyTemplate,
+                                onBalance: () => setState(_draft.autoBalance),
+                                onDelete: _draft.id != null && !_busy ? _delete : null,
+                                canDelete: _draft.id != null,
                               ),
-                            ),
-                          if (_errors.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: AkSpace.s3),
-                              child: AkBanner(
-                                kind: AkBannerKind.danger,
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final message in _errors) Text('• $message')]),
-                              ),
-                            ),
-                          if (_loaded?.reviewComment != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: AkSpace.s3),
-                              child: AkBanner(kind: AkBannerKind.warning, child: Text('Revue : ${_loaded!.reviewComment}')),
-                            ),
-                          DraftReturnArea(
-                            entry: _loaded,
-                            canReturn: canValidate && widget.entity.clientAccess != 'disabled' && _loaded?.createdBy != ref.watch(currentUserIdProvider),
-                            onReturn: _returnToClient,
-                          ),
-                          if (!_readOnly && !mobile)
-                            Padding(
-                              padding: const EdgeInsets.only(top: AkSpace.s3),
-                              child: Wrap(
-                                spacing: AkSpace.s4,
-                                runSpacing: AkSpace.s1,
-                                children: [
-                                  for (final (k, d) in const [
-                                    ('Tab', 'cellule suivante'),
-                                    ('Entrée', 'champ suivant ; en fin de ligne : nouvelle ligne'),
-                                    ('Ctrl B', 'contrepartie'),
-                                    ('Ctrl S', 'enregistrer le brouillard'),
-                                    ('F1', 'tous les raccourcis'),
-                                  ])
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
+                            const SizedBox(height: AkSpace.s3),
+                            AkCard(
+                              child: mobile
+                                  ? EntryMobileHeaderFields(
+                                      journals: journals,
+                                      journalId: _draft.journalId,
+                                      onJournal: (v) => setState(() => _draft.journalId = v),
+                                      date: _date,
+                                      reference: _reference,
+                                      label: _label,
+                                      readOnly: _readOnly,
+                                      status: _loaded != null
+                                          ? AkStatusBadge.of(status: _loaded!.status, reviewStatus: _loaded!.reviewStatus)
+                                          : AkEntryStatus.draft,
+                                    )
+                                  : Wrap(
+                                      spacing: AkSpace.s3,
+                                      runSpacing: AkSpace.s3,
+                                      crossAxisAlignment: WrapCrossAlignment.end,
                                       children: [
-                                        AkKbd(k),
-                                        const SizedBox(width: 6),
-                                        Text(d, style: AkText.caption.copyWith(color: t.textMuted)),
+                                        SizedBox(
+                                          width: mobile ? double.infinity : 240,
+                                          child: AkDropdown<String>(
+                                            key: const Key('entry-journal'),
+                                            label: 'Journal',
+                                            value: _draft.journalId,
+                                            items: [for (final j in journals) AkOption(j.id, '${j.code} · ${j.label}')],
+                                            onChanged: _readOnly ? null : (v) => setState(() => _draft.journalId = v),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: mobile ? double.infinity : 160,
+                                          child: AkDateField(key: const Key('entry-date'), controller: _date, label: 'Date', enabled: !_readOnly),
+                                        ),
+                                        SizedBox(
+                                          width: mobile ? double.infinity : 180,
+                                          child: AkTextField(controller: _reference, label: 'Référence pièce', enabled: !_readOnly, mono: true),
+                                        ),
+                                        SizedBox(
+                                          width: mobile ? double.infinity : 420,
+                                          child: AkTextField(key: const Key('entry-label'), controller: _label, label: 'Libellé', enabled: !_readOnly),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.only(bottom: 10),
+                                          child: _loaded != null
+                                              ? AkStatusBadge(AkStatusBadge.of(status: _loaded!.status, reviewStatus: _loaded!.reviewStatus))
+                                              : const AkStatusBadge(AkEntryStatus.draft),
+                                        ),
                                       ],
                                     ),
-                                ],
+                            ),
+                            EntrySuggestionsPanel(
+                              entityId: widget.entity.id,
+                              labelController: _label,
+                              referenceController: _reference,
+                              currentDraft: () => _draft,
+                              enabled: !_readOnly && !_loading,
+                              onUseEntry: _useSuggestedEntry,
+                              onUseTemplate: _useSuggestedTemplate,
+                              onUseAccount: _useSuggestedAccount,
+                            ),
+                            const SizedBox(height: AkSpace.s3),
+                            if (mobile) EntryDocumentsToggle(count: _documentCount, open: _piecesOpen, onTap: () => setState(() => _piecesOpen = !_piecesOpen)),
+                            if (!mobile || _piecesOpen)
+                              EntryDocumentsPanel(
+                                entityId: widget.entity.id,
+                                entryId: _savedEntryId,
+                                pending: _pending,
+                                onPendingChanged: (list) => setState(() => _pending = list),
+                                onView: _view,
+                                viewedId: _viewed?.id,
+                                canAttach: perms.has('documents.attach', entityId: widget.entity.id),
+                                canDetach: !_readOnly,
+                              ),
+                            const SizedBox(height: AkSpace.s3),
+                            AkCard(
+                              padding: EdgeInsets.zero,
+                              clip: true,
+                              // Sur petit écran la grille défile horizontalement plutôt que de se comprimer.
+                              child: LayoutBuilder(
+                                builder: (context, c) {
+                                  final withThird = _draft.lines.any((l) => l.isCollective);
+                                  final grid = Column(
+                                    children: [
+                                      EntryGridHeader(withThirdParty: withThird),
+                                      for (var i = 0; i < _draft.lines.length; i++)
+                                        EntryLineRow(
+                                          key: ValueKey(_draft.lines[i]),
+                                          index: i,
+                                          line: _draft.lines[i],
+                                          entityId: widget.entity.id,
+                                          readOnly: _readOnly,
+                                          withThirdParty: withThird,
+                                          onChanged: () => setState(() {}),
+                                          onRemove: _readOnly || _draft.lines.length <= 2 ? null : () => setState(() => _draft.lines.removeAt(i)),
+                                          onEnterOnLast: i == _draft.lines.length - 1 ? _appendLine : null,
+                                        ),
+                                      EntryGridTotals(debit: _draft.totalDebit, credit: _draft.totalCredit),
+                                    ],
+                                  );
+                                  final minWidth = AkEntryGridCols.minWidth(withThirdParty: withThird);
+                                  if (c.maxWidth >= minWidth) return AkEntryGridTheme(child: grid);
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      const EntryScrollHint(),
+                                      SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: SizedBox(
+                                          width: minWidth,
+                                          child: AkEntryGridTheme(child: grid),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
-                        ],
-                      ),
+                            if (!_readOnly)
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: AkSpace.s2),
+                                  child: AkButton.ghost('Ligne', icon: Icons.add, onPressed: _appendLine),
+                                ),
+                              ),
+                            if (_errors.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: AkSpace.s3),
+                                child: AkBanner(
+                                  kind: AkBannerKind.danger,
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final message in _errors) Text('• $message')]),
+                                ),
+                              ),
+                            if (_loaded?.reviewComment != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: AkSpace.s3),
+                                child: AkBanner(kind: AkBannerKind.warning, child: Text('Revue : ${_loaded!.reviewComment}')),
+                              ),
+                            DraftReturnArea(
+                              entry: _loaded,
+                              canReturn: canValidate && widget.entity.clientAccess != 'disabled' && _loaded?.createdBy != ref.watch(currentUserIdProvider),
+                              onReturn: _returnToClient,
+                            ),
+                            if (!_readOnly && !mobile) const EntryShortcutHints(),
+                          ],
+                        ),
                       ),
                     ),
                   ),

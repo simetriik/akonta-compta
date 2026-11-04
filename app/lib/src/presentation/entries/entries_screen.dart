@@ -36,6 +36,7 @@ class _EntriesBody extends ConsumerStatefulWidget {
 class _EntriesBodyState extends ConsumerState<_EntriesBody> {
   final Set<String> _selected = {};
   final _search = TextEditingController();
+  bool _filtersOpen = false; // mobile : journal et mois sont repliés derrière le bouton « Filtres »
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +63,10 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
             child: AkPageHead(
               title: 'Saisie',
               subtitle: 'Écritures du dossier courant',
-              actions: [if (!widget.entity.isClientSuspended(ref.watch(permissionsProvider).value)) AkButton.primary('Nouvelle écriture', key: const Key('new-entry'), icon: Icons.add, onPressed: () => context.go('/saisie/nouvelle'))],
+              actions: [
+                if (!widget.entity.isClientSuspended(ref.watch(permissionsProvider).value))
+                  AkButton.primary('Nouvelle écriture', key: const Key('new-entry'), icon: Icons.add, onPressed: () => context.go('/saisie/nouvelle')),
+              ],
             ),
           ),
           Expanded(
@@ -74,7 +78,7 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _filters(context, filter, journals, month),
+                    _filters(context, filter, journals, month, mobile: mobile),
                     Divider(height: 1, color: t.border),
                     Expanded(
                       child: AsyncView(
@@ -96,8 +100,94 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
   }
 
   /// Barre de filtres : journal, mois, statut, recherche.
-  Widget _filters(BuildContext context, EntryFilter filter, List<Journal> journals, DateTime month) {
+  Widget _filters(BuildContext context, EntryFilter filter, List<Journal> journals, DateTime month, {required bool mobile}) {
     final notifier = ref.read(entryFilterProvider.notifier);
+    final journalField = AkDropdown<String?>(
+      value: filter.journalId,
+      hint: 'Tous les journaux',
+      items: [const AkOption<String?>(null, 'Tous les journaux'), for (final j in journals) AkOption<String?>(j.id, '${j.code} · ${j.label}')],
+      onChanged: (v) => notifier.set(v == null ? filter.copyWith(clearJournal: true) : filter.copyWith(journalId: v)),
+    );
+    // Wrap plutôt que Row : sur mobile, « Tout l'exercice » passe à la ligne au lieu de déborder.
+    final monthNav = Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        AkIconButton(
+          icon: Icons.chevron_left,
+          tooltip: 'Mois précédent',
+          onPressed: () => notifier.set(filter.copyWith(month: DateTime(month.year, month.month - 1, 1))),
+        ),
+        Text(Fmt.month(month), style: AkText.bodyStrong.copyWith(color: context.ak.text)),
+        AkIconButton(
+          icon: Icons.chevron_right,
+          tooltip: 'Mois suivant',
+          onPressed: () => notifier.set(filter.copyWith(month: DateTime(month.year, month.month + 1, 1))),
+        ),
+        AkButton.ghost('Tout l\'exercice', onPressed: () => notifier.set(filter.copyWith(clearMonth: true))),
+      ],
+    );
+    final status = AkSegmented<String>(
+      options: const [AkOption('all', 'Toutes'), AkOption('draft', 'Brouillards'), AkOption('validated', 'Validées'), AkOption('review', 'À revoir')],
+      selected: filter.toReviewOnly ? 'review' : (filter.status ?? 'all'),
+      onChanged: (v) => notifier.set(
+        EntryFilter(
+          journalId: filter.journalId,
+          month: filter.month,
+          search: filter.search,
+          status: v == 'all' || v == 'review' ? null : v,
+          toReviewOnly: v == 'review',
+        ),
+      ),
+    );
+    Widget search() => AkTextField(
+      controller: _search,
+      hint: 'Montant, libellé, compte, tiers, n°',
+      prefixIcon: const Icon(Icons.search, size: 18),
+      suffix: AkIconButton(
+        icon: Icons.clear,
+        tooltip: 'Effacer',
+        size: 18,
+        onPressed: () {
+          _search.clear();
+          notifier.set(filter.copyWith(search: ''));
+        },
+      ),
+      onSubmitted: (v) => notifier.set(filter.copyWith(search: v)),
+    );
+
+    if (mobile) {
+      // Le statut reste visible (filtre le plus utilisé), défilable pour que « Brouillards » ne se coupe pas ;
+      // journal et mois se déplient à la demande.
+      final active = (filter.journalId != null ? 1 : 0) + (filter.month != null ? 1 : 0);
+      return Padding(
+        padding: const EdgeInsets.all(AkSpace.s3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(child: search()),
+                const SizedBox(width: AkSpace.s2),
+                AkButton.secondary(
+                  active == 0 ? 'Filtres' : 'Filtres ($active)',
+                  key: const Key('entries-filters-toggle'),
+                  icon: _filtersOpen ? Icons.expand_less : Icons.tune,
+                  onPressed: () => setState(() => _filtersOpen = !_filtersOpen),
+                ),
+              ],
+            ),
+            const SizedBox(height: AkSpace.s2),
+            SingleChildScrollView(scrollDirection: Axis.horizontal, child: status),
+            if (_filtersOpen) ...[
+              const SizedBox(height: AkSpace.s3),
+              journalField,
+              const SizedBox(height: AkSpace.s2),
+              Align(alignment: Alignment.centerLeft, child: monthNav),
+            ],
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.all(AkSpace.s3),
       child: Wrap(
@@ -105,63 +195,10 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
         runSpacing: AkSpace.s2,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          SizedBox(
-            width: 240,
-            child: AkDropdown<String?>(
-              value: filter.journalId,
-              hint: 'Tous les journaux',
-              items: [const AkOption<String?>(null, 'Tous les journaux'), for (final j in journals) AkOption<String?>(j.id, '${j.code} · ${j.label}')],
-              onChanged: (v) => notifier.set(v == null ? filter.copyWith(clearJournal: true) : filter.copyWith(journalId: v)),
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AkIconButton(
-                icon: Icons.chevron_left,
-                tooltip: 'Mois précédent',
-                onPressed: () => notifier.set(filter.copyWith(month: DateTime(month.year, month.month - 1, 1))),
-              ),
-              Text(Fmt.month(month), style: AkText.bodyStrong.copyWith(color: context.ak.text)),
-              AkIconButton(
-                icon: Icons.chevron_right,
-                tooltip: 'Mois suivant',
-                onPressed: () => notifier.set(filter.copyWith(month: DateTime(month.year, month.month + 1, 1))),
-              ),
-              AkButton.ghost('Tout l\'exercice', onPressed: () => notifier.set(filter.copyWith(clearMonth: true))),
-            ],
-          ),
-          AkSegmented<String>(
-            options: const [AkOption('all', 'Toutes'), AkOption('draft', 'Brouillards'), AkOption('validated', 'Validées'), AkOption('review', 'À revoir')],
-            selected: filter.toReviewOnly ? 'review' : (filter.status ?? 'all'),
-            onChanged: (v) => notifier.set(
-              EntryFilter(
-                journalId: filter.journalId,
-                month: filter.month,
-                search: filter.search,
-                status: v == 'all' || v == 'review' ? null : v,
-                toReviewOnly: v == 'review',
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 280,
-            child: AkTextField(
-              controller: _search,
-              hint: 'Montant, libellé, compte, tiers, n°',
-              prefixIcon: const Icon(Icons.search, size: 18),
-              suffix: AkIconButton(
-                icon: Icons.clear,
-                tooltip: 'Effacer',
-                size: 18,
-                onPressed: () {
-                  _search.clear();
-                  notifier.set(filter.copyWith(search: ''));
-                },
-              ),
-              onSubmitted: (v) => notifier.set(filter.copyWith(search: v)),
-            ),
-          ),
+          SizedBox(width: 240, child: journalField),
+          monthNav,
+          status,
+          SizedBox(width: 280, child: search()),
         ],
       ),
     );
@@ -340,7 +377,9 @@ class _EntryTile extends StatelessWidget {
               if (onReverse != null) const PopupMenuItem(value: 'reverse', child: Text('Contre-passer…')),
             ],
           );
-    final note = entry.returnedComment != null ? 'À corriger : ${entry.returnedComment}' : (entry.reviewComment != null ? 'Revue : ${entry.reviewComment}' : null);
+    final note = entry.returnedComment != null
+        ? 'À corriger : ${entry.returnedComment}'
+        : (entry.reviewComment != null ? 'Revue : ${entry.reviewComment}' : null);
     final comment = note != null
         ? Padding(
             padding: const EdgeInsets.only(bottom: AkSpace.s2),
@@ -389,7 +428,7 @@ class _EntryTile extends StatelessWidget {
                 ),
               ),
             ),
-            ?menu,
+            menu ?? const SizedBox(width: AkSpace.s3),
           ],
         ),
       );
