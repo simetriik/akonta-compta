@@ -5,8 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../application/offline/in_memory_outbox.dart';
 import '../application/offline/response_cache.dart';
-import '../application/providers/repositories.dart';
 import '../application/providers/session_providers.dart' show lastEntityStoreProvider;
+import '../application/providers/live_refresh_providers.dart';
+import '../application/providers/repositories.dart';
 import '../application/providers/services.dart';
 import '../core/config.dart';
 import '../domain/repositories/outbox_repository.dart';
@@ -16,6 +17,7 @@ import '../infrastructure/local/local_response_cache.dart';
 import '../infrastructure/local/shared_prefs_last_entity_store.dart';
 import '../infrastructure/supabase/offline_http_client.dart';
 import '../infrastructure/supabase/reachability_monitor.dart';
+import '../infrastructure/supabase/supabase_change_feed.dart';
 import 'supabase_overrides.dart';
 
 /// Résultat de la composition : remplacements de providers à passer au `ProviderScope`.
@@ -53,6 +55,7 @@ Future<AppComposition> composeApp() async {
   return AppComposition(overrides: [
     ...supabaseOverrides(),
     connectivityProvider.overrideWithValue(monitor),
+    changeFeedProvider.overrideWithValue(SupabaseChangeFeed(Supabase.instance.client)),
     outboxRepositoryProvider.overrideWithValue(outbox),
     lastEntityStoreProvider.overrideWithValue(SharedPrefsLastEntityStore(await SharedPreferences.getInstance())),
   ]);

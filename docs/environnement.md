@@ -33,7 +33,7 @@ Services locaux : API `http://127.0.0.1:54321`, Studio `http://127.0.0.1:54323`,
 
 ## Configuration Supabase (`supabase/config.toml`)
 - Auth : mot de passe de 12 caractères minimum avec minuscules, majuscules et chiffres ; inscription publique désactivée (création par invitation uniquement) ; MFA TOTP activée (exigée pour associé et administrateur côté application et RLS).
-- Services désactivés en local pour alléger : analytics, realtime, storage vector. Storage, Auth, Edge Runtime et Studio actifs.
+- Services désactivés en local pour alléger : analytics, storage vector. Storage, Auth, Edge Runtime, Studio et **Realtime** actifs (Realtime sert au rafraîchissement automatique des listes, D-045).
 - Migrations : `supabase/migrations/` (horodatées, jamais modifiées après fusion). Seed : `supabase/seed.sql` (jeu de démonstration). Tests : `supabase/tests/*.test.sql` (pgTAP, un fichier par domaine, transaction annulée à la fin).
 
 ## Organisation du dépôt

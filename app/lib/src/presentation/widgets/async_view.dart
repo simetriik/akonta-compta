@@ -16,6 +16,7 @@ class AsyncView<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return value.when(
+      skipLoadingOnReload: true, // relecture automatique : on garde l'affichage actuel au lieu de montrer un chargement
       loading: () => const AkLoading(),
       error: (e, stack) {
         final app = humanizeError(e, stack);
