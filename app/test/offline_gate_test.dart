@@ -6,6 +6,7 @@ import 'package:akonta/src/application/connectivity/connectivity.dart';
 import 'package:akonta/src/application/offline/in_memory_outbox.dart';
 import 'package:akonta/src/application/providers/repositories.dart';
 import 'package:akonta/src/application/providers/services.dart';
+import 'package:akonta/src/application/providers/session_providers.dart';
 import 'package:akonta/src/domain/outbox_models.dart';
 import 'package:akonta/src/presentation/shell/offline_gate.dart';
 import 'package:flutter/material.dart';
@@ -64,6 +65,7 @@ void main() {
       outboxRepositoryProvider.overrideWithValue(outbox ?? InMemoryOutboxRepository()),
       entriesRepositoryProvider.overrideWithValue(_UnreachableEntries()),
       documentsRepositoryProvider.overrideWithValue(_UnreachableDocuments()),
+      currentUserProvider.overrideWithValue(null), // aucune session : pas d'écoute des changements
     ];
     await tester.pumpWidget(ProviderScope(overrides: overrides, child: MaterialApp(theme: buildAkontaTheme(), home: Scaffold(body: OfflineGate(location: location, child: const Text('contenu'))))));
     await tester.pump();

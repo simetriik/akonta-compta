@@ -20,6 +20,7 @@ class DashboardScreen extends ConsumerWidget {
     final data = ref.watch(entityDashboardProvider);
     final pad = akPageMargin(context);
     return data.when(
+      skipLoadingOnReload: true,
       loading: () => const AkLoading(),
       error: (e, _) => AkErrorMessage(errorText(e, action: 'Chargement impossible'), onRetry: () => ref.invalidate(entityDashboardProvider)),
       data: (entities) => RefreshIndicator(

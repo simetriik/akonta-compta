@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/outbox_models.dart';
 import '../offline/sync_service.dart';
+import 'live_refresh_providers.dart';
 import 'repositories.dart';
 import 'services.dart';
 
@@ -21,10 +22,17 @@ final syncServiceProvider = Provider<SyncService>(
 );
 
 /// Lance la synchronisation à chaque retour en ligne et au démarrage ; à observer une fois, depuis le gabarit de l'application.
+/// Une fois la file envoyée, les listes sont relues : elles ont pu changer pendant la coupure.
 final syncAutoProvider = Provider<void>((ref) {
   final sync = ref.watch(syncServiceProvider);
+  final live = ref.watch(liveRefreshProvider);
+  Future<void> syncThenRefresh() async {
+    await sync.flush();
+    if (ref.mounted) live.refreshAll();
+  }
+
   ref.listen<AsyncValue<bool>>(isOnlineProvider, (previous, next) {
-    if (next.value == true) sync.flush();
+    if (next.value == true) syncThenRefresh();
   });
-  if (ref.read(connectivityProvider).isOnline) sync.flush();
+  if (ref.read(connectivityProvider).isOnline) syncThenRefresh();
 });

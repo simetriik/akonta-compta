@@ -8,6 +8,7 @@ import '../../domain/models.dart';
 import '../widgets/require_entity.dart';
 import '../../application/providers/entities_providers.dart';
 import '../../domain/consultation_models.dart';
+import '../../application/providers/consultation_providers.dart';
 import '../../application/providers/services.dart';
 import '../widgets/save_export.dart';
 import 'aged_tab.dart';
@@ -43,6 +44,16 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
   String _side = 'debit';
   bool _compare = false;
   bool _exporting = false;
+
+  /// Relit vraiment les données du serveur (et pas seulement l'écran).
+  void _reload() {
+    ref.invalidate(generalLedgerProvider);
+    ref.invalidate(trialBalanceProvider);
+    ref.invalidate(auxiliaryBalanceProvider);
+    ref.invalidate(agedBalanceProvider);
+    ref.invalidate(centralizationProvider);
+    setState(() {});
+  }
 
   ConsultationParams? _params() {
     final from = Fmt.parseDate(_from.text), to = Fmt.parseDate(_to.text);
@@ -171,7 +182,7 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
           height: akControlHeight(context),
           child: AkCheckbox(value: _compare, label: 'Comparer N-1', onChanged: (v) => setState(() => _compare = v)),
         ),
-        AkButton.secondary('Actualiser', icon: Icons.refresh, onPressed: () => setState(() {})),
+        AkButton.secondary('Actualiser', icon: Icons.refresh, onPressed: _reload),
       ],
     );
   }

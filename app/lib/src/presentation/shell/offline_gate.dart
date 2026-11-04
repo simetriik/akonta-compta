@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers/offline_providers.dart';
 import '../../application/providers/services.dart';
 import '../../core/errors/errors.dart';
+import 'live_refresh_lifecycle.dart';
 
 /// Parties de l'application qui exigent une connexion (calculs, validation, clôture, administration) : remplacées par un message
 /// clair tant que l'appareil est hors ligne. Les brouillons, les référentiels, les dossiers et les pièces restent utilisables.
@@ -27,7 +28,8 @@ class OfflineGate extends ConsumerWidget {
     final failed = items.where((i) => i.hasFailed && i.attempts >= 1).toList();
     final pending = items.length;
     final blocked = !online && isOnlineOnlyRoute(location);
-    return Column(
+    return LiveRefreshLifecycle(
+      child: Column(
       children: [
         if (!online)
           AkBanner(
@@ -71,6 +73,7 @@ class OfflineGate extends ConsumerWidget {
               : child,
         ),
       ],
+    ),
     );
   }
 
