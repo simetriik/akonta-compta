@@ -103,6 +103,7 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
               child: AkDropdown<String>(
                 key: const Key('recon-journal'),
                 label: 'Journal de trésorerie',
+                hint: 'Choisir un journal',
                 value: v.journal?.id,
                 items: [for (final j in journals) AkOption(j.id, '${j.code} · ${j.label} (${j.treasuryAccountCode})')],
                 onChanged: (id) => _guard(() => _c.setJournal(journals.where((j) => j.id == id).firstOrNull)),

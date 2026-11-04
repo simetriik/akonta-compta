@@ -6,3 +6,6 @@ inputs/
 .env.*
 !.env.example
 recette/.stack/
+
+# Sorties d'échec des tests golden (régénérées à chaque exécution)
+app/test/golden/failures/

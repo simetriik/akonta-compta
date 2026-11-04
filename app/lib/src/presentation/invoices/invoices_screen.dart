@@ -57,8 +57,8 @@ class _InvoicesBody extends ConsumerWidget {
           AkBanner(
             kind: AkBannerKind.warning,
             child: Text(canManageDevices
-                ? 'Aucun e-MCF actif pour ce dossier. Déclarez le point de vente (NIM) et enregistrez son jeton avec le bouton « e-MCF ».'
-                : 'Aucun e-MCF actif pour ce dossier. Demandez à un associé de déclarer le point de vente et son jeton.'),
+                ? 'Pour émettre des factures, il faut d\'abord relier ce dossier à la machine de facturation de la DGI. Cliquez sur « e-MCF » pour déclarer le point de vente et son code d\'accès.'
+                : 'Ce dossier n\'est pas encore relié à la machine de facturation de la DGI : « Nouvelle facture » reste indisponible. Demandez à un associé de le faire.'),
           ),
         const SizedBox(height: AkSpace.s3),
         AsyncView<List<Invoice>>(

@@ -87,6 +87,7 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
               child: AkDropdown<String>(
                 key: const Key('lettering-account'),
                 label: 'Compte lettrable',
+                hint: 'Choisir un compte',
                 value: _account?.id,
                 items: [for (final a in accounts) AkOption(a.id, '${a.code} ${a.label}')],
                 onChanged: (v) {

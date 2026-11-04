@@ -29,6 +29,20 @@ void main() {
       expect(DraftLine().validate(), 'Compte requis');
     });
 
+    test('une contrepartie sur une ligne sans compte équilibre mais bloque la validation', () {
+      final d = EntryDraft(journalId: 'j', label: 'Achat', lines: [
+        DraftLine(accountId: 'a1', accountCode: '6011000', debit: 5000),
+        DraftLine(),
+      ]);
+      d.autoBalance();
+      expect(d.balance, 0);
+      expect(d.hasLineWithoutAccount, isTrue);
+      expect(d.validationErrors(), contains('Ligne 2 : Compte requis'));
+      d.lines[1].accountId = 'a2';
+      expect(d.hasLineWithoutAccount, isFalse);
+      expect(d.validationErrors(), isEmpty);
+    });
+
     test('exige deux lignes et un libellé', () {
       final d = EntryDraft(journalId: 'j', lines: [DraftLine(accountId: 'a', debit: 10)]);
       final errors = d.validationErrors();

@@ -9,7 +9,7 @@ abstract final class AkEntryGridCols {
   static const thirdParty = AkSpace.colThirdParty;
 
   /// Colonne Tiers réduite tant qu'aucune ligne n'a de tiers.
-  static const thirdPartyEmpty = AkSpace.s12;
+  static const thirdPartyEmpty = 64.0; // assez large pour l'en-tête « Tiers » en entier
   static const amount = AkSpace.colAmount;
   static const remove = AkSpace.colAction;
   static const labelMin = AkSpace.colLabel;

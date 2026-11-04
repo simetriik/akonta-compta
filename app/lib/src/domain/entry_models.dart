@@ -133,6 +133,9 @@ class EntryDraft {
   int get totalCredit => lines.fold(0, (s, l) => s + l.credit);
   int get balance => totalDebit - totalCredit;
   bool get isBalanced => balance == 0 && nonEmptyLines.length >= 2;
+
+  /// Une ligne porte un montant ou un libellé sans compte : l'écriture ne pourra pas être validée.
+  bool get hasLineWithoutAccount => lines.any((l) => !l.isEmpty && l.accountId == null);
   List<DraftLine> get nonEmptyLines => lines.where((l) => !l.isEmpty).toList();
 
   /// Contrepartie automatique : place le solde sur la première ligne vide (ou une nouvelle).

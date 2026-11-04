@@ -142,7 +142,7 @@ class DossierCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (status != null) ...[const SizedBox(width: AkSpace.s2), _FiscalYearBadge(status: status)],
+              if (status != null) ...[const SizedBox(width: AkSpace.s2), FiscalYearBadge(status: status)],
             ],
           ),
           if (entity.lastEntryDate != null || selected) ...[
@@ -187,8 +187,8 @@ class DossierCard extends ConsumerWidget {
 }
 
 /// Statut de l'exercice du dossier : ouvert, en clôture ou clôturé.
-class _FiscalYearBadge extends StatelessWidget {
-  const _FiscalYearBadge({required this.status});
+class FiscalYearBadge extends StatelessWidget {
+  const FiscalYearBadge({super.key, required this.status});
 
   final String status;
 

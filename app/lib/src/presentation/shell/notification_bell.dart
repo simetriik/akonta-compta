@@ -6,6 +6,7 @@ import 'package:akonta/design/design.dart';
 import '../../application/providers/entries_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/rules/notification_text.dart';
+import '../../domain/entry_models.dart';
 import '../../domain/models.dart';
 import '../../application/providers/services.dart';
 
@@ -77,10 +78,11 @@ class _NotificationsDialog extends ConsumerWidget {
                 children: [
                   if (toCorrect > 0)
                     AkListRow(
-                      title: Text('$toCorrect écriture(s) à corriger dans le dossier courant'),
+                      title: Text(toCorrect == 1 ? '1 écriture à corriger dans le dossier courant' : '$toCorrect écritures à corriger dans le dossier courant'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         Navigator.pop(context);
+                        ref.read(entryFilterProvider.notifier).set(const EntryFilter(reviewStatus: 'to_correct'));
                         context.go('/saisie');
                       },
                     ),

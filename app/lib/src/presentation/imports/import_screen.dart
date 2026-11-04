@@ -83,6 +83,7 @@ class _ImportBodyState extends ConsumerState<_ImportBody> {
                       width: 320,
                       child: AkDropdown<String>(
                         label: 'Journal cible',
+                        hint: 'Choisir un journal',
                         value: _journalId,
                         items: [for (final j in journals) AkOption(j.id, '${j.code} · ${j.label}')],
                         onChanged: (v) => setState(() => _journalId = v),
