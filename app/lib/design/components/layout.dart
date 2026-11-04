@@ -100,7 +100,7 @@ class AkPage extends StatelessWidget {
     final content = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
     final padded = Padding(padding: EdgeInsets.fromLTRB(m, AkSpace.s4, m, AkSpace.s6), child: content);
     final bounded = Align(
-      alignment: Alignment.topCenter,
+      alignment: Alignment.topLeft,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: padded,

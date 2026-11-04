@@ -123,7 +123,8 @@ void main() {
     // Contrepartie automatique (bouton) → crédit 100 000 sur la ligne vide
     await tester.tap(find.text('Contrepartie (Ctrl+B)'));
     await tester.pumpAndSettle();
-    expect(find.text('Équilibrée'), findsOneWidget);
+    // Les lignes n'ont pas de compte : l'équilibre est signalé comme insuffisant pour valider.
+    expect(find.text('Équilibrée · une ligne sans compte'), findsOneWidget);
   });
 
   testWidgets('valider sans compte ni libellé liste les erreurs sans appel réseau', (tester) async {

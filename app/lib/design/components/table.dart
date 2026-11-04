@@ -41,7 +41,11 @@ class AkTable<R> extends StatelessWidget {
     this.footerLabel,
     this.shrinkWrap = false,
     this.bare = false,
+    this.rowHeight,
   });
+
+  /// Hauteur des lignes de données ; par défaut 32 px (48 px au toucher).
+  final double? rowHeight;
 
   final List<AkColumn<R>> columns;
   final List<R> rows;
@@ -81,9 +85,10 @@ class AkTable<R> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
-    final rowH = akIsTouch(context) ? AkSpace.rowTouch : AkSpace.rowCompact;
+    final headH = akIsTouch(context) ? AkSpace.rowTouch : AkSpace.rowCompact;
+    final rowH = rowHeight ?? headH;
     final header = Container(
-      height: rowH,
+      height: headH,
       color: t.tableHead,
       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3),
       child: _cells(context, [

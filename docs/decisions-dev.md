@@ -343,3 +343,15 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Clôture** : la ligne de chaque contrôle n'affiche plus les clés du résultat SQL (`count : 28`, `debit : 245737000`) mais une phrase (« 28 écritures en brouillard », montants formatés, écart du grand livre) ; chaque contrôle en échec propose un lien vers l'endroit où le corriger (saisie filtrée sur les brouillons, les écritures à corriger ou à revoir, périodes, rapprochement, inventaire) ; « Lever » devient un bouton à contour « Lever l'alerte ». Règles dans `application/rules/closing_check_text.dart`, testées sans interface.
 - **Dossier courant** : le choix est mémorisé par utilisateur (clé `last_entity.<id utilisateur>`, seul l'identifiant du dossier est conservé) et retrouvé au rechargement ou à la réouverture. Port `LastEntityStore` (`application/preferences/`), adaptateur `SharedPrefsLastEntityStore` (infrastructure), câblé dans la composition. Un dossier supprimé ou dont l'accès est retiré n'est pas forcé ; une mémoire illisible ne bloque rien ; un seul dossier accessible reste choisi d'office.
 - **Limite** : le filtre « à corriger » n'a pas de bouton propre dans la barre de la saisie (le contrôle sélectionné y reste affiché « Toutes »).
+
+## D-047 — 2026-11-04 — Reste de l'audit UX/UI (constats 5 à 14)
+- **Gabarit de page** : `AkPage` aligne le contenu à gauche (largeur maximale conservée), comme la Saisie, les Pièces et les Référentiels ; Factures, Lettrage, Rapprochement et Import ne sont plus recentrés.
+- **Listes vides** : texte par défaut « Choisir un compte / un journal » sur Compte lettrable, Journal de trésorerie et Journal cible.
+- **Saisie** : un brouillon n'a plus de numéro affiché (tiret en tableau, rien sur mobile) ; nouveau bouton « À corriger » dans la barre de statut (le filtre arrivé depuis la Clôture ou la cloche est désormais visible).
+- **Éditeur** : la colonne Tiers réduite fait 64 px (l'en-tête n'est plus tronqué) ; si une ligne porte un montant sans compte, la pastille indique « Équilibrée · une ligne sans compte » en avertissement (la validation était déjà bloquée par « Compte requis », maintenant testé).
+- **Factures** : message e-MCF reformulé (machine de facturation de la DGI), avec la raison du bouton « Nouvelle facture » grisé.
+- **Dossiers** : lignes plus hautes, IFU sans répétition du libellé, colonne Exercice (libellé et statut), « Longueur des comptes ».
+- **Notifications** : pluriel correct ; la ligne « à corriger » pose le filtre avant d'ouvrir la Saisie. La fenêtre modale est conservée.
+- **Pièces** : libellé clair sous la zone de dépôt, empreinte SHA-256 en info-bulle.
+- **Rail tablette** : les info-bulles existaient déjà (constat 10) ; pas de libellés ajoutés.
+- **Dépôt** : `app/test/golden/failures/` sort du suivi git et entre dans `.gitignore`.

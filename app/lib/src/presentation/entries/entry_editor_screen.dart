@@ -583,6 +583,7 @@ class _EditorState extends ConsumerState<_Editor> {
               readOnly: _readOnly,
               busy: _busy,
               canValidate: canValidate,
+              incomplete: _draft.hasLineWithoutAccount,
               onSave: () => _save(),
               onValidate: () => _save(validate: true),
             ),

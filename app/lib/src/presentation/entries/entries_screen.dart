@@ -127,14 +127,21 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
       ],
     );
     final status = AkSegmented<String>(
-      options: const [AkOption('all', 'Toutes'), AkOption('draft', 'Brouillards'), AkOption('validated', 'Validées'), AkOption('review', 'À revoir')],
-      selected: filter.toReviewOnly ? 'review' : (filter.status ?? 'all'),
+      options: const [
+        AkOption('all', 'Toutes'),
+        AkOption('draft', 'Brouillards'),
+        AkOption('validated', 'Validées'),
+        AkOption('review', 'À revoir'),
+        AkOption('correct', 'À corriger'),
+      ],
+      selected: filter.toReviewOnly ? 'review' : (filter.reviewStatus == 'to_correct' ? 'correct' : (filter.status ?? 'all')),
       onChanged: (v) => notifier.set(
         EntryFilter(
           journalId: filter.journalId,
           month: filter.month,
           search: filter.search,
-          status: v == 'all' || v == 'review' ? null : v,
+          status: v == 'all' || v == 'review' || v == 'correct' ? null : v,
+          reviewStatus: v == 'correct' ? 'to_correct' : null,
           toReviewOnly: v == 'review',
         ),
       ),
@@ -405,7 +412,8 @@ class _EntryTile extends StatelessWidget {
                       children: [
                         Text(Fmt.date(entry.entryDate), style: AkText.table.copyWith(color: t.textMuted)),
                         const SizedBox(width: AkSpace.s2),
-                        Text(entry.numberLabel, style: AkText.code.copyWith(color: t.text)),
+                        // Un brouillon n'a pas de numéro : le badge de statut suffit.
+                        if (entry.number != null) Text(entry.numberLabel, style: AkText.code.copyWith(color: t.text)),
                         const Spacer(),
                         AkAmountText(Fmt.fcfa(entry.totalDebit, showZero: true)),
                       ],
@@ -444,7 +452,7 @@ class _EntryTile extends StatelessWidget {
             ),
             SizedBox(
               width: 120,
-              child: Text(entry.numberLabel, style: AkText.code.copyWith(color: t.text)),
+              child: Text(entry.number == null ? '—' : entry.numberLabel, style: AkText.code.copyWith(color: t.text)),
             ),
             Expanded(
               child: Text(

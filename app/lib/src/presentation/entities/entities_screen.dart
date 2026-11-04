@@ -6,6 +6,8 @@ import 'package:akonta/design/design.dart';
 import '../../domain/entity_models.dart';
 import '../widgets/async_view.dart';
 import '../../application/providers/entities_providers.dart';
+import '../../application/providers/session_providers.dart';
+import '../dashboard/dashboard_screen.dart' show FiscalYearBadge;
 
 /// Liste des dossiers (entités) du cabinet accessibles à l'utilisateur ; création via l'assistant.
 class EntitiesScreen extends ConsumerWidget {
@@ -14,6 +16,8 @@ class EntitiesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final list = ref.watch(entitiesListProvider);
+    // Exercice en cours de chaque dossier ; absent tant que le tableau de bord n'est pas chargé.
+    final summaries = {for (final s in ref.watch(entityDashboardProvider).value ?? const []) s.id: s};
     final t = context.ak;
     final pad = akPageMargin(context);
     return AsyncView(
@@ -43,7 +47,8 @@ class EntitiesScreen extends ConsumerWidget {
               clip: true,
               child: AkTable<EntityDetail>(
                 rows: entities,
-                minWidth: 560,
+                minWidth: 720,
+                rowHeight: AkSpace.rowComfort + 8,
                 onRowTap: (e) => context.go('/dossiers/${e.id}'),
                 columns: [
                   AkColumn<EntityDetail>(
@@ -64,8 +69,24 @@ class EntitiesScreen extends ConsumerWidget {
                     ),
                   ),
                   AkColumn<EntityDetail>.text(label: 'Forme juridique', flex: 2, text: (e) => e.legalForm ?? ''),
-                  AkColumn<EntityDetail>.text(label: 'IFU', flex: 2, text: (e) => e.taxId == null ? '' : 'IFU ${e.taxId}'),
-                  AkColumn<EntityDetail>.text(label: 'Comptes', flex: 1, text: (e) => '${e.accountLength} chiffres'),
+                  AkColumn<EntityDetail>.text(label: 'IFU', flex: 2, text: (e) => e.taxId ?? ''),
+                  AkColumn<EntityDetail>(
+                    label: 'Exercice',
+                    flex: 3,
+                    cell: (context, e) {
+                      final s = summaries[e.id];
+                      if (s?.fiscalYearStatus == null) return Text('—', style: AkText.table.copyWith(color: t.textMuted));
+                      return Wrap(
+                        spacing: AkSpace.s2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (s!.fiscalYearLabel != null) Text(s.fiscalYearLabel!, style: AkText.table.copyWith(color: t.text)),
+                          FiscalYearBadge(status: s.fiscalYearStatus!),
+                        ],
+                      );
+                    },
+                  ),
+                  AkColumn<EntityDetail>.text(label: 'Longueur des comptes', flex: 2, text: (e) => '${e.accountLength} chiffres'),
                 ],
               ),
             ),

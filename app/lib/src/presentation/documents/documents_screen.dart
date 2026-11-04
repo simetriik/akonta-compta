@@ -117,7 +117,7 @@ class _DocumentsBodyState extends ConsumerState<_DocumentsBody> {
                             child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                           ),
                         Expanded(
-                          child: Text('PDF, JPEG, PNG, HEIC · 20 Mo max · empreinte SHA-256', style: AkText.caption.copyWith(color: t.textMuted)),
+                          child: Text('PDF, JPEG, PNG, HEIC · 20 Mo max · chaque pièce est protégée contre toute modification', style: AkText.caption.copyWith(color: t.textMuted)),
                         ),
                       ],
                     ),
@@ -332,7 +332,10 @@ class DocumentViewer extends ConsumerWidget {
             '${Fmt.date(d.capturedAt)} · ${(d.sizeBytes / 1024).toStringAsFixed(0)} Ko · ${d.capturedVia == 'mobile' ? 'capture mobile' : 'dépôt'}',
             style: AkText.caption.copyWith(color: t.textMuted),
           ),
-          Text('SHA-256 ${d.sha256}', style: AkText.code.copyWith(color: t.textMuted)),
+          Tooltip(
+            message: 'Empreinte numérique (SHA-256) : elle change si le fichier est modifié.',
+            child: Text('Empreinte ${d.sha256}', style: AkText.code.copyWith(color: t.textMuted)),
+          ),
           const SizedBox(height: AkSpace.s3),
           DocumentPreview(document: d, height: size.height < 704 ? size.height - 280 : 480),
         ],
