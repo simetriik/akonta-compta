@@ -3,13 +3,16 @@
 
 Un seul port : la page et l'API partagent la même origine (pas de CORS, un build web valable pour toute adresse).
   /auth/v1, /rest/v1, /storage/v1, /functions/v1  ->  API Supabase de recette (127.0.0.1:55321)
+  /realtime/v1 (WebSocket)                         ->  tunnel vers le service Realtime de la même API
   tout le reste                                    ->  fichiers de app/build/web (retombe sur index.html pour les routes de l'application)
 Bibliothèque standard uniquement. Usage : recette/serveur-reseau.py [--port 8080] [--api http://127.0.0.1:55321]
 """
 import argparse
 import http.client
 import mimetypes
+import socket
 import sys
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit, unquote
@@ -17,6 +20,7 @@ from urllib.parse import urlsplit, unquote
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "app" / "build" / "web"
 PROXIED = ("/auth/v1", "/rest/v1", "/storage/v1", "/functions/v1")
+REALTIME = "/realtime/v1"
 HOP_BY_HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailers", "transfer-encoding", "upgrade", "host"}
 
 
@@ -38,12 +42,48 @@ class Handler(BaseHTTPRequestHandler):
 
     def _route(self):
         path = urlsplit(self.path).path
-        if path.startswith(PROXIED):
+        if path.startswith(REALTIME) and self.headers.get("Upgrade", "").lower() == "websocket":
+            self._tunnel()
+        elif path.startswith(PROXIED):
             self._proxy()
         elif self.command in ("GET", "HEAD"):
             self._static(path)
         else:
             self.send_error(405)
+
+    def _tunnel(self):
+        """Relaie une connexion WebSocket octet par octet : la poignée de main HTTP est rejouée telle quelle vers l'API."""
+        try:
+            upstream = socket.create_connection((self.api_host, self.api_port), timeout=10)
+        except OSError as e:
+            self.send_error(502, f"Realtime de recette injoignable : {e}")
+            return
+        upstream.settimeout(None)
+        lines = [f"{self.command} {self.path} HTTP/1.1"]
+        for k, v in self.headers.items():
+            lines.append(f"{k}: {self.api_host}:{self.api_port}" if k.lower() == "host" else f"{k}: {v}")
+        upstream.sendall(("\r\n".join(lines) + "\r\n\r\n").encode("latin-1"))
+        self.close_connection = True
+        client = self.connection
+
+        def pump(src, dst):
+            try:
+                while (chunk := src.recv(65536)):
+                    dst.sendall(chunk)
+            except OSError:
+                pass
+            finally:
+                for sock in (src, dst):
+                    try:
+                        sock.shutdown(socket.SHUT_RDWR)
+                    except OSError:
+                        pass
+
+        back = threading.Thread(target=pump, args=(upstream, client), daemon=True)
+        back.start()
+        pump(client, upstream)
+        back.join(timeout=5)
+        upstream.close()
 
     def _proxy(self):
         length = int(self.headers.get("Content-Length") or 0)
