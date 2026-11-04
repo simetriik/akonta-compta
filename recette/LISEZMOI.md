@@ -67,6 +67,8 @@ recette/lancer-service-documents.sh       # terminal 2 : exports PDF / Excel / D
 recette/lancer-reseau.sh                  # terminal 3 : compile le build web (1re fois) et sert page + API sur le port 8080
 ```
 
+Le relais transmet aussi le WebSocket du Realtime (`/realtime/v1`), nécessaire au rafraîchissement en direct. Si la pile a été créée avant D-045, sa configuration générée (`recette/.stack/supabase/config.toml`) peut avoir `[realtime] enabled = false` : `scripts/reset-recette.sh` la régénère (mais efface les données).
+
 Le script affiche l'adresse à donner aux collègues (ex. `http://192.168.1.232:8080`). Le build est compilé avec `SUPABASE_URL=auto` : la page et l'API partagent la même origine (relais de `recette/serveur-reseau.py`), donc ni CORS ni adresse à recompiler. `--rebuild` recompile après une modification du code ; `--port` change le port.
 
 - **Pare-feu** : ouvrir le port 8080 du poste hôte aux machines du réseau si une page ne s'ouvre pas. Les ports 55322 (PostgreSQL, mot de passe `postgres`) et 55323 (Studio) sont publiés par la pile Supabase sur toutes les interfaces : ne pas les ouvrir au réseau (réseau de confiance, données fictives uniquement).
