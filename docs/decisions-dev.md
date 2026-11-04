@@ -355,3 +355,8 @@ Format : identifiant, date, contexte, choix, raison. Une décision ne rouvre jam
 - **Pièces** : libellé clair sous la zone de dépôt, empreinte SHA-256 en info-bulle.
 - **Rail tablette** : les info-bulles existaient déjà (constat 10) ; pas de libellés ajoutés.
 - **Dépôt** : `app/test/golden/failures/` sort du suivi git et entre dans `.gitignore`.
+
+## D-048 — 2026-11-04 — Éditeur mobile en cartes et temps réel du lettrage et du rapprochement
+- **Éditeur d'écriture** : quand la largeur ne permet pas la grille (moins de sa largeur minimale), chaque ligne devient une carte (compte, tiers si collectif, libellé, débit et crédit côte à côte) ; plus de défilement horizontal, plus de bandeau « Faites glisser la grille ». Les totaux passent sous les cartes. La grille de bureau et le parcours au clavier ne changent pas. La pastille d'équilibre revient à la ligne au lieu de déborder.
+- **Temps réel** : nouveaux sujets `lettering` et `reconciliation`. Migration `20261105100006` : publication de `reconciliation_matches` et `bank_statement_lines` (`letterings` et `reconciliations` l'étaient déjà) ; pgTAP `280` complété. Les écrans de lettrage et de rapprochement gardent leur état local : ils surveillent un compteur de révision (`letteringRevisionProvider`, `reconciliationRevisionProvider`) incrémenté par la relecture en direct, et se rechargent **sans effacer la sélection** des lignes encore présentes. Une nouvelle écriture relance aussi les deux écrans (nouvelles lignes à lettrer ou pointer).
+- **Limite** : un lettrage ou un pointage fait par un autre pendant qu'on sélectionne retire simplement les lignes concernées de la sélection ; aucun message ne l'explique.

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/bank_models.dart';
 import '../../domain/reference_models.dart';
+import 'live_refresh_providers.dart';
 import 'services.dart';
 import 'reconciliation_providers.dart';
 
@@ -72,7 +73,13 @@ final reconciliationControllerProvider = NotifierProvider.autoDispose<Reconcilia
 /// (l'écran les affiche) et rechargent toujours les listes ensuite.
 class ReconciliationController extends Notifier<ReconciliationView> {
   @override
-  ReconciliationView build() => ReconciliationView(until: endOfMonth(DateTime.now()));
+  ReconciliationView build() {
+    // Relecture en direct quand un autre utilisateur saisit, importe ou pointe : la sélection en cours est conservée.
+    ref.listen(reconciliationRevisionProvider, (_, _) {
+      if (state.journal != null && !state.busy) reload(quiet: true);
+    });
+    return ReconciliationView(until: endOfMonth(DateTime.now()));
+  }
 
   Future<void> setJournal(Journal? journal) {
     state = ReconciliationView(until: state.until, journal: journal);
@@ -85,10 +92,10 @@ class ReconciliationController extends Notifier<ReconciliationView> {
   }
 
   /// Recharge relevé, comptabilité, propositions et état ; vide la sélection.
-  Future<void> reload() async {
+  Future<void> reload({bool quiet = false}) async {
     final j = state.journal;
     if (j == null) return;
-    state = state.copyWith(busy: true);
+    if (!quiet) state = state.copyWith(busy: true);
     final service = ref.read(reconciliationServiceProvider);
     final until = state.until;
     try {
@@ -97,9 +104,18 @@ class ReconciliationController extends Notifier<ReconciliationView> {
       final proposals = await service.proposals(j.id, until: until);
       final st = await service.state(j.id, until);
       if (!ref.mounted) return;
-      state = state.copyWith(bank: bank, book: book, proposals: proposals, state: st, selBank: {}, selBook: {});
+      final bankIds = bank.map((l) => l.id).toSet();
+      final bookIds = book.map((l) => l.id).toSet();
+      state = state.copyWith(
+        bank: bank,
+        book: book,
+        proposals: proposals,
+        state: st,
+        selBank: quiet ? state.selBank.where(bankIds.contains).toSet() : {},
+        selBook: quiet ? state.selBook.where(bookIds.contains).toSet() : {},
+      );
     } finally {
-      if (ref.mounted) state = state.copyWith(busy: false);
+      if (ref.mounted && !quiet) state = state.copyWith(busy: false);
     }
   }
 

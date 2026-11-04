@@ -505,9 +505,12 @@ class _EditorState extends ConsumerState<_Editor> {
                               child: LayoutBuilder(
                                 builder: (context, c) {
                                   final withThird = _draft.lines.any((l) => l.isCollective);
+                                  final minWidth = AkEntryGridCols.minWidth(withThirdParty: withThird);
+                                  // Trop étroit pour la grille : une carte par ligne, sans défilement horizontal.
+                                  final card = c.maxWidth < minWidth;
                                   final grid = Column(
                                     children: [
-                                      EntryGridHeader(withThirdParty: withThird),
+                                      if (!card) EntryGridHeader(withThirdParty: withThird),
                                       for (var i = 0; i < _draft.lines.length; i++)
                                         EntryLineRow(
                                           key: ValueKey(_draft.lines[i]),
@@ -516,28 +519,15 @@ class _EditorState extends ConsumerState<_Editor> {
                                           entityId: widget.entity.id,
                                           readOnly: _readOnly,
                                           withThirdParty: withThird,
+                                          card: card,
                                           onChanged: () => setState(() {}),
                                           onRemove: _readOnly || _draft.lines.length <= 2 ? null : () => setState(() => _draft.lines.removeAt(i)),
                                           onEnterOnLast: i == _draft.lines.length - 1 ? _appendLine : null,
                                         ),
-                                      EntryGridTotals(debit: _draft.totalDebit, credit: _draft.totalCredit),
+                                      card ? EntryCardTotals(debit: _draft.totalDebit, credit: _draft.totalCredit) : EntryGridTotals(debit: _draft.totalDebit, credit: _draft.totalCredit),
                                     ],
                                   );
-                                  final minWidth = AkEntryGridCols.minWidth(withThirdParty: withThird);
-                                  if (c.maxWidth >= minWidth) return AkEntryGridTheme(child: grid);
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      const EntryScrollHint(),
-                                      SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: SizedBox(
-                                          width: minWidth,
-                                          child: AkEntryGridTheme(child: grid),
-                                        ),
-                                      ),
-                                    ],
-                                  );
+                                  return AkEntryGridTheme(child: grid);
                                 },
                               ),
                             ),

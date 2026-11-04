@@ -143,6 +143,37 @@ void main() {
       container.dispose();
       expect(feed.subscription.closed, isTrue);
     });
+
+    test('un changement d\'écriture ou de lettrage relance l\'écran de lettrage, un pointage celui du rapprochement', () {
+      fakeAsync((async) {
+        final feed = _CountingFeed();
+        final container = ProviderContainer(overrides: [
+          changeFeedProvider.overrideWithValue(feed),
+          currentUserProvider.overrideWithValue(const AuthSession(userId: 'user-1', email: 'u@test')),
+          isOnlineProvider.overrideWithValue(const AsyncData(true)),
+        ]);
+        container.read(liveRefreshProvider);
+        container.listen(letteringRevisionProvider, (_, _) {});
+        container.listen(reconciliationRevisionProvider, (_, _) {});
+
+        feed.subscription.emit(ChangeTopic.lettering);
+        async.elapse(const Duration(seconds: 1));
+        expect(container.read(letteringRevisionProvider), 1);
+        expect(container.read(reconciliationRevisionProvider), 0);
+
+        feed.subscription.emit(ChangeTopic.reconciliation);
+        async.elapse(const Duration(seconds: 1));
+        expect(container.read(letteringRevisionProvider), 1);
+        expect(container.read(reconciliationRevisionProvider), 1);
+
+        // De nouvelles écritures changent les lignes à lettrer comme à pointer.
+        feed.subscription.emit(ChangeTopic.entries);
+        async.elapse(const Duration(seconds: 1));
+        expect(container.read(letteringRevisionProvider), 2);
+        expect(container.read(reconciliationRevisionProvider), 2);
+        container.dispose();
+      });
+    });
   });
 }
 
