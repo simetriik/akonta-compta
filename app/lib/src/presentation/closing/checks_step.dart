@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
 import '../../domain/entity_models.dart';
 import '../../domain/models.dart';
 import '../../domain/closing_models.dart';
+import '../../domain/entry_models.dart';
+import '../../application/providers/entries_providers.dart';
+import '../../application/rules/closing_check_text.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import '../inventory/inventory_widgets.dart';
@@ -69,6 +73,32 @@ class _ChecksStepState extends ConsumerState<ChecksStep> {
     );
   }
 
+  /// Ouvre l'écran où corriger le contrôle ; les filtres de la saisie sont posés avant l'ouverture.
+  void _open(ClosingCheckTarget target) {
+    final filters = ref.read(entryFilterProvider.notifier);
+    switch (target) {
+      case ClosingCheckTarget.draftEntries:
+        filters.set(const EntryFilter(status: 'draft'));
+        context.go('/saisie');
+      case ClosingCheckTarget.entriesToCorrect:
+        filters.set(const EntryFilter(reviewStatus: 'to_correct'));
+        context.go('/saisie');
+      case ClosingCheckTarget.entriesToReview:
+        filters.set(const EntryFilter(toReviewOnly: true));
+        context.go('/saisie');
+      case ClosingCheckTarget.periods:
+        context.go('/dossiers/${widget.entity.id}');
+      case ClosingCheckTarget.reconciliation:
+        context.go('/rapprochement');
+      case ClosingCheckTarget.inventory:
+        context.go('/inventaire');
+      case ClosingCheckTarget.references:
+        context.go('/referentiels');
+      case ClosingCheckTarget.consultation:
+        context.go('/consultation');
+    }
+  }
+
   Widget _checkRow(BuildContext context, ClosingCheck c, bool canWaive) {
     final t = context.ak;
     final passed = c.status == 'passed';
@@ -84,6 +114,7 @@ class _ChecksStepState extends ConsumerState<ChecksStep> {
         : blocking
         ? AkBadge(label: 'Bloquant', color: t.danger, tint: t.dangerTint, icon: Icons.block)
         : AkBadge(label: 'Alerte', color: t.warning, tint: t.warningTint, icon: Icons.warning_amber);
+    final action = ClosingCheckText.action(c);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AkSpace.s4, vertical: AkSpace.s3),
       child: Row(
@@ -95,36 +126,36 @@ class _ChecksStepState extends ConsumerState<ChecksStep> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(c.label, style: AkText.bodyStrong.copyWith(color: t.text)),
-                Text(
-                  '${blocking ? 'Bloquant' : 'Alerte'} · ${passed
-                      ? 'conforme'
-                      : waived
-                      ? 'levée'
-                      : 'en échec'}${c.details.isEmpty ? '' : ' · ${c.details.entries.map((e) => '${e.key} : ${e.value}').join(', ')}'}',
-                  style: AkText.caption.copyWith(color: t.textMuted),
-                ),
+                Text(ClosingCheckText.subtitle(c), style: AkText.caption.copyWith(color: t.textMuted)),
               ],
             ),
           ),
           const SizedBox(width: AkSpace.s2),
-          badge,
-          if (c.status == 'failed' && c.severity == 'warning' && canWaive) ...[
-            const SizedBox(width: AkSpace.s2),
-            AkButton.ghost(
-              'Lever',
-              dense: true,
-              onPressed: () async {
-                final comment = await askText(context, title: 'Lever : ${c.label}', label: 'Commentaire (obligatoire)', confirmLabel: 'Lever l\'alerte');
-                if (comment == null || comment.trim().isEmpty) return;
-                try {
-                  await ref.read(closingServiceProvider).waive(widget.fy.id, c.code, comment.trim());
-                } catch (e) {
-                  if (context.mounted) showErrorSnack(context, errorText(e));
-                }
-                setState(() => _future = ref.read(closingServiceProvider).runChecks(widget.entity.id, widget.fy.id));
-              },
-            ),
-          ],
+          Wrap(
+            spacing: AkSpace.s2,
+            runSpacing: AkSpace.s2,
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (action != null) AkButton.secondary(action.label, dense: true, onPressed: () => _open(action.target)),
+              badge,
+              if (c.status == 'failed' && c.severity == 'warning' && canWaive)
+                AkButton.secondary(
+                  'Lever l\'alerte',
+                  dense: true,
+                  onPressed: () async {
+                    final comment = await askText(context, title: 'Lever : ${c.label}', label: 'Commentaire (obligatoire)', confirmLabel: 'Lever l\'alerte');
+                    if (comment == null || comment.trim().isEmpty) return;
+                    try {
+                      await ref.read(closingServiceProvider).waive(widget.fy.id, c.code, comment.trim());
+                    } catch (e) {
+                      if (context.mounted) showErrorSnack(context, errorText(e));
+                    }
+                    setState(() => _future = ref.read(closingServiceProvider).runChecks(widget.entity.id, widget.fy.id));
+                  },
+                ),
+            ],
+          ),
         ],
       ),
     );
