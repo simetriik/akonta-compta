@@ -1,5 +1,5 @@
 /// Famille de données dont un autre utilisateur peut avoir modifié le contenu.
-enum ChangeTopic { entries, documents, notifications, invoices }
+enum ChangeTopic { entries, documents, notifications, invoices, lettering, reconciliation }
 
 /// Écoute ouverte sur les changements : un simple signal « quelque chose a changé », sans donnée métier.
 abstract interface class ChangeSubscription {

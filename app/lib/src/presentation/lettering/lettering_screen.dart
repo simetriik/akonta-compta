@@ -7,6 +7,7 @@ import '../../core/formatting.dart';
 import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
 import '../widgets/require_entity.dart';
+import '../../application/providers/live_refresh_providers.dart';
 import '../../application/providers/references_providers.dart';
 import '../../domain/lettering_models.dart';
 import '../../application/providers/session_providers.dart';
@@ -39,10 +40,11 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
   final Set<String> _selected = {};
   bool _busy = false;
 
-  Future<void> _load() async {
+  /// Charge les lignes ; `quiet` (relecture en direct) garde la sélection des lignes encore présentes et n'affiche pas l'attente.
+  Future<void> _load({bool quiet = false}) async {
     final a = _account;
-    if (a == null) return;
-    setState(() => _busy = true);
+    if (a == null || (quiet && _busy)) return;
+    if (!quiet) setState(() => _busy = true);
     final repo = ref.read(letteringServiceProvider);
     final lines = await repo.unlettered(widget.entity.id, a.id, thirdPartyId: _thirdParty?.id);
     final proposals = await repo.proposals(widget.entity.id, a.id, thirdPartyId: _thirdParty?.id);
@@ -52,7 +54,12 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
       _lines = lines;
       _proposals = proposals;
       _groups = groups;
-      _selected.clear();
+      if (quiet) {
+        final present = lines.map((l) => l.lineId).toSet();
+        _selected.removeWhere((id) => !present.contains(id));
+      } else {
+        _selected.clear();
+      }
       _busy = false;
     });
   }
@@ -68,6 +75,8 @@ class _LetteringBodyState extends ConsumerState<_LetteringBody> {
     final thirdParties = ref.watch(thirdPartiesProvider(widget.entity.id)).value ?? const <ThirdParty>[];
     final perms = ref.watch(permissionsProvider).value ?? PermissionSet.empty;
     final canLetter = perms.has('lettering.manage', entityId: widget.entity.id);
+    // Un autre utilisateur a saisi ou lettré : on relit sans perdre la sélection en cours.
+    ref.listen(letteringRevisionProvider, (_, _) => _load(quiet: true));
     final diff = _selectedDebit - _selectedCredit;
     final t = context.ak;
     final debits = _lines.where((l) => l.debit > 0).toList();

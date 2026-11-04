@@ -53,9 +53,13 @@ class EntryBalanceBar extends StatelessWidget {
         children: [
           Icon(warn ? Icons.warning_amber : (balanced ? Icons.check_circle_outline : Icons.error_outline), size: AkSpace.iconMd, color: color),
           const SizedBox(width: AkSpace.s2),
-          Text(
-            balanced ? (warn ? 'Équilibrée · une ligne sans compte' : 'Équilibrée') : 'Écart ${Fmt.fcfa(balance.abs())} · ${balance > 0 ? 'débit' : 'crédit'} supérieur',
-            style: AkText.bodyStrong.copyWith(color: color),
+          Flexible(
+            child: Text(
+              balanced
+                  ? (warn ? 'Équilibrée · une ligne sans compte' : 'Équilibrée')
+                  : 'Écart ${Fmt.fcfa(balance.abs())} · ${balance > 0 ? 'débit' : 'crédit'} supérieur',
+              style: AkText.bodyStrong.copyWith(color: color),
+            ),
           ),
         ],
       ),

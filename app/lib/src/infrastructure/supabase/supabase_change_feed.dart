@@ -36,6 +36,10 @@ class _SupabaseChangeSubscription implements ChangeSubscription {
       on('entries', ChangeTopic.entries, column: 'entity_id', value: entityId);
       on('documents', ChangeTopic.documents, column: 'entity_id', value: entityId);
       on('invoices', ChangeTopic.invoices, column: 'entity_id', value: entityId);
+      on('letterings', ChangeTopic.lettering, column: 'entity_id', value: entityId);
+      on('reconciliation_matches', ChangeTopic.reconciliation, column: 'entity_id', value: entityId);
+      on('bank_statement_lines', ChangeTopic.reconciliation, column: 'entity_id', value: entityId);
+      on('reconciliations', ChangeTopic.reconciliation, column: 'entity_id', value: entityId);
       // Pas de colonne de dossier sur les rattachements : la RLS limite déjà les événements reçus.
       on('entry_documents', ChangeTopic.documents);
     }

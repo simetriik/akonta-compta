@@ -127,6 +127,29 @@ void main() {
     expect(find.text('Équilibrée · une ligne sans compte'), findsOneWidget);
   });
 
+  testWidgets('sur mobile, chaque ligne est une carte : débit et crédit restent dans l\'écran, sans défilement horizontal', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ligne 1'), findsOneWidget);
+    expect(find.text('Ligne 2'), findsOneWidget);
+    expect(find.text('Total débit'), findsOneWidget);
+    // Les deux montants de la première ligne tiennent dans la largeur de l'écran.
+    final amounts = find.byType(AkAmountField);
+    for (final i in [0, 1]) {
+      final box = tester.getRect(amounts.at(i));
+      expect(box.left, greaterThanOrEqualTo(0));
+      expect(box.right, lessThanOrEqualTo(390));
+    }
+    // Le débit saisi se retrouve dans les totaux.
+    await tester.enterText(amounts.at(0), '100000');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Écart'), findsOneWidget);
+  });
+
   testWidgets('valider sans compte ni libellé liste les erreurs sans appel réseau', (tester) async {
     tester.view.physicalSize = const Size(1600, 1000);
     tester.view.devicePixelRatio = 1;
@@ -190,22 +213,13 @@ void main() {
     expect(validate.top, save.top);
   });
 
-  testWidgets('sur mobile, la grille annonce qu\'elle défile pour atteindre le débit et le crédit', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(app());
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Faites glisser la grille'), findsOneWidget);
-  });
-
   testWidgets('sur grand écran, la grille n\'affiche pas d\'indice de défilement', (tester) async {
     tester.view.physicalSize = const Size(1600, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    expect(find.textContaining('Faites glisser la grille'), findsNothing);
+    expect(find.text('Ligne 1'), findsNothing);
     expect(find.text('Raccourcis (F1)'), findsOneWidget);
   });
 }

@@ -90,6 +90,7 @@ class EntryLineRow extends ConsumerStatefulWidget {
     required this.readOnly,
     required this.withThirdParty,
     required this.onChanged,
+    this.card = false,
     this.onRemove,
     this.onEnterOnLast,
   });
@@ -99,6 +100,9 @@ class EntryLineRow extends ConsumerStatefulWidget {
   final String entityId;
   final bool readOnly;
   final bool withThirdParty;
+
+  /// Mise en page « une carte par ligne » pour les écrans étroits.
+  final bool card;
   final VoidCallback onChanged;
   final VoidCallback? onRemove;
   final VoidCallback? onEnterOnLast;
@@ -143,6 +147,107 @@ class _LineRowState extends ConsumerState<EntryLineRow> {
     final l = widget.line;
     final t = context.ak;
     final mobile = akIsTouch(context);
+    final card = widget.card;
+    final accountField = AkAccountField(
+      key: Key('line-account-${widget.index}'),
+      accounts: accounts,
+      dense: !mobile,
+      label: card ? 'Compte' : null,
+      enabled: !widget.readOnly,
+      selected: l.accountCode.isEmpty
+          ? null
+          : Account(
+              id: l.accountId ?? '',
+              code: l.accountCode,
+              label: l.accountLabel,
+              classNo: 0,
+              normalSide: 'debit',
+              isCollective: l.isCollective,
+              isLetterable: false,
+              allowPosting: true,
+              isActive: true,
+            ),
+      resolved: l.accountId != null,
+      onSelected: (a) => _selectAccount(l, a),
+      onCleared: () {
+        if (l.accountId != null) {
+          l.accountId = null;
+          l.accountCode = '';
+          widget.onChanged();
+        }
+      },
+      onSubmittedPick: _next,
+    );
+    final thirdField = AkThirdPartyField(
+      thirdParties: thirdParties,
+      dense: !mobile,
+      label: card ? 'Tiers' : null,
+      enabled: !widget.readOnly,
+      initialCode: l.thirdPartyCode,
+      resolved: l.thirdPartyId != null,
+      onSelected: (t) {
+        l.thirdPartyId = t.id;
+        l.thirdPartyCode = t.code;
+        widget.onChanged();
+      },
+      onSubmittedPick: _next,
+    );
+    final labelField = AkTextField(
+      controller: _label,
+      dense: !mobile,
+      label: card ? 'Libellé' : null,
+      enabled: !widget.readOnly,
+      textInputAction: TextInputAction.next,
+      onChanged: (v) => l.label = v,
+      onSubmitted: (_) => _next(),
+    );
+    final remove = widget.onRemove == null
+        ? null
+        : ExcludeFocus(
+            child: AkIconButton(tooltip: 'Supprimer la ligne', icon: Icons.close, size: AkSpace.iconMd, dense: true, onPressed: widget.onRemove),
+          );
+
+    // Petit écran : une carte par ligne, tous les champs visibles sans défilement horizontal.
+    if (card) {
+      return Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (has) => setState(() => _active = has),
+        child: Container(
+          padding: const EdgeInsets.all(AkSpace.s3),
+          decoration: BoxDecoration(
+            color: _active ? t.rowActive : null,
+            border: Border(bottom: BorderSide(color: t.border)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text('Ligne ${widget.index + 1}', style: AkText.label.copyWith(color: t.textMuted))),
+                  ?remove,
+                ],
+              ),
+              const SizedBox(height: AkSpace.s2),
+              accountField,
+              if (l.isCollective) ...[const SizedBox(height: AkSpace.s2), thirdField],
+              const SizedBox(height: AkSpace.s2),
+              labelField,
+              const SizedBox(height: AkSpace.s2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _amountField(_debit, (v) => l.debit = v, () => l.credit = 0, _credit, label: 'Débit')),
+                  const SizedBox(width: AkSpace.s2),
+                  Expanded(child: _amountField(_credit, (v) => l.credit = v, () => l.debit = 0, _debit, last: true, label: 'Crédit')),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     // Ligne active : la ligne qui contient le focus prend `rowActive` ; la cellule active montre l'anneau de focus.
     return Focus(
       canRequestFocus: false,
@@ -161,71 +266,19 @@ class _LineRowState extends ConsumerState<EntryLineRow> {
               width: kEntryIndexWidth,
               child: Text('${widget.index + 1}', style: AkText.caption.copyWith(color: t.textMuted)),
             ),
-            SizedBox(
-              width: AkEntryGridCols.account,
-              child: AkAccountField(
-                key: Key('line-account-${widget.index}'),
-                accounts: accounts,
-                dense: !mobile,
-                enabled: !widget.readOnly,
-                selected: l.accountCode.isEmpty
-                    ? null
-                    : Account(
-                        id: l.accountId ?? '',
-                        code: l.accountCode,
-                        label: l.accountLabel,
-                        classNo: 0,
-                        normalSide: 'debit',
-                        isCollective: l.isCollective,
-                        isLetterable: false,
-                        allowPosting: true,
-                        isActive: true,
-                      ),
-                resolved: l.accountId != null,
-                onSelected: (a) => _selectAccount(l, a),
-                onCleared: () {
-                  if (l.accountId != null) {
-                    l.accountId = null;
-                    l.accountCode = '';
-                    widget.onChanged();
-                  }
-                },
-                onSubmittedPick: _next,
-              ),
-            ),
+            SizedBox(width: AkEntryGridCols.account, child: accountField),
             const SizedBox(width: AkSpace.s2),
             SizedBox(
               width: widget.withThirdParty ? AkEntryGridCols.thirdParty : AkEntryGridCols.thirdPartyEmpty,
               child: l.isCollective
-                  ? AkThirdPartyField(
-                      thirdParties: thirdParties,
-                      dense: !mobile,
-                      enabled: !widget.readOnly,
-                      initialCode: l.thirdPartyCode,
-                      resolved: l.thirdPartyId != null,
-                      onSelected: (t) {
-                        l.thirdPartyId = t.id;
-                        l.thirdPartyCode = t.code;
-                        widget.onChanged();
-                      },
-                      onSubmittedPick: _next,
-                    )
+                  ? thirdField
                   : Padding(
                       padding: const EdgeInsets.only(left: AkSpace.s2),
                       child: Text('—', style: AkText.table.copyWith(color: t.borderControl)),
                     ),
             ),
             const SizedBox(width: AkSpace.s2),
-            Expanded(
-              child: AkTextField(
-                controller: _label,
-                dense: !mobile,
-                enabled: !widget.readOnly,
-                textInputAction: TextInputAction.next,
-                onChanged: (v) => l.label = v,
-                onSubmitted: (_) => _next(),
-              ),
-            ),
+            Expanded(child: labelField),
             const SizedBox(width: AkSpace.s2),
             SizedBox(width: kEntryAmountWidth, child: _amountField(_debit, (v) => l.debit = v, () => l.credit = 0, _credit)),
             const SizedBox(width: AkSpace.s2),
@@ -238,24 +291,18 @@ class _LineRowState extends ConsumerState<EntryLineRow> {
               ),
               child: _amountField(_credit, (v) => l.credit = v, () => l.debit = 0, _debit, last: true),
             ),
-            SizedBox(
-              width: kEntryRemoveWidth,
-              // Hors du parcours au clavier : Tab va de ligne en ligne sans s'arrêter sur la suppression.
-              child: widget.onRemove == null
-                  ? null
-                  : ExcludeFocus(
-                      child: AkIconButton(tooltip: 'Supprimer la ligne', icon: Icons.close, size: AkSpace.iconMd, dense: true, onPressed: widget.onRemove),
-                    ),
-            ),
+            // Hors du parcours au clavier : Tab va de ligne en ligne sans s'arrêter sur la suppression.
+            SizedBox(width: kEntryRemoveWidth, child: remove),
           ],
         ),
       ),
     );
   }
 
-  Widget _amountField(TextEditingController c, void Function(int) set, VoidCallback clearOther, TextEditingController other, {bool last = false}) {
+  Widget _amountField(TextEditingController c, void Function(int) set, VoidCallback clearOther, TextEditingController other, {bool last = false, String? label}) {
     return AkAmountField(
       controller: c,
+      label: label,
       enabled: !widget.readOnly,
       dense: !akIsTouch(context),
       textInputAction: TextInputAction.next,
@@ -315,24 +362,32 @@ class EntryGridTotals extends StatelessWidget {
   }
 }
 
-/// Mobile : la grille est plus large que l'écran, ce bandeau annonce qu'il faut la faire glisser.
-class EntryScrollHint extends StatelessWidget {
-  const EntryScrollHint({super.key});
+/// Pied de l'écran étroit : totaux débit et crédit sous les cartes.
+class EntryCardTotals extends StatelessWidget {
+  const EntryCardTotals({super.key, required this.debit, required this.credit});
+
+  final int debit;
+  final int credit;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AkSpace.s3, AkSpace.s2, AkSpace.s3, AkSpace.s1),
-      child: Row(
+    Widget total(String label, int v) => Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Icon(Icons.swap_horiz, size: AkSpace.iconSm, color: t.textMuted),
-          const SizedBox(width: AkSpace.s1),
-          Expanded(
-            child: Text('Faites glisser la grille pour saisir le débit et le crédit', style: AkText.caption.copyWith(color: t.textMuted)),
-          ),
+          Text(label, style: AkText.tableHead.copyWith(color: t.textMuted)),
+          AkAmountText(Fmt.fcfa(v, showZero: true), bold: true),
         ],
       ),
+    );
+    return Container(
+      padding: const EdgeInsets.all(AkSpace.s3),
+      decoration: BoxDecoration(
+        color: t.surfaceSunken,
+        border: Border(top: BorderSide(color: t.borderControl, width: 2)),
+      ),
+      child: Row(children: [total('Total débit', debit), const SizedBox(width: AkSpace.s3), total('Total crédit', credit)]),
     );
   }
 }

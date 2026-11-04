@@ -27,6 +27,17 @@ final liveRefreshProvider = Provider<LiveRefresh>((ref) {
   return refresh;
 });
 
+/// Compteur de relectures demandées par le temps réel : l'écran de lettrage (état local) le surveille pour se recharger.
+class LiveRevision extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
+final letteringRevisionProvider = NotifierProvider<LiveRevision, int>(LiveRevision.new);
+final reconciliationRevisionProvider = NotifierProvider<LiveRevision, int>(LiveRevision.new);
+
 /// Invalide les listes concernées ; celles qui ne sont affichées nulle part sont simplement relues à leur prochaine ouverture.
 void _invalidate(Ref ref, Set<ChangeTopic> topics) {
   if (topics.contains(ChangeTopic.entries)) {
@@ -38,6 +49,9 @@ void _invalidate(Ref ref, Set<ChangeTopic> topics) {
     ref.invalidate(agedBalanceProvider);
     ref.invalidate(centralizationProvider);
   }
+  // De nouvelles écritures changent aussi les lignes à lettrer et à pointer.
+  if (topics.contains(ChangeTopic.entries) || topics.contains(ChangeTopic.lettering)) ref.read(letteringRevisionProvider.notifier).bump();
+  if (topics.contains(ChangeTopic.entries) || topics.contains(ChangeTopic.reconciliation)) ref.read(reconciliationRevisionProvider.notifier).bump();
   if (topics.contains(ChangeTopic.documents)) {
     ref.invalidate(documentsProvider);
     ref.invalidate(entryDocumentsProvider);
