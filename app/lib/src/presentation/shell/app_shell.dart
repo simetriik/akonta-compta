@@ -55,11 +55,16 @@ class AppShell extends ConsumerWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(authRepositoryProvider).signOut());
     }
     // Un seul dossier accessible (ou dossier qui vient d'être créé) : on le choisit à la place de l'utilisateur.
+    // Sinon, on retrouve le dernier dossier ouvert par cet utilisateur (rechargement de la page, nouvelle ouverture de l'application).
     final accessible = ref.watch(entityDashboardProvider).value;
-    if (accessible != null && accessible.length == 1 && ref.watch(currentEntityProvider) == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (ref.read(currentEntityProvider) == null) ref.read(currentEntityProvider.notifier).select(accessible.first);
-      });
+    final savedId = ref.watch(savedEntityIdProvider);
+    if (accessible != null && savedId.hasValue && ref.watch(currentEntityProvider) == null) {
+      final toOpen = accessible.length == 1 ? accessible.first : restoreSavedEntity(accessible, savedId.value);
+      if (toOpen != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (ref.read(currentEntityProvider) == null) ref.read(currentEntityProvider.notifier).select(toOpen);
+        });
+      }
     }
     final t = context.ak;
     final location = GoRouterState.of(context).uri.path;

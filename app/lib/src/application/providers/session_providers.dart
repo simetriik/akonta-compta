@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/auth_models.dart';
 import '../../domain/models.dart';
+import '../preferences/last_entity_store.dart';
 import 'repositories.dart';
 
 /// Changements d'état d'authentification (tous, jeton renouvelé compris).
@@ -50,7 +51,22 @@ final entityDashboardProvider = FutureProvider<List<EntitySummary>>((ref) async 
   return ref.watch(sessionRepositoryProvider).dashboard();
 });
 
+/// Mémoire du dernier dossier ouvert ; la composition fournit l'adaptateur réel.
+final lastEntityStoreProvider = Provider<LastEntityStore>((ref) => const NoLastEntityStore());
+
+/// Identifiant du dernier dossier ouvert par l'utilisateur connecté (lu une fois par connexion).
+final savedEntityIdProvider = FutureProvider<String?>((ref) async {
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == null) return null;
+  try {
+    return await ref.watch(lastEntityStoreProvider).read(userId);
+  } catch (_) {
+    return null; // mémoire illisible : on repart sans dossier, sans bloquer l'application
+  }
+});
+
 /// Dossier courant, toujours visible dans l'interface (conception §12.3).
+/// Le choix est mémorisé par utilisateur et retrouvé au prochain chargement (voir [restoreSavedEntity]).
 class CurrentEntityNotifier extends Notifier<EntitySummary?> {
   @override
   EntitySummary? build() {
@@ -58,7 +74,21 @@ class CurrentEntityNotifier extends Notifier<EntitySummary?> {
     return null;
   }
 
-  void select(EntitySummary? entity) => state = entity;
+  void select(EntitySummary? entity) {
+    state = entity;
+    final userId = ref.read(currentUserIdProvider);
+    if (userId != null) {
+      // Mémorisation sans attente : un échec d'écriture ne doit jamais gêner le choix du dossier.
+      ref.read(lastEntityStoreProvider).write(userId, entity?.id).ignore();
+    }
+  }
+}
+
+/// Retrouve le dossier mémorisé parmi les dossiers accessibles ; renvoie null s'il n'y en a pas
+/// (dossier supprimé ou accès retiré : on ne force rien, l'utilisateur choisit).
+EntitySummary? restoreSavedEntity(List<EntitySummary> accessible, String? savedId) {
+  if (savedId == null) return null;
+  return accessible.where((e) => e.id == savedId).firstOrNull;
 }
 
 final currentEntityProvider = NotifierProvider<CurrentEntityNotifier, EntitySummary?>(CurrentEntityNotifier.new);
