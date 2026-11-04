@@ -94,6 +94,26 @@ Chaque étape : qui agit, ce qu'il fait, le résultat attendu. Cocher OK ou note
 ### Étape 13 — Piste d'audit (associé)
 1. Consulter et filtrer la piste d'audit ; vérifier l'intégrité de la chaîne.
 
+### Étape 14 — Facturation e-MECeF (associé, assistant) — D-043
+Prérequis : jeton de test et NIM du point de vente fournis par la DGI (sinon, s'arrêter au point 2).
+1. Associé : déclarer l'e-MCF du dossier (NIM, mode test) et saisir le jeton ; refus attendu si le jeton ne correspond pas au NIM.
+2. Assistant : créer une facture de vente (FV) en brouillon, avec groupes de taxe A et B, puis un cas AIB 1 % et 5 % ; vérifier les totaux affichés.
+3. Émettre : statut « confirmée », code MECeF et QR code présents ; ouvrir le PDF et **scanner le QR au téléphone**.
+4. Facture d'avoir (FA) sur une facture confirmée ; annulation d'une émission en attente (« pending »).
+5. Couper le réseau pendant l'émission : la facture reste reprenable (« reprendre ») sans doublon.
+6. Vérifier l'écriture de vente générée **en brouillard**, marquée « générée » ; contrôler le compte AIB et la ventilation HT/TVA/total.
+7. Passer les 20 cas d'auto-déclaration DGI (liste dans `intrants/emcf-dgi/06-auto-declaration-sfe.md`) et noter les écarts.
+
+### Étape 15 — Accès clients (associé, comptable, client) — D-044
+1. Associé : fiche du dossier, onglet **Clients** → état « fermé » par défaut ; ouvrir l'accès ; inviter un `client_saisie` puis un `client_gerant` (le gérant doit enrôler le TOTP).
+2. Client saisie, première connexion : l'accueil client s'affiche ; seules les routes saisie, pièces et factures sont accessibles (taper une autre adresse → retour à l'accueil).
+3. Client : saisir un brouillard, déposer une pièce, créer une facture. Vérifier qu'il **ne voit ni les écritures validées, ni les soldes, ni les autres dossiers**, ni les brouillards du cabinet.
+4. Client : tenter de valider une écriture → impossible. Modifier/supprimer une pièce du cabinet → impossible.
+5. Comptable : voir le brouillard du client, le **renvoyer avec un motif** ; le client voit « À corriger : … » et reçoit la notification, corrige, le comptable valide.
+6. Associé : **suspendre** l'accès → le client lit mais ne crée plus rien (boutons masqués) ; **fermer** → le client ne voit plus rien.
+7. Piste d'audit : les changements d'état (`client_access`) et les renvois (`return_draft`) y figurent.
+8. Points à trancher pendant la recette : TOTP pour un saisisseur qui émet ; création de tiers par le client ; visibilité des brouillards du cabinet.
+
 ## 4. Fiche d'anomalie
 
 | N° | Étape | Rôle | Description | Gravité (bloquante / majeure / mineure / ergonomie) | Capture | Statut |
