@@ -47,3 +47,37 @@ class EntryShortcutsDialog extends StatelessWidget {
     );
   }
 }
+
+/// Rappel des raccourcis clavier sous la grille (ordinateur uniquement).
+class EntryShortcutHints extends StatelessWidget {
+  const EntryShortcutHints({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return Padding(
+      padding: const EdgeInsets.only(top: AkSpace.s3),
+      child: Wrap(
+        spacing: AkSpace.s4,
+        runSpacing: AkSpace.s1,
+        children: [
+          for (final (k, d) in const [
+            ('Tab', 'cellule suivante'),
+            ('Entrée', 'champ suivant ; en fin de ligne : nouvelle ligne'),
+            ('Ctrl B', 'contrepartie'),
+            ('Ctrl S', 'enregistrer le brouillard'),
+            ('F1', 'tous les raccourcis'),
+          ])
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AkKbd(k),
+                const SizedBox(width: 6),
+                Text(d, style: AkText.caption.copyWith(color: t.textMuted)),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}

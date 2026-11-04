@@ -238,3 +238,44 @@ class _InboxPicker extends ConsumerWidget {
     );
   }
 }
+
+/// Mobile : ligne repliable qui remplace le bloc des pièces, avec leur nombre.
+class EntryDocumentsToggle extends StatelessWidget {
+  const EntryDocumentsToggle({super.key, required this.count, required this.open, required this.onTap});
+
+  final int count;
+  final bool open;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AkSpace.s3),
+      child: AkCard(
+        padding: EdgeInsets.zero,
+        child: InkWell(
+          key: const Key('entry-documents-toggle'),
+          borderRadius: AkRadius.smAll,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: AkSpace.rowTouch),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3),
+              child: Row(
+                children: [
+                  Icon(Icons.attach_file, size: AkSpace.iconSm, color: t.textMuted),
+                  const SizedBox(width: AkSpace.s1),
+                  Expanded(
+                    child: Text('Pièces justificatives${count == 0 ? '' : ' ($count)'}', style: AkText.bodyStrong.copyWith(color: t.text)),
+                  ),
+                  Icon(open ? Icons.expand_less : Icons.expand_more, color: t.textMuted),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

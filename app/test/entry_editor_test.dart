@@ -59,22 +59,52 @@ void main() {
   setUpAll(() => initializeDateFormatting('fr_FR'));
 
   const accounts = [
-    Account(id: 'a1', code: '6221000', label: 'Locations', classNo: 6, normalSide: 'debit', isCollective: false, isLetterable: false, allowPosting: true, isActive: true),
-    Account(id: 'a2', code: '5210000', label: 'Banques locales', classNo: 5, normalSide: 'debit', isCollective: false, isLetterable: false, allowPosting: true, isActive: true),
+    Account(
+      id: 'a1',
+      code: '6221000',
+      label: 'Locations',
+      classNo: 6,
+      normalSide: 'debit',
+      isCollective: false,
+      isLetterable: false,
+      allowPosting: true,
+      isActive: true,
+    ),
+    Account(
+      id: 'a2',
+      code: '5210000',
+      label: 'Banques locales',
+      classNo: 5,
+      normalSide: 'debit',
+      isCollective: false,
+      isLetterable: false,
+      allowPosting: true,
+      isActive: true,
+    ),
   ];
   const journals = [Journal(id: 'j1', code: 'OD', label: 'Opérations diverses', type: 'misc', isActive: true)];
 
   Widget app({String? documentId}) => ProviderScope(
-        overrides: [
-          currentEntityProvider.overrideWith(_FixedEntity.new),
-          accountsProvider.overrideWith((ref, id) async => accounts),
-          thirdPartiesProvider.overrideWith((ref, id) async => const <ThirdParty>[]),
-          journalsProvider.overrideWith((ref, id) async => journals),
-          permissionsProvider.overrideWith((ref) async => const PermissionSet(byEntity: {'e1': {'entries.draft', 'entries.validate', 'documents.attach'}}, cabinetWide: {}, roles: [])),
-          documentsServiceProvider.overrideWithValue(DocumentsService(_FakeDocuments(), const OnlinePolicy(AlwaysOnline()), _FakeOutbox())),
-        ],
-        child: MaterialApp(home: Scaffold(body: EntryEditorScreen(documentId: documentId))),
-      );
+    overrides: [
+      currentEntityProvider.overrideWith(_FixedEntity.new),
+      accountsProvider.overrideWith((ref, id) async => accounts),
+      thirdPartiesProvider.overrideWith((ref, id) async => const <ThirdParty>[]),
+      journalsProvider.overrideWith((ref, id) async => journals),
+      permissionsProvider.overrideWith(
+        (ref) async => const PermissionSet(
+          byEntity: {
+            'e1': {'entries.draft', 'entries.validate', 'documents.attach'},
+          },
+          cabinetWide: {},
+          roles: [],
+        ),
+      ),
+      documentsServiceProvider.overrideWithValue(DocumentsService(_FakeDocuments(), const OnlinePolicy(AlwaysOnline()), _FakeOutbox())),
+    ],
+    child: MaterialApp(
+      home: Scaffold(body: EntryEditorScreen(documentId: documentId)),
+    ),
+  );
 
   testWidgets('la grille affiche l\'écart puis l\'équilibre après contrepartie automatique', (tester) async {
     tester.view.physicalSize = const Size(1600, 1000);
@@ -134,5 +164,47 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Pièces justificatives (1)'), findsOneWidget);
     expect(find.byKey(const Key('document-pane')), findsNothing);
+  });
+
+  testWidgets('sur mobile, les pièces sont repliées et la barre du bas tient en deux lignes', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app(documentId: 'd1'));
+    await tester.pumpAndSettle();
+    // Le bloc des pièces est replié, son nombre reste visible sur la ligne qui le déplie.
+    expect(find.byKey(const Key('entry-documents')), findsNothing);
+    expect(find.text('Pièces justificatives (1)'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('entry-documents-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('entry-documents')), findsOneWidget);
+    // Pas de raccourci clavier sur mobile ; les actions d'en-tête sont courtes.
+    expect(find.text('Raccourcis (F1)'), findsNothing);
+    expect(find.text('Contrepartie'), findsOneWidget);
+    // Enregistrer et Valider sont côte à côte, sous l'indicateur d'équilibre.
+    final chip = tester.getRect(find.byKey(const Key('balance-chip')));
+    final save = tester.getRect(find.byKey(const Key('save-draft')));
+    final validate = tester.getRect(find.byKey(const Key('validate-entry')));
+    expect(save.top, greaterThan(chip.bottom));
+    expect(validate.top, save.top);
+  });
+
+  testWidgets('sur mobile, la grille annonce qu\'elle défile pour atteindre le débit et le crédit', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Faites glisser la grille'), findsOneWidget);
+  });
+
+  testWidgets('sur grand écran, la grille n\'affiche pas d\'indice de défilement', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Faites glisser la grille'), findsNothing);
+    expect(find.text('Raccourcis (F1)'), findsOneWidget);
   });
 }

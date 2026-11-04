@@ -39,6 +39,40 @@ class EntryBalanceBar extends StatelessWidget {
         Text(Fmt.fcfa(v, showZero: true), style: AkText.amountTotal.copyWith(color: t.textStrong)),
       ],
     );
+    final chip = Container(
+      key: const Key('balance-chip'),
+      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: AkSpace.s1),
+      decoration: BoxDecoration(color: balanced ? t.successTint : t.dangerTint, borderRadius: AkRadius.smAll),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(balanced ? Icons.check_circle_outline : Icons.error_outline, size: AkSpace.iconMd, color: color),
+          const SizedBox(width: AkSpace.s2),
+          Text(
+            balanced ? 'Équilibrée' : 'Écart ${Fmt.fcfa(balance.abs())} · ${balance > 0 ? 'débit' : 'crédit'} supérieur',
+            style: AkText.bodyStrong.copyWith(color: color),
+          ),
+        ],
+      ),
+    );
+    final saveButton = AkButton.secondary(
+      mobile ? 'Enregistrer' : 'Enregistrer le brouillard',
+      key: const Key('save-draft'),
+      expand: mobile,
+      onPressed: busy ? null : onSave,
+    );
+    final validateButton = AkButton.primary(
+      mobile ? 'Valider' : 'Valider l\'écriture',
+      key: const Key('validate-entry'),
+      expand: mobile,
+      onPressed: busy || !balanced ? null : onValidate,
+    );
+    final actions = Row(
+      children: [
+        Expanded(child: saveButton),
+        if (canValidate) ...[const SizedBox(width: AkSpace.s2), Expanded(child: validateButton)],
+      ],
+    );
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: akPageMargin(context), vertical: AkSpace.s3),
@@ -46,35 +80,25 @@ class EntryBalanceBar extends StatelessWidget {
         color: t.surfaceSunken,
         border: Border(top: BorderSide(color: t.border)),
       ),
-      child: Wrap(
-        spacing: AkSpace.s4,
-        runSpacing: AkSpace.s2,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        alignment: mobile ? WrapAlignment.start : WrapAlignment.end,
-        children: [
-          if (!mobile) ...[total('Débit', debit), total('Crédit', credit)],
-          Container(
-            key: const Key('balance-chip'),
-            padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: AkSpace.s1),
-            decoration: BoxDecoration(color: balanced ? t.successTint : t.dangerTint, borderRadius: AkRadius.smAll),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+      child: mobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(balanced ? Icons.check_circle_outline : Icons.error_outline, size: AkSpace.iconMd, color: color),
-                const SizedBox(width: AkSpace.s2),
-                Text(
-                  balanced ? 'Équilibrée' : 'Écart ${Fmt.fcfa(balance.abs())} · ${balance > 0 ? 'débit' : 'crédit'} supérieur',
-                  style: AkText.bodyStrong.copyWith(color: color),
-                ),
+                chip,
+                if (!readOnly) ...[const SizedBox(height: AkSpace.s2), actions],
+              ],
+            )
+          : Wrap(
+              spacing: AkSpace.s4,
+              runSpacing: AkSpace.s2,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              alignment: mobile ? WrapAlignment.start : WrapAlignment.end,
+              children: [
+                if (!mobile) ...[total('Débit', debit), total('Crédit', credit)],
+                chip,
+                if (!readOnly) ...[saveButton, if (canValidate) validateButton],
               ],
             ),
-          ),
-          if (!readOnly) ...[
-            AkButton.secondary('Enregistrer le brouillard', key: const Key('save-draft'), onPressed: busy ? null : onSave),
-            if (canValidate) AkButton.primary('Valider l\'écriture', key: const Key('validate-entry'), onPressed: busy || !balanced ? null : onValidate),
-          ],
-        ],
-      ),
     );
   }
 }

@@ -271,3 +271,68 @@ class _LineRowState extends ConsumerState<EntryLineRow> {
     );
   }
 }
+
+/// Pied de la grille : filet fort, totaux alignés sur les colonnes Débit / Crédit.
+class EntryGridTotals extends StatelessWidget {
+  const EntryGridTotals({super.key, required this.debit, required this.credit});
+
+  final int debit;
+  final int credit;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    const cellPad = EdgeInsets.symmetric(horizontal: AkSpace.s2);
+    return Container(
+      decoration: BoxDecoration(
+        color: t.surfaceSunken,
+        border: Border(top: BorderSide(color: t.borderControl, width: 2)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: AkSpace.s2, vertical: AkSpace.s2),
+      child: Row(
+        children: [
+          const SizedBox(width: kEntryIndexWidth),
+          Expanded(
+            child: Padding(
+              padding: cellPad,
+              child: Text('Totaux', style: AkText.tableHead.copyWith(color: t.textStrong)),
+            ),
+          ),
+          const SizedBox(width: AkSpace.s2),
+          SizedBox(
+            width: kEntryAmountWidth,
+            child: Padding(padding: cellPad, child: AkAmountText(Fmt.fcfa(debit, showZero: true), bold: true)),
+          ),
+          const SizedBox(width: AkSpace.s2),
+          SizedBox(
+            width: kEntryAmountWidth + AkSpace.s2,
+            child: Padding(padding: cellPad, child: AkAmountText(Fmt.fcfa(credit, showZero: true), bold: true)),
+          ),
+          const SizedBox(width: kEntryRemoveWidth),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mobile : la grille est plus large que l'écran, ce bandeau annonce qu'il faut la faire glisser.
+class EntryScrollHint extends StatelessWidget {
+  const EntryScrollHint({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ak;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AkSpace.s3, AkSpace.s2, AkSpace.s3, AkSpace.s1),
+      child: Row(
+        children: [
+          Icon(Icons.swap_horiz, size: AkSpace.iconSm, color: t.textMuted),
+          const SizedBox(width: AkSpace.s1),
+          Expanded(
+            child: Text('Faites glisser la grille pour saisir le débit et le crédit', style: AkText.caption.copyWith(color: t.textMuted)),
+          ),
+        ],
+      ),
+    );
+  }
+}
