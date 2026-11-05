@@ -1,0 +1,62 @@
+name: Build Web
+
+# Compile la version web d'Akonta (Flutter) et publie l'image sur ghcr.io.
+# Dokploy ne fait que télécharger l'image : aucune charge de compilation sur le serveur.
+# Déclenchement : à la main (Actions > Build Web > Run workflow) ou sur une étiquette `v*`.
+on:
+  workflow_dispatch:
+    inputs:
+      supabase_url:
+        description: "URL publique de la Supabase (https://…)"
+        required: true
+        type: string
+      publishable_key:
+        description: "Clé publique ANON Supabase (jamais la clé de service)"
+        required: true
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: ${{ inputs.supabase_url || vars.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ inputs.publishable_key || vars.SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier la configuration
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "SUPABASE_URL et SUPABASE_PUBLISHABLE_KEY sont requis." >&2; exit 1
+          fi
+          case "$SUPABASE_URL" in *localhost*|*127.0.0.1*) echo "URL locale interdite." >&2; exit 1;; esac
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: app
+          file: app/Dockerfile.web
+          push: true
+          tags: |
+            ghcr.io/simetriik/akonta-web:latest
+            ghcr.io/simetriik/akonta-web:${{ github.sha }}
+          build-args: |
+            SUPABASE_URL=${{ env.SUPABASE_URL }}
+            SUPABASE_PUBLISHABLE_KEY=${{ env.SUPABASE_PUBLISHABLE_KEY }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
