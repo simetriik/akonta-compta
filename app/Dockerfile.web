@@ -5,7 +5,16 @@
 #     --build-arg SUPABASE_PUBLISHABLE_KEY=<clé publique ANON> -t akonta-web .
 # La clé de service ne doit jamais être passée ici.
 
-FROM ghcr.io/cirruslabs/flutter:3.47.4 AS build
+FROM debian:13-slim AS build
+ARG FLUTTER_VERSION=3.47.4
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl git unzip xz-utils \
+ && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 --branch ${FLUTTER_VERSION} https://github.com/flutter/flutter.git /opt/flutter
+ENV PATH="/opt/flutter/bin:${PATH}"
+RUN git config --global --add safe.directory /opt/flutter \
+ && flutter config --no-analytics --enable-web \
+ && flutter precache --web
 WORKDIR /src
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
