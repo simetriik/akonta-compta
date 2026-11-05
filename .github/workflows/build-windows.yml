@@ -1,0 +1,74 @@
+name: Build Windows
+
+# Compile l'application Flutter pour Windows et publie un zip en artefact.
+# Déclenchement : à la main (Actions > Build Windows > Run workflow) ou sur une étiquette `v*`.
+# Les runners Windows comptent double dans le quota gratuit : ne pas déclencher à chaque commit.
+on:
+  workflow_dispatch:
+    inputs:
+      supabase_url:
+        description: "URL publique de la Supabase de pré-production (https://…)"
+        required: true
+        type: string
+      publishable_key:
+        description: "Clé publiable Supabase (publique par construction, jamais la clé de service)"
+        required: true
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      # Étiquette : valeurs prises dans Settings > Variables du dépôt (non secrètes).
+      SUPABASE_URL: ${{ inputs.supabase_url || vars.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ inputs.publishable_key || vars.SUPABASE_PUBLISHABLE_KEY }}
+    defaults:
+      run:
+        working-directory: app
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier la configuration
+        run: |
+          if (-not $env:SUPABASE_URL -or -not $env:SUPABASE_PUBLISHABLE_KEY) {
+            throw "SUPABASE_URL et SUPABASE_PUBLISHABLE_KEY sont requis (champs du lancement manuel ou variables du dépôt)."
+          }
+          if ($env:SUPABASE_URL -match '127\.0\.0\.1|localhost') {
+            throw "SUPABASE_URL ne doit pas pointer vers localhost : les postes ne pourraient pas se connecter."
+          }
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.4" # même version que le poste de développement (Dart 3.13.3)
+          cache: true
+
+      - name: Dépendances
+        run: flutter pub get
+
+      - name: Compilation Windows (release)
+        run: >
+          flutter build windows --release
+          --dart-define=SUPABASE_URL=$env:SUPABASE_URL
+          --dart-define=SUPABASE_PUBLISHABLE_KEY=$env:SUPABASE_PUBLISHABLE_KEY
+
+      - name: Archive
+        run: |
+          $name = "akonta-windows-$($env:GITHUB_REF_NAME -replace '[^A-Za-z0-9._-]', '-')"
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "$name.zip"
+          "ARCHIVE=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: akonta-windows
+          path: app/${{ env.ARCHIVE }}
+          if-no-files-found: error
+          retention-days: 30
