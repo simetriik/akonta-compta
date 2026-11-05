@@ -60,6 +60,15 @@ jobs:
           --dart-define=SUPABASE_URL=$env:SUPABASE_URL
           --dart-define=SUPABASE_PUBLISHABLE_KEY=$env:SUPABASE_PUBLISHABLE_KEY
 
+      # Application « autonome » : les DLL Visual C++ sont copiées à côté de l'exécutable, pour qu'un Windows
+      # vierge (sans redistribuable VC++) puisse lancer Akonta.
+      - name: Bibliothèques Visual C++ (installation locale)
+        run: |
+          $dest = "build/windows/x64/runner/Release"
+          foreach ($dll in "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll") {
+            Copy-Item -Path "$env:WINDIR\System32\$dll" -Destination $dest -ErrorAction Stop
+          }
+
       - name: Archive
         run: |
           $name = "akonta-windows-$($env:GITHUB_REF_NAME -replace '[^A-Za-z0-9._-]', '-')"
@@ -70,5 +79,22 @@ jobs:
         with:
           name: akonta-windows
           path: app/${{ env.ARCHIVE }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Installeur (Inno Setup)
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+          }
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9.]+)').Matches[0].Groups[1].Value
+          & $iscc "/DAppVersion=$version" windows/installer/akonta.iss
+          if ($LASTEXITCODE -ne 0) { throw "Échec de la compilation de l'installeur" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: akonta-windows-installer
+          path: app/build/installer/*.exe
           if-no-files-found: error
           retention-days: 30
