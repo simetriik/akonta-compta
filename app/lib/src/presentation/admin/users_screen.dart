@@ -85,6 +85,7 @@ class UsersScreen extends ConsumerWidget {
                       ref.invalidate(profilesProvider);
                     },
                     onResetPassword: () => _resetPassword(context, ref, list[i]),
+                    onResetMfa: () => _resetMfa(context, ref, list[i]),
                     onEdit: () => showDialog(
                       context: context,
                       builder: (_) => EditMemberDialog(profile: list[i]),
@@ -146,6 +147,25 @@ class UsersScreen extends ConsumerWidget {
     }
   }
 
+  /// Double vérification perdue (téléphone changé ou perdu) : on supprime ses facteurs, le membre en enrôle un nouveau.
+  Future<void> _resetMfa(BuildContext context, WidgetRef ref, Profile p) async {
+    final name = p.fullName.isEmpty ? p.email : p.fullName;
+    final ok = await showAkConfirm(
+      context,
+      title: 'Réinitialiser la double vérification',
+      message: 'Supprimer la double vérification de $name ? Son mot de passe ne change pas. À sa prochaine connexion, $name devra enregistrer de nouveau son application d\'authentification.',
+      danger: true,
+    );
+    if (!ok || !context.mounted) return;
+    try {
+      final removed = await ref.read(adminServiceProvider).resetMfa(p.id);
+      if (!context.mounted) return;
+      showAkToast(context, removed == 0 ? '$name n\'avait aucune double vérification enregistrée' : 'Double vérification de $name réinitialisée');
+    } catch (e) {
+      if (context.mounted) showErrorSnack(context, errorText(e, action: 'Réinitialisation impossible'));
+    }
+  }
+
   /// Suppression définitive, réservée aux membres sans trace : la base refuse sinon et on propose la désactivation.
   Future<void> _delete(BuildContext context, WidgetRef ref, Profile p) async {
     final name = p.fullName.isEmpty ? p.email : p.fullName;
@@ -202,6 +222,7 @@ class _UserRow extends StatelessWidget {
     required this.onDesignate,
     required this.onRevoke,
     required this.onResetPassword,
+    required this.onResetMfa,
     required this.onEdit,
     required this.onDelete,
   });
@@ -218,6 +239,7 @@ class _UserRow extends StatelessWidget {
   final VoidCallback onDesignate;
   final VoidCallback onRevoke;
   final VoidCallback onResetPassword;
+  final VoidCallback onResetMfa;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -255,6 +277,7 @@ class _UserRow extends StatelessWidget {
           // Sur la ligne d'un associé ou de l'administrateur, l'associé n'a aucune action (règle de la base).
           if (canManage) AkSwitch(value: p.isActive, onChanged: onToggle),
           if (canManage) AkIconButton(key: Key('reset-password-${p.id}'), icon: Icons.key_outlined, tooltip: 'Nouveau mot de passe provisoire', onPressed: onResetPassword),
+          if (canManage) AkIconButton(key: Key('reset-mfa-${p.id}'), icon: Icons.phonelink_lock_outlined, tooltip: 'Réinitialiser la double vérification', onPressed: onResetMfa),
           if (canManage || isSelf) AkIconButton(key: Key('edit-member-${p.id}'), icon: Icons.edit_outlined, tooltip: 'Modifier le membre', onPressed: onEdit),
           if (canDesignate) AkIconButton(key: Key('designate-partner-${p.id}'), icon: Icons.workspace_premium_outlined, tooltip: 'Désigner comme associé', onPressed: onDesignate),
           if (canRevoke) AkIconButton(key: Key('revoke-partner-${p.id}'), icon: Icons.remove_moderator_outlined, tooltip: 'Retirer le rôle d\'associé', onPressed: onRevoke),

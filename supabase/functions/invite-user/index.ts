@@ -5,6 +5,7 @@
 // avec un rôle d'équipe et un dossier) ; le profil est créé par le déclencheur Auth à partir des métadonnées.
 import { callerClient, error, json, requireAnyPermission, serviceClient } from "../_shared/auth.ts";
 import { parseUsersCsv, type UserRow } from "../_shared/csv.ts";
+import { resetMemberFactors } from "../_shared/mfa_reset.ts";
 import { generateTemporaryPassword } from "../_shared/passwords.ts";
 import { actsAsAdmin, validateInvite } from "../_shared/team_invite.ts";
 
@@ -20,6 +21,8 @@ interface InvitePayload {
   entity_id?: string;
   /** Nouveau mot de passe provisoire pour ce membre (oubli, première remise perdue). */
   reset_user_id?: string;
+  /** Supprime les facteurs de double vérification de ce membre (appareil perdu) : il en enrôle un nouveau à sa connexion. */
+  reset_mfa_user_id?: string;
 }
 
 Deno.serve(async (req) => {
@@ -33,6 +36,7 @@ Deno.serve(async (req) => {
   try { payload = await req.json(); } catch { return error("Corps JSON attendu"); }
 
   if (payload.reset_user_id) return await resetPassword(caller, ctx, payload.reset_user_id);
+  if (payload.reset_mfa_user_id) return await resetMfa(caller, ctx, payload.reset_mfa_user_id);
 
   const refusal = validateInvite(payload, actsAsAdmin(ctx, payload));
   if (refusal) return error(refusal, 403);
@@ -132,4 +136,21 @@ async function resetPassword(
   if (updateError) return error(`Réinitialisation impossible : ${updateError.message}`, 500);
   await caller.rpc("log_audit_event", { p_action: "reset_password", p_payload: { user: profile.email } });
   return json({ reset: { email: profile.email, user_id: userId, temporary_password: temporaryPassword } });
+}
+
+/** Réinitialise la double vérification d'un membre : même règle que le mot de passe (administrateur : tous, associé : son équipe). */
+async function resetMfa(
+  caller: ReturnType<typeof callerClient> & object,
+  ctx: { userId: string; cabinetId: string },
+  userId: string,
+): Promise<Response> {
+  if (userId === ctx.userId) return error("Vous ne pouvez pas réinitialiser votre propre double vérification");
+  const { data: manageable } = await caller.rpc("can_manage_member", { p_user: userId });
+  if (!manageable) return error("Vous ne pouvez pas gérer ce membre", 403);
+  const { data: profile } = await caller.from("profiles").select("id, email").eq("id", userId).maybeSingle();
+  if (!profile) return error("Membre introuvable", 404);
+  const result = await resetMemberFactors(serviceClient().auth.admin.mfa, userId);
+  if ("failure" in result) return error(result.failure, 500);
+  await caller.rpc("log_audit_event", { p_action: "reset_mfa", p_payload: { user: profile.email, factors_removed: result.removed } });
+  return json({ mfa_reset: { email: profile.email, user_id: userId, factors_removed: result.removed } });
 }

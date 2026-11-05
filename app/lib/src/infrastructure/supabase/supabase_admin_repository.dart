@@ -32,6 +32,13 @@ class SupabaseAdminRepository implements AdminRepository {
   }
 
   @override
+  Future<int> resetMfa(String userId) async {
+    final res = await _client.functions.invoke('invite-user', body: {'reset_mfa_user_id': userId});
+    final r = (res.data as Map<String, dynamic>)['mfa_reset'] as Map<String, dynamic>;
+    return r['factors_removed'] as int;
+  }
+
+  @override
   Future<void> deleteMember(String userId) => _client.rpc('delete_member', params: {'p_user': userId});
 
   @override
