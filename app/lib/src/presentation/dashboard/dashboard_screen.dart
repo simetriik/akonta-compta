@@ -245,6 +245,14 @@ class _NoEntity extends StatelessWidget {
         action: AkButton.primary('Gérer les collaborateurs', key: const Key('first-users'), icon: Icons.manage_accounts_outlined, onPressed: () => context.go('/utilisateurs')),
       );
     }
+    // Aucun rôle du tout (compte créé par import CSV, par exemple) : la demande d'affectation à un dossier serait trompeuse.
+    if (perms.roles.isEmpty) {
+      return const AkEmptyState(
+        'Aucun rôle ne vous est attribué. Demandez à l\'administrateur technique du cabinet de vous en donner un (par exemple « Désigner comme associé »).',
+        icon: Icons.admin_panel_settings_outlined,
+        title: 'Compte sans rôle',
+      );
+    }
     return const AkEmptyState(
       'Aucun dossier ne vous est affecté. Demandez à l\'associé ou au chef de mission de vous affecter à un dossier.',
       icon: Icons.folder_off_outlined,
