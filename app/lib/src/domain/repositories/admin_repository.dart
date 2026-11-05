@@ -13,6 +13,10 @@ abstract interface class AdminRepository {
   /// Nouveau mot de passe provisoire pour un membre (oubli) ; il devra le changer à sa prochaine connexion.
   Future<TemporaryAccess> resetPassword(String userId);
 
+  /// Supprime la double vérification d'un membre (appareil perdu) ; renvoie le nombre de facteurs retirés.
+  /// Le membre en enrôle un nouveau à sa prochaine connexion ; son mot de passe ne change pas.
+  Future<int> resetMfa(String userId);
+
   /// Le cabinet de l'utilisateur courant a-t-il déjà un associé ?
   Future<bool> cabinetHasPartner();
 

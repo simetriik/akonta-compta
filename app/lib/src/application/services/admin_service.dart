@@ -36,6 +36,11 @@ class AdminService {
     return _repository.resetPassword(userId);
   }
 
+  Future<int> resetMfa(String userId) async {
+    _online.require('L\'administration');
+    return _repository.resetMfa(userId);
+  }
+
   Future<void> deleteMember(String userId) async {
     _online.require('L\'administration');
     return _repository.deleteMember(userId);
