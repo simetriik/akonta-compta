@@ -93,6 +93,8 @@ void main() {
       await pump(tester, partner);
       expect(find.byKey(const Key('delete-member-ast')), findsOneWidget);
       expect(find.byKey(const Key('reset-password-ast')), findsOneWidget);
+      expect(find.byKey(const Key('reset-mfa-ast')), findsOneWidget);
+      expect(find.byKey(const Key('reset-mfa-p2')), findsNothing);
       expect(find.byKey(const Key('delete-member-p2')), findsNothing);
       expect(find.byKey(const Key('edit-member-p2')), findsNothing);
       expect(find.byKey(const Key('designate-partner-ast')), findsNothing);
