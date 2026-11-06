@@ -17,9 +17,15 @@ class EntitiesService {
     return _repository.get(id);
   }
 
-  Future<EntityDetail> create(String cabinetId, EntityInput input) async {
+  Future<EntityDetail> create(String cabinetId, EntityInput input, {String? requestId}) async {
     _online.require('La gestion des dossiers');
-    return _repository.create(cabinetId, input);
+    return _repository.create(cabinetId, input, requestId: requestId);
+  }
+
+  /// Supprime un dossier en double tant qu'il est vide (refusé par la base dès qu'il contient des données).
+  Future<void> deleteEmptyDuplicate(String id) async {
+    _online.require('La gestion des dossiers');
+    return _repository.deleteEmptyDuplicate(id);
   }
 
   Future<void> update(String id, EntityInput input) async {

@@ -12,6 +12,7 @@ class EntityForm extends StatefulWidget {
     this.initial,
     required this.onSubmit,
     this.submitLabel = 'Enregistrer',
+    this.busyLabel = 'Enregistrement en cours…',
     this.canEditAccountingParams = true,
     this.accountLengthLocked = false,
     this.defaultAccountLength,
@@ -20,6 +21,9 @@ class EntityForm extends StatefulWidget {
   final EntityDetail? initial;
   final Future<void> Function(EntityInput input) onSubmit;
   final String submitLabel;
+
+  /// Texte du bouton pendant l'envoi (le bouton est alors désactivé).
+  final String busyLabel;
   final bool canEditAccountingParams;
   final bool accountLengthLocked;
 
@@ -55,6 +59,8 @@ class _EntityFormState extends State<EntityForm> {
   String? _error;
 
   Future<void> _submit() async {
+    // Garde contre le double clic : deux appuis dans la même image ne doivent créer qu'une demande.
+    if (_busy) return;
     if (!_form.currentState!.validate()) return;
     final inc = _incorporation.text.trim().isEmpty ? null : Fmt.parseDate(_incorporation.text);
     if (_incorporation.text.trim().isNotEmpty && inc == null) {
@@ -257,7 +263,7 @@ class _EntityFormState extends State<EntityForm> {
           const SizedBox(height: AkSpace.s4),
           Align(
             alignment: Alignment.centerRight,
-            child: AkButton.primary(widget.submitLabel, key: const Key('entity-submit'), loading: _busy, onPressed: _submit),
+            child: AkButton.primary(widget.submitLabel, key: const Key('entity-submit'), loading: _busy, loadingLabel: widget.busyLabel, onPressed: _submit),
           ),
         ],
       ),

@@ -14,20 +14,20 @@ class AkButton extends StatelessWidget {
     required this.onPressed,
     this.variant = AkButtonVariant.primary,
     this.icon,
-    this.loading = false,
+    this.loading = false, this.loadingLabel,
     this.dense = false,
     this.expand = false,
   });
 
-  const AkButton.primary(this.label, {super.key, required this.onPressed, this.icon, this.loading = false, this.dense = false, this.expand = false})
+  const AkButton.primary(this.label, {super.key, required this.onPressed, this.icon, this.loading = false, this.loadingLabel, this.dense = false, this.expand = false})
     : variant = AkButtonVariant.primary;
-  const AkButton.secondary(this.label, {super.key, required this.onPressed, this.icon, this.loading = false, this.dense = false, this.expand = false})
+  const AkButton.secondary(this.label, {super.key, required this.onPressed, this.icon, this.loading = false, this.loadingLabel, this.dense = false, this.expand = false})
     : variant = AkButtonVariant.secondary;
-  const AkButton.danger(this.label, {super.key, required this.onPressed, this.icon, this.loading = false, this.dense = false, this.expand = false})
+  const AkButton.danger(this.label, {super.key, required this.onPressed, this.icon, this.loading = false, this.loadingLabel, this.dense = false, this.expand = false})
     : variant = AkButtonVariant.danger;
-  const AkButton.dangerOutline(this.label, {super.key, required this.onPressed, this.icon, this.loading = false, this.dense = false, this.expand = false})
+  const AkButton.dangerOutline(this.label, {super.key, required this.onPressed, this.icon, this.loading = false, this.loadingLabel, this.dense = false, this.expand = false})
     : variant = AkButtonVariant.dangerOutline;
-  const AkButton.ghost(this.label, {super.key, required this.onPressed, this.icon, this.loading = false, this.dense = false, this.expand = false})
+  const AkButton.ghost(this.label, {super.key, required this.onPressed, this.icon, this.loading = false, this.loadingLabel, this.dense = false, this.expand = false})
     : variant = AkButtonVariant.ghost;
 
   final String label;
@@ -37,6 +37,9 @@ class AkButton extends StatelessWidget {
 
   /// Affiche un indicateur et désactive le bouton.
   final bool loading;
+
+  /// Texte affiché à côté de l'indicateur pendant l'action (ex. « Création en cours… »).
+  final String? loadingLabel;
 
   /// Hauteur de 32 px pour les barres d'outils et les lignes de tableau.
   final bool dense;
@@ -77,9 +80,19 @@ class AkButton extends StatelessWidget {
       }),
       side: border == null ? null : WidgetStateProperty.resolveWith((s) => BorderSide(color: s.contains(WidgetState.disabled) ? t.border : border)),
     );
-    final child = loading
-        ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: fg))
-        : Text(label, maxLines: 1, overflow: TextOverflow.ellipsis);
+    final spinner = SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: fg));
+    final child = !loading
+        ? Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)
+        : loadingLabel == null
+        ? spinner
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              spinner,
+              const SizedBox(width: AkSpace.s2),
+              Flexible(child: Text(loadingLabel!, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ],
+          );
     final leading = icon == null || loading ? null : Icon(icon, size: 18);
     final onTap = enabled ? onPressed : null;
     return switch (variant) {
