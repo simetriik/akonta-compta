@@ -12,6 +12,7 @@ import '../../application/providers/consultation_providers.dart';
 import '../../application/providers/services.dart';
 import '../widgets/save_export.dart';
 import 'aged_tab.dart';
+import 'audit_tabs.dart';
 import 'auxiliary_tab.dart';
 import 'balance_tab.dart';
 import 'centralization_tab.dart';
@@ -35,7 +36,7 @@ class _ConsultationBody extends ConsumerStatefulWidget {
 }
 
 class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with SingleTickerProviderStateMixin {
-  late final _tabs = TabController(length: 5, vsync: this);
+  late final _tabs = TabController(length: 7, vsync: this);
   late final _from = TextEditingController(text: '01/01/${DateTime.now().year}');
   late final _to = TextEditingController(text: Fmt.date(DateTime.now()));
   final _accountFrom = TextEditingController();
@@ -129,6 +130,8 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
                       Tab(text: 'Balance auxiliaire'),
                       Tab(text: 'Balance âgée'),
                       Tab(text: 'Centralisateur'),
+                      Tab(text: 'Contrôles'),
+                      Tab(text: 'Piste d\'audit'),
                     ],
                   ),
                   Container(
@@ -156,6 +159,8 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
                               AuxiliaryTab(params: p),
                               AgedTab(params: p, side: _side, onSide: (s) => setState(() => _side = s)),
                               CentralizationTab(params: p),
+                              ControlsTab(params: p),
+                              AuditTrailTab(params: p),
                             ],
                           ),
                   ),

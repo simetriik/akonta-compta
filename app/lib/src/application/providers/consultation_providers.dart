@@ -16,3 +16,10 @@ final agedBalanceProvider = FutureProvider.family<List<AgedRow>, ConsultationPar
 final centralizationProvider = FutureProvider.family<List<CentralizationRow>, ConsultationParams>(
   (ref, p) => ref.watch(consultationServiceProvider).centralization(p),
 );
+
+final accountingControlsProvider = FutureProvider.family<List<AccountingControl>, ConsultationParams>((ref, p) async {
+  if (p.fiscalYearId == null) return const [];
+  return ref.watch(consultationServiceProvider).accountingControls(p.entityId, p.fiscalYearId!);
+});
+
+final entryAuditTrailProvider = FutureProvider.family<List<AuditTrailEvent>, ConsultationParams>((ref, p) => ref.watch(consultationServiceProvider).entryAuditTrail(p));

@@ -31,6 +31,16 @@ class ConsultationService {
     return _repository.agedBalance(p);
   }
 
+  Future<List<AccountingControl>> accountingControls(String entityId, String fiscalYearId) async {
+    _online.require('Les contrôles');
+    return _repository.accountingControls(entityId, fiscalYearId);
+  }
+
+  Future<List<AuditTrailEvent>> entryAuditTrail(ConsultationParams p) async {
+    _online.require('La piste d\'audit');
+    return _repository.entryAuditTrail(p);
+  }
+
   Future<List<CentralizationRow>> centralization(ConsultationParams p) async {
     _online.require('La centralisation des journaux');
     return _repository.centralization(p);

@@ -57,3 +57,26 @@ CentralizationRow centralizationRowFromJson(Map<String, dynamic> j) => Centraliz
         totalDebit: (j['total_debit'] as num).toInt(),
         totalCredit: (j['total_credit'] as num).toInt(),
       );
+
+AccountingControl accountingControlFromJson(Map<String, dynamic> j) => AccountingControl(
+      controlCode: j['control_code'] as String,
+      severity: j['severity'] as String,
+      accountCode: j['account_code'] as String?,
+      accountLabel: j['account_label'] as String?,
+      entryId: j['entry_id'] as String?,
+      entryDate: j['entry_date'] == null ? null : DateTime.parse(j['entry_date'] as String),
+      amount: (j['amount'] as num?)?.toInt(),
+      detail: (j['detail'] as String?) ?? '',
+    );
+
+AuditTrailEvent auditTrailEventFromJson(Map<String, dynamic> j) => AuditTrailEvent(
+      auditId: (j['audit_id'] as num).toInt(),
+      occurredAt: DateTime.parse(j['occurred_at'] as String).toLocal(),
+      actorLabel: j['actor_label'] as String,
+      event: j['event'] as String,
+      entryId: j['entry_id'] as String?,
+      journalCode: j['journal_code'] as String?,
+      entryNumber: (j['entry_number'] as num?)?.toInt(),
+      entryDate: j['entry_date'] == null ? null : DateTime.parse(j['entry_date'] as String),
+      label: j['label'] as String?,
+    );

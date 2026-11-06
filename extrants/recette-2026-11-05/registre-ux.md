@@ -16,8 +16,9 @@ Familles : 1 rupture de parcours · 2 éléments inertes · 3 absence de retour/
 | UX-08 | Grand livre (écran, PDF, Excel) | Colonne Tiers : le code (« 4011 ») au lieu du nom. | 4 | gênant | Traité avec le point 2. | voir point 2 |
 | UX-09 | Test `password_test` | Le test du tableau de bord vide ne connaissait pas le message « Compte sans rôle » (D-049) : suite rouge sur `main`. | – | gênant (qualité) | Test mis à jour (avec un rôle) et cas « sans rôle » ajouté. | corrigé |
 | UX-10 | Dépôt | `.env` à la racine : sa première ligne n'est pas commentée, la CLI Supabase refuse de démarrer (« failed to parse environment file »). Contourné en lançant la CLI depuis une copie de `supabase/`. | – | gênant (outillage) | Non modifié (un `.env` ne se touche pas sans ton accord) : préfixer la ligne 1 par `#`. | à décider |
+| UX-12 | Consultation (onglets Contrôles et Piste d'audit) | Les filtres de comptes et de classe, au-dessus des onglets, ne servent pas à ces deux onglets. | 7 | cosmétique | Non corrigé : masquer les filtres selon l'onglet. | reporté (coût faible, à grouper avec UX-11) |
 | UX-11 | Tous | Parcours manuel des 19 écrans, clavier intégral de la saisie, états vide/chargement/erreur par liste. | 5, 7, 8 | – | Non réalisé dans cette session. | reporté |
 
 ## Résumé
-- Défauts relevés : 11. Bloquants : 4 (UX-01, 03, 04, 07-brouillard), tous corrigés. Gênants : 6 corrigés, 1 traité au point 2, 1 outillage à décider. Cosmétiques : 0 relevé.
+- Défauts relevés : 12. Bloquants : 4 (UX-01, 03, 04, 07-brouillard), tous corrigés. Gênants : 6 corrigés, 1 traité au point 2, 1 outillage à décider. Cosmétique : 1 relevé (UX-12), reporté.
 - Reporté : UX-11 (parcours manuel) – il demande une session de recette sur une pile en marche avec captures.
