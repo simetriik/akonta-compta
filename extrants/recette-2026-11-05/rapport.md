@@ -36,9 +36,9 @@ Je n'ai touché à aucune donnée réelle. Pour nettoyer : se connecter en assoc
 - **D-R07** Tout bouton d'action asynchrone se désactive seul (sablier fixe) jusqu'à la fin de l'action.
 
 ## 5. Questions en attente (`questions.md`)
-- **Q-R01** Identifiant d'un client sans IFU : garder la règle sur le nom, ou exiger l'IFU ?
-- **Q-R02** Modèles : faut-il détecter automatiquement un pourcentage (TVA) quand on enregistre une écriture comme modèle ?
-- **Q-R03** `.env` à la racine : première ligne non commentée, la CLI Supabase refuse de démarrer. Voulez-vous que je préfixe la ligne par `#` (je n'y ai pas touché) ?
+- **Q-R01** (tranchée) Règle sur le nom conservée, IFU non obligatoire ; homonymes sans IFU distingués par un suffixe.
+- **Q-R02** (tranchée) Pas de détection automatique du pourcentage ; il se règle dans Référentiels → Modèles.
+- **Q-R03** (résolue) Ligne 1 du `.env` commentée, la CLI Supabase démarre.
 
 ## 6. À savoir avant de déployer
 - **4 migrations** à appliquer dans l'ordre : `20261106100001`, `…200001`, `…300001`, `…400001`. Toutes sont additives (colonnes, fonctions, politiques) ; seule `general_ledger` est supprimée puis recréée (nouvelles colonnes de retour) : **l'application Flutter de la recette doit être mise à jour en même temps**, sinon les écrans de consultation ne liront plus la réponse. Un retour arrière est consigné en commentaire en pied de chaque migration. Testées sur une base locale vierge, **pas sur une copie des données de la recette**.
