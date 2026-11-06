@@ -72,6 +72,9 @@ class PermissionSet {
 
   static const empty = PermissionSet(byEntity: {}, cabinetWide: {}, roles: []);
 
+  /// Droit accordé à l'échelle du cabinet ou sur au moins une affectation (même règle que `public.has_permission_anywhere`).
+  bool hasAnywhere(String code) => cabinetWide.contains(code) || byEntity.values.any((s) => s.contains(code));
+
   /// Même règle que `public.has_permission` : portée cabinet ou affectation sur le dossier.
   bool has(String code, {String? entityId}) {
     if (cabinetWide.contains(code)) return true;

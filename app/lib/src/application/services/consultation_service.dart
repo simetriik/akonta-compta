@@ -31,14 +31,24 @@ class ConsultationService {
     return _repository.agedBalance(p);
   }
 
+  Future<List<AccountingControl>> accountingControls(String entityId, String fiscalYearId) async {
+    _online.require('Les contrôles');
+    return _repository.accountingControls(entityId, fiscalYearId);
+  }
+
+  Future<List<AuditTrailEvent>> entryAuditTrail(ConsultationParams p) async {
+    _online.require('La piste d\'audit');
+    return _repository.entryAuditTrail(p);
+  }
+
   Future<List<CentralizationRow>> centralization(ConsultationParams p) async {
     _online.require('La centralisation des journaux');
     return _repository.centralization(p);
   }
 
   /// Export PDF / Excel : renvoie le nom du fichier et son contenu.
-  Future<(String, Uint8List)> export({required ConsultationParams p, required String kind, required String format}) async {
+  Future<(String, Uint8List)> export({required ConsultationParams p, required String kind, required String format, bool allCounterparts = false}) async {
     _online.require('L\'export');
-    return _repository.export(p: p, kind: kind, format: format);
+    return _repository.export(p: p, kind: kind, format: format, allCounterparts: allCounterparts);
   }
 }

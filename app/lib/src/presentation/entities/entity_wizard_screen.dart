@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../core/errors/errors.dart';
+import '../../core/request_id.dart';
 import '../../domain/entity_models.dart';
 import 'entity_detail_screen.dart';
 import 'entity_form.dart';
@@ -23,6 +24,9 @@ class EntityWizardScreen extends ConsumerStatefulWidget {
 class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
   int _step = 0;
   EntityDetail? _entity;
+
+  /// Identifiant de la demande de création : le même pour tous les essais d'un même dossier (idempotence côté serveur).
+  final String _requestId = newRequestId();
   FiscalYear? _fiscalYear;
   int? _accountCount;
   final Set<String> _journalCodes = {};
@@ -117,10 +121,11 @@ class _EntityWizardScreenState extends ConsumerState<EntityWizardScreen> {
       case 0:
         return EntityForm(
           submitLabel: 'Créer le dossier et continuer',
+          busyLabel: 'Création en cours…',
           defaultAccountLength: defaultAccountLength,
           onSubmit: (input) async {
             if (cabinetId == null) throw const AppError.business('Cabinet inconnu : reconnectez-vous.');
-            final e = await ref.read(entitiesServiceProvider).create(cabinetId, input);
+            final e = await ref.read(entitiesServiceProvider).create(cabinetId, input, requestId: _requestId);
             final count = await ref.read(entitiesServiceProvider).accountCount(e.id);
             ref.invalidate(entitiesListProvider);
             ref.invalidate(entityDashboardProvider);

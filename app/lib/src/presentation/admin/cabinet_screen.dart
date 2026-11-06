@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
-import '../../core/errors/errors.dart';
+import '../widgets/error_display.dart';
+
 import '../../core/formatting.dart';
 import '../../domain/models.dart';
 import '../widgets/async_view.dart';
@@ -257,8 +258,20 @@ class AssignmentsTab extends ConsumerWidget {
                               icon: Icons.delete_outline,
                               dense: true,
                               onPressed: () async {
-                                await ref.read(adminServiceProvider).removeAssignment(a.id);
-                                ref.invalidate(assignmentsProvider);
+                                final ok = await showAkConfirm(
+                                  context,
+                                  title: 'Retirer l\'affectation ?',
+                                  message: '${a.userName} ne sera plus ${a.roleName} sur ce périmètre. Son travail déjà saisi est conservé.',
+                                  confirmLabel: 'Retirer',
+                                  danger: true,
+                                );
+                                if (!ok || !context.mounted) return;
+                                try {
+                                  await ref.read(adminServiceProvider).removeAssignment(a.id);
+                                  ref.invalidate(assignmentsProvider);
+                                } catch (e) {
+                                  if (context.mounted) showError(context, e, action: 'Retrait impossible');
+                                }
                               },
                             ),
                           ),

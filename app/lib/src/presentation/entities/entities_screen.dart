@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
 
 import '../../domain/entity_models.dart';
+import '../../domain/models.dart' show EntitySummary;
 import '../widgets/async_view.dart';
 import '../../application/providers/entities_providers.dart';
 import '../../application/providers/session_providers.dart';
@@ -49,7 +50,11 @@ class EntitiesScreen extends ConsumerWidget {
                 rows: entities,
                 minWidth: 720,
                 rowHeight: AkSpace.rowComfort + 8,
-                onRowTap: (e) => context.go('/dossiers/${e.id}'),
+                onRowTap: (e) {
+                  // Ouvrir un dossier le rend aussi courant (comme sur le tableau de bord).
+                  ref.read(currentEntityProvider.notifier).select(summaries[e.id] ?? EntitySummary(id: e.id, name: e.name));
+                  context.go('/dossiers/${e.id}');
+                },
                 columns: [
                   AkColumn<EntityDetail>(
                     label: 'Dossier',

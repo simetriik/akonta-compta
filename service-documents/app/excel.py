@@ -5,6 +5,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from .formatting import ledger_counterpart_text, ledger_third_party_text
 from .models import LedgerDocument, TrialBalanceDocument
 
 HEADER_FILL = PatternFill("solid", fgColor="F7F3EC")
@@ -62,20 +63,21 @@ def general_ledger_xlsx(d: LedgerDocument) -> bytes:
     wb = Workbook()
     ws = wb.active
     ws.title = "Grand livre"
-    titles = ["Compte", "Intitulé compte", "Date", "Journal", "N°", "Référence", "Libellé", "Tiers", "Débit", "Crédit", "Solde", "Lettrage"]
+    titles = ["Compte", "Intitulé compte", "Date", "Journal", "N°", "Référence", "Libellé", "Tiers", "Contrepartie", "Débit", "Crédit", "Solde", "Lettrage"]
     row = _sheet_header(ws, d.header, titles)
     first = row
     for line in d.lines:
         ws.append([line.account_code, line.account_label, line.entry_date, line.journal_code, line.number, line.reference or "",
-                   line.label, line.third_party_code or "", line.debit, line.credit, line.running_balance, line.letter_code or ""])
+                   line.label, ledger_third_party_text(line), ledger_counterpart_text(line, d.counterpart_mode), line.debit, line.credit,
+                   line.running_balance, line.letter_code or ""])
         row += 1
-    for r in ws.iter_rows(min_row=first, max_row=row, min_col=9, max_col=11):
+    for r in ws.iter_rows(min_row=first, max_row=row, min_col=10, max_col=12):
         for cell in r:
             cell.number_format = NUMBER_FORMAT
     for r in ws.iter_rows(min_row=first, max_row=row, min_col=3, max_col=3):
         for cell in r:
             cell.number_format = "DD/MM/YYYY"
-    widths = [12, 36, 12, 8, 8, 16, 48, 10, 16, 16, 16, 8]
+    widths = [12, 36, 12, 8, 8, 16, 48, 26, 24, 16, 16, 16, 8]
     for i, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
     return _finish(wb)

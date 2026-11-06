@@ -12,6 +12,7 @@ import '../../application/providers/entities_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
 import 'client_access_tab.dart';
+import 'duplicate_entity_button.dart';
 
 /// Dossier : fiche, dirigeants, exercices et périodes (verrouillage), historique.
 class EntityDetailScreen extends ConsumerWidget {
@@ -32,7 +33,11 @@ class EntityDetailScreen extends ConsumerWidget {
           children: [
             Padding(
               padding: EdgeInsets.fromLTRB(pad, pad, pad, 0),
-              child: AkPageHead(title: e.name, subtitle: (e.taxId == null || e.taxId!.isEmpty) ? null : 'IFU ${e.taxId}'),
+              child: AkPageHead(
+                title: e.name,
+                subtitle: (e.taxId == null || e.taxId!.isEmpty) ? null : 'IFU ${e.taxId}',
+                actions: [DuplicateEntityButton(entity: e)],
+              ),
             ),
             const SizedBox(height: AkSpace.s2),
             Padding(
@@ -146,8 +151,20 @@ class _DirectorsTab extends ConsumerWidget {
                       tooltip: 'Retirer',
                       dense: true,
                       onPressed: () async {
-                        await ref.read(entitiesServiceProvider).removeDirector(d.id);
-                        ref.invalidate(directorsProvider(entity.id));
+                        final ok = await showAkConfirm(
+                          context,
+                          title: 'Retirer ce dirigeant ?',
+                          message: '${d.fullName} sera retiré de la liste des dirigeants du dossier.',
+                          confirmLabel: 'Retirer',
+                          danger: true,
+                        );
+                        if (!ok || !context.mounted) return;
+                        try {
+                          await ref.read(entitiesServiceProvider).removeDirector(d.id);
+                          ref.invalidate(directorsProvider(entity.id));
+                        } catch (e) {
+                          if (context.mounted) showError(context, e, action: 'Retrait impossible');
+                        }
                       },
                     ),
                   ),

@@ -19,3 +19,17 @@ def fcfa_total(amount: int) -> str:
 
 def fr_date(d: date) -> str:
     return d.strftime("%d/%m/%Y")
+
+
+def ledger_counterpart_text(line, mode: str = "main") -> str:
+    """Contrepartie d'une ligne du grand livre : « 6011000 + 1 » (principale et nombre d'autres) ou la liste complète."""
+    if mode == "all" and line.counterparts:
+        return ", ".join(c.code for c in line.counterparts)
+    if not line.counterpart_code:
+        return ""
+    return f"{line.counterpart_code} + {line.counterpart_more}" if line.counterpart_more > 0 else line.counterpart_code
+
+
+def ledger_third_party_text(line) -> str:
+    """Tiers d'une ligne du grand livre : son nom, à défaut son code (jamais le numéro de compte)."""
+    return line.third_party_name or line.third_party_code or ""
