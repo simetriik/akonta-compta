@@ -30,6 +30,18 @@ class AccountSelection {
   /// Comptes collectifs de tiers sur lesquels une écriture peut être passée.
   static List<Account> collectives(List<Account> all) => all.where((a) => a.isCollective && _usable(a)).toList();
 
+  /// Compte collectif proposé par défaut pour un type de tiers (clients 411, fournisseurs 401, salariés 421, associés 46…).
+  static Account? defaultCollective(List<Account> collectives, String type) {
+    final prefix = switch (type) {
+      'customer' => '411',
+      'supplier' => '401',
+      'employee' => '421',
+      'partner' => '46',
+      _ => '',
+    };
+    return collectives.where((a) => prefix.isNotEmpty && a.code.startsWith(prefix)).firstOrNull ?? collectives.firstOrNull;
+  }
+
   /// Contrepartie d'une écriture générée depuis un relevé : tout compte imputable hors trésorerie.
   static List<Account> statementCounterparts(List<Account> all) => all.where((a) => _usable(a) && a.classNo != 5).toList();
 
