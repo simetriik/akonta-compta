@@ -124,7 +124,11 @@ class DossierCard extends ConsumerWidget {
     final status = entity.fiscalYearStatus;
     return AkCard(
       selected: selected,
-      onTap: () => ref.read(currentEntityProvider.notifier).select(entity),
+      onTap: () {
+        // Ouvrir un dossier = le rendre courant puis afficher sa fiche.
+        ref.read(currentEntityProvider.notifier).select(entity);
+        context.go('/dossiers/${entity.id}');
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

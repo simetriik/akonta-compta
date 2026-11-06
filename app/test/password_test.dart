@@ -86,12 +86,14 @@ void main() {
   });
 
   group('tableau de bord vide', () {
-    Future<void> pumpEmpty(WidgetTester tester, Set<String> cabinetWide) async {
+    const collaborator = AssignedRole(roleId: 'r1', code: 'collaborator', name: 'Collaborateur', entityId: null, requiresMfa: false, grantsAllEntities: false, accountingAccess: true);
+
+    Future<void> pumpEmpty(WidgetTester tester, Set<String> cabinetWide, {bool withRole = true}) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             entityDashboardProvider.overrideWith((ref) async => <EntitySummary>[]),
-            permissionsProvider.overrideWith((ref) async => PermissionSet(byEntity: const {}, cabinetWide: cabinetWide, roles: const [])),
+            permissionsProvider.overrideWith((ref) async => PermissionSet(byEntity: const {}, cabinetWide: cabinetWide, roles: withRole ? const [collaborator] : const [])),
           ],
           child: MaterialApp(theme: buildAkontaTheme(), home: const Scaffold(body: DashboardScreen())),
         ),
@@ -112,6 +114,11 @@ void main() {
     testWidgets('un collaborateur sans dossier est invité à demander une affectation', (tester) async {
       await pumpEmpty(tester, {});
       expect(find.textContaining('Demandez à l\'associé'), findsOneWidget);
+    });
+
+    testWidgets('un compte sans rôle est orienté vers l\'administrateur technique (D-049)', (tester) async {
+      await pumpEmpty(tester, {}, withRole: false);
+      expect(find.text('Compte sans rôle'), findsOneWidget);
     });
   });
 }
