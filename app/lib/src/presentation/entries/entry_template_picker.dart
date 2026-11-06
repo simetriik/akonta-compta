@@ -5,9 +5,12 @@ import '../../core/formatting.dart';
 import '../../domain/reference_models.dart';
 
 class EntryTemplatePicker extends StatefulWidget {
-  const EntryTemplatePicker({super.key, required this.templates, this.initial});
+  const EntryTemplatePicker({super.key, required this.templates, this.initial, this.thirdParties = const []});
 
   final List<EntryTemplate> templates;
+
+  /// Tiers du dossier : proposés quand le modèle porte un compte collectif générique (tiers choisi à l'appel).
+  final List<ThirdParty> thirdParties;
   final EntryTemplate? initial;
 
   @override
@@ -17,6 +20,7 @@ class EntryTemplatePicker extends StatefulWidget {
 class _TemplatePickerState extends State<EntryTemplatePicker> {
   late EntryTemplate? _template = widget.initial;
   final _amount = TextEditingController();
+  ThirdParty? _thirdParty;
 
   @override
   Widget build(BuildContext context) {
@@ -35,13 +39,25 @@ class _TemplatePickerState extends State<EntryTemplatePicker> {
           ),
           const SizedBox(height: AkSpace.s3),
           AkAmountField(controller: _amount, label: 'Montant de base', onChanged: (_) => setState(() {})),
+          if (_template?.lines.any((l) => l.usesThirdParty) ?? false) ...[
+            const SizedBox(height: AkSpace.s3),
+            // Compte générique (ex. 411) : le tiers précis du dossier se choisit ici, au moment de l'appel.
+            AkThirdPartyField(
+              key: const Key('template-third-party'),
+              thirdParties: widget.thirdParties,
+              label: 'Tiers (facultatif, à compléter dans la grille sinon)',
+              hint: 'Code ou nom du tiers',
+              resolved: _thirdParty != null,
+              onSelected: (t) => setState(() => _thirdParty = t),
+            ),
+          ],
         ],
       ),
       actions: [
         AkButton.secondary('Annuler', onPressed: () => Navigator.pop(context)),
         AkButton.primary(
           'Appliquer',
-          onPressed: _template == null || amount == null || amount <= 0 ? null : () => Navigator.pop(context, (_template!, amount)),
+          onPressed: _template == null || amount == null || amount <= 0 ? null : () => Navigator.pop(context, (_template!, amount, _thirdParty)),
         ),
       ],
     );

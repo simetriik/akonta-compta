@@ -38,6 +38,27 @@ class TemplateBuilder {
 
   static final _numericAccount = RegExp(r'^[1-9][0-9]*$');
 
+  /// Code proposé pour un modèle à partir de son libellé : majuscules, chiffres et « _ », 20 caractères au plus, unique
+  /// parmi [existing] (suffixe numérique si besoin). Valide pour la contrainte `^[A-Z0-9_]{2,20}$` de la base.
+  static String suggestCode(String label, Iterable<String> existing) {
+    const from = 'àâäáãçéèêëíìîïñóòôöõúùûüýÿ';
+    const to = 'aaaaaceeeeiiiinooooouuuuyy';
+    final folded = label.toLowerCase().split('').map((c) {
+      final i = from.indexOf(c);
+      return i < 0 ? c : to[i];
+    }).join();
+    var base = folded.replaceAll(RegExp(r'[^a-z0-9]+'), '_').replaceAll(RegExp(r'^_+|_+$'), '').toUpperCase();
+    if (base.length > 18) base = base.substring(0, 18).replaceAll(RegExp(r'_+$'), '');
+    if (base.length < 2) base = 'MODELE';
+    final taken = existing.map((c) => c.toUpperCase()).toSet();
+    if (!taken.contains(base)) return base;
+    for (var n = 2; n < 1000; n++) {
+      final candidate = '$base$n';
+      if (!taken.contains(candidate)) return candidate;
+    }
+    return base;
+  }
+
   static TemplateBuild build({required String code, required String label, required List<TemplateLineInput> inputs}) {
     if (code.trim().isEmpty || label.trim().isEmpty) return const TemplateBuild.error('Code et libellé requis');
     final lines = <TemplateLine>[];

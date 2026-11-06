@@ -27,6 +27,7 @@ import 'entry_grid.dart';
 import 'entry_header_fields.dart';
 import 'entry_shortcuts_dialog.dart';
 import 'entry_template_picker.dart';
+import 'save_as_template.dart';
 import 'return_draft_dialog.dart';
 import '../../application/entries/entry_editor_logic.dart';
 
@@ -283,6 +284,8 @@ class _EditorState extends ConsumerState<_Editor> {
     if (mounted) context.go('/saisie');
   }
 
+  void _saveAsTemplate() => saveEntryAsTemplate(context, ref, entityId: widget.entity.id, draft: _draft);
+
   Future<void> _applyTemplate({String? preselectedId}) => _guard(() => _applyTemplateNow(preselectedId));
 
   Future<void> _applyTemplateNow(String? preselectedId) async {
@@ -290,14 +293,16 @@ class _EditorState extends ConsumerState<_Editor> {
     final accounts = await ref.read(accountsProvider(widget.entity.id).future);
     final rates = await ref.read(taxRatesProvider.future);
     if (!mounted) return;
-    final result = await showDialog<(EntryTemplate, int)>(
+    final thirdParties = (await ref.read(thirdPartiesProvider(widget.entity.id).future)).where((t) => t.isActive).toList();
+    if (!mounted) return;
+    final result = await showDialog<(EntryTemplate, int, ThirdParty?)>(
       context: context,
-      builder: (_) => EntryTemplatePicker(templates: templates, initial: templates.where((t) => t.id == preselectedId).firstOrNull),
+      builder: (_) => EntryTemplatePicker(templates: templates, thirdParties: thirdParties, initial: templates.where((t) => t.id == preselectedId).firstOrNull),
     );
     if (result == null) return;
-    final (template, amount) = result;
+    final (template, amount, thirdParty) = result;
     setState(() {
-      EntryEditorLogic.applyTemplateTo(_draft, template, baseAmount: amount, accounts: accounts, rates: rates, today: DateTime.now());
+      EntryEditorLogic.applyTemplateTo(_draft, template, baseAmount: amount, accounts: accounts, rates: rates, today: DateTime.now(), thirdParty: thirdParty);
       if (_label.text.isEmpty) _label.text = template.label;
     });
   }
@@ -412,6 +417,7 @@ class _EditorState extends ConsumerState<_Editor> {
                                     actions: mobile
                                         ? const []
                                         : [
+                                            AkButton.ghost('Enregistrer comme modèle', key: const Key('save-as-template'), icon: Icons.bookmark_add_outlined, onPressed: _saveAsTemplate),
                                             if (!_readOnly) ...[
                                               AkButton.secondary('Modèle', icon: Icons.auto_fix_high_outlined, onPressed: _applyTemplate),
                                               AkButton.secondary('Contrepartie (Ctrl+B)', icon: Icons.balance, onPressed: () => setState(_draft.autoBalance)),

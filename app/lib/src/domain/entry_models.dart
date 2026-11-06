@@ -186,7 +186,8 @@ class EntryDraft {
 
 /// Application d'un modèle d'écriture : montants calculés depuis la saisie de base, les taux et le solde.
 /// `resolveAccount` fait correspondre le numéro de référence du modèle (ex. 4452) au compte de l'entité.
-List<DraftLine> applyTemplate(EntryTemplate template, {required int baseAmount, required double? Function(String code) rateOf, required Account? Function(String referenceCode) resolveAccount}) {
+/// [thirdParty] : tiers choisi à l'appel, placé sur les lignes du modèle marquées « tiers » (comptes collectifs génériques).
+List<DraftLine> applyTemplate(EntryTemplate template, {required int baseAmount, required double? Function(String code) rateOf, required Account? Function(String referenceCode) resolveAccount, ThirdParty? thirdParty}) {
   final amounts = <int, int>{};
   final result = <DraftLine>[];
   // Première passe : saisie et pourcentages (dans l'ordre des lignes)
@@ -227,6 +228,8 @@ List<DraftLine> applyTemplate(EntryTemplate template, {required int baseAmount, 
       accountCode: account?.code ?? l.accountCode,
       accountLabel: account?.label ?? '',
       isCollective: account?.isCollective ?? l.usesThirdParty,
+      thirdPartyId: l.usesThirdParty ? thirdParty?.id : null,
+      thirdPartyCode: l.usesThirdParty ? (thirdParty?.code ?? '') : '',
       label: l.label ?? template.label,
       debit: side == 'debit' ? amount : 0,
       credit: side == 'credit' ? amount : 0,
