@@ -55,6 +55,14 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
     setState(() {});
   }
 
+  /// Depuis la balance : filtre le grand livre sur ce compte et y bascule.
+  void _openLedgerOf(String accountCode) {
+    _accountFrom.text = accountCode;
+    _accountTo.text = accountCode;
+    _tabs.animateTo(0);
+    setState(() {});
+  }
+
   ConsultationParams? _params() {
     final from = Fmt.parseDate(_from.text), to = Fmt.parseDate(_to.text);
     if (from == null || to == null || to.isBefore(from)) return null;
@@ -141,7 +149,7 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
                             controller: _tabs,
                             children: [
                               LedgerTab(params: p),
-                              BalanceTab(params: p, previous: _compare ? _previousYear(p) : null),
+                              BalanceTab(params: p, previous: _compare ? _previousYear(p) : null, onOpenAccount: _openLedgerOf),
                               AuxiliaryTab(params: p),
                               AgedTab(params: p, side: _side, onSide: (s) => setState(() => _side = s)),
                               CentralizationTab(params: p),

@@ -9,10 +9,13 @@ import '../../domain/consultation_models.dart';
 import 'consultation_widgets.dart';
 
 class BalanceTab extends ConsumerWidget {
-  const BalanceTab({super.key, required this.params, this.previous});
+  const BalanceTab({super.key, required this.params, this.previous, this.onOpenAccount});
 
   final ConsultationParams params;
   final ConsultationParams? previous;
+
+  /// Clic sur un compte : ouvre son grand livre (parcours habituel du comptable : balance puis détail).
+  final ValueChanged<String>? onOpenAccount;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,7 +49,7 @@ class BalanceTab extends ConsumerWidget {
               consultationAmount(Fmt.fcfa(r.closingDebit)),
               consultationAmount(Fmt.fcfa(r.closingCredit)),
               if (withPrev) consultationAmount(Fmt.balance((prev?.closingDebit ?? 0) - (prev?.closingCredit ?? 0))),
-            ]),
+            ], onTap: onOpenAccount == null ? null : () => onOpenAccount!(r.accountCode)),
           );
         }
         grid.add(

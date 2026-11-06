@@ -270,6 +270,14 @@ class _EditorState extends ConsumerState<_Editor> {
 
   Future<void> _delete() async {
     if (_draft.id == null) return;
+    final ok = await showAkConfirm(
+      context,
+      title: 'Supprimer ce brouillard ?',
+      message: 'Le brouillard et ses lignes seront supprimés. Une écriture validée, elle, ne se supprime jamais (contre-passation).',
+      confirmLabel: 'Supprimer',
+      danger: true,
+    );
+    if (!ok || !mounted) return;
     await ref.read(entriesServiceProvider).deleteDraft(_draft.id!);
     ref.invalidate(entriesListProvider(widget.entity.id));
     if (mounted) context.go('/saisie');

@@ -7,7 +7,7 @@ enum AkButtonVariant { primary, secondary, danger, dangerOutline, ghost }
 
 /// Bouton unique de l'application : primaire (orange d'action), secondaire (contour), danger (cramoisi),
 /// danger secondaire (contour cramoisi) et discret (texte). Même hauteur que les champs (40 px, 48 px sur mobile).
-class AkButton extends StatelessWidget {
+class AkButton extends StatefulWidget {
   const AkButton({
     super.key,
     required this.label,
@@ -48,10 +48,37 @@ class AkButton extends StatelessWidget {
   final bool expand;
 
   @override
+  State<AkButton> createState() => _AkButtonState();
+}
+
+/// Un bouton dont l'action est asynchrone se désactive seul jusqu'à sa fin (indicateur affiché) : un second clic
+/// ne relance jamais l'action. Il redevient actif même si l'action échoue.
+class _AkButtonState extends State<AkButton> {
+  bool _pending = false;
+
+  Future<void> _run() async {
+    if (_pending) return; // deuxième clic avant que l'écran ait été redessiné
+    // Une action `async` renvoie un Future même si le type déclaré est VoidCallback.
+    final Object? result = (widget.onPressed as dynamic)();
+    if (result is! Future) return;
+    setState(() => _pending = true);
+    try {
+      await result;
+    } finally {
+      if (mounted) setState(() => _pending = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = context.ak;
+    final (dense, expand, variant, label, icon, loadingLabel) = (widget.dense, widget.expand, widget.variant, widget.label, widget.icon, widget.loadingLabel);
+    final loading = widget.loading;
+    // Action asynchrone en cours sans `loading` explicite : bouton désactivé, sablier fixe (pas d'animation, car l'action
+    // peut attendre une réponse de l'utilisateur, par ex. une confirmation).
+    final waiting = _pending && !loading;
     final height = dense && !akIsTouch(context) ? AkSpace.controlDense : akControlHeight(context);
-    final enabled = onPressed != null && !loading;
+    final enabled = widget.onPressed != null && !loading && !waiting;
     final base = ButtonStyle(
       minimumSize: WidgetStatePropertyAll(Size(expand ? double.infinity : 0, height)),
       maximumSize: WidgetStatePropertyAll(Size(double.infinity, height)),
@@ -81,7 +108,16 @@ class AkButton extends StatelessWidget {
       side: border == null ? null : WidgetStateProperty.resolveWith((s) => BorderSide(color: s.contains(WidgetState.disabled) ? t.border : border)),
     );
     final spinner = SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: fg));
-    final child = !loading
+    final child = waiting
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.hourglass_top, size: 18),
+              const SizedBox(width: AkSpace.s2),
+              Flexible(child: Text(loadingLabel ?? label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ],
+          )
+        : !loading
         ? Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)
         : loadingLabel == null
         ? spinner
@@ -90,11 +126,11 @@ class AkButton extends StatelessWidget {
             children: [
               spinner,
               const SizedBox(width: AkSpace.s2),
-              Flexible(child: Text(loadingLabel!, maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Flexible(child: Text(loadingLabel, maxLines: 1, overflow: TextOverflow.ellipsis)),
             ],
           );
-    final leading = icon == null || loading ? null : Icon(icon, size: 18);
-    final onTap = enabled ? onPressed : null;
+    final leading = icon == null || loading || waiting ? null : Icon(icon, size: 18);
+    final onTap = enabled ? _run : null;
     return switch (variant) {
       AkButtonVariant.primary || AkButtonVariant.danger =>
         leading == null

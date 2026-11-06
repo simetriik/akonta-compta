@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
-import '../../core/errors/errors.dart';
+import '../widgets/error_display.dart';
+
 import '../../core/formatting.dart';
 import '../../domain/entity_models.dart';
 import '../../domain/models.dart';
@@ -93,8 +94,20 @@ class AccrualsTab extends ConsumerWidget {
                         tooltip: 'Supprimer',
                         dense: true,
                         onPressed: () async {
-                          await ref.read(inventoryServiceProvider).deleteAccrual(a.id);
-                          ref.invalidate(accrualsProvider(fy.id));
+                          final ok = await showAkConfirm(
+                            context,
+                            title: 'Supprimer cette régularisation ?',
+                            message: 'La ligne de régularisation sera supprimée. Aucune écriture n\'a encore été générée.',
+                            confirmLabel: 'Supprimer',
+                            danger: true,
+                          );
+                          if (!ok || !context.mounted) return;
+                          try {
+                            await ref.read(inventoryServiceProvider).deleteAccrual(a.id);
+                            ref.invalidate(accrualsProvider(fy.id));
+                          } catch (e) {
+                            if (context.mounted) showError(context, e, action: 'Suppression impossible');
+                          }
                         },
                       )
                     : const SizedBox.shrink(),

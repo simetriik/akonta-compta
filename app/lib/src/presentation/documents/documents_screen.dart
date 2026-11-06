@@ -251,6 +251,14 @@ class DocumentTile extends ConsumerWidget {
                       if (context.mounted) context.go('/saisie/nouvelle?document=${d.id}');
                       return;
                     case 'delete':
+                      final ok = await showAkConfirm(
+                        context,
+                        title: 'Supprimer cette pièce ?',
+                        message: 'La pièce « ${d.fileName} » sera supprimée de la boîte de réception. Cette action est irréversible.',
+                        confirmLabel: 'Supprimer',
+                        danger: true,
+                      );
+                      if (!ok || !context.mounted) return;
                       try {
                         await ref.read(documentsServiceProvider).delete(d);
                       } catch (e) {

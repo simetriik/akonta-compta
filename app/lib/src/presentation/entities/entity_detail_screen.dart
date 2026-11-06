@@ -151,8 +151,20 @@ class _DirectorsTab extends ConsumerWidget {
                       tooltip: 'Retirer',
                       dense: true,
                       onPressed: () async {
-                        await ref.read(entitiesServiceProvider).removeDirector(d.id);
-                        ref.invalidate(directorsProvider(entity.id));
+                        final ok = await showAkConfirm(
+                          context,
+                          title: 'Retirer ce dirigeant ?',
+                          message: '${d.fullName} sera retiré de la liste des dirigeants du dossier.',
+                          confirmLabel: 'Retirer',
+                          danger: true,
+                        );
+                        if (!ok || !context.mounted) return;
+                        try {
+                          await ref.read(entitiesServiceProvider).removeDirector(d.id);
+                          ref.invalidate(directorsProvider(entity.id));
+                        } catch (e) {
+                          if (context.mounted) showError(context, e, action: 'Retrait impossible');
+                        }
                       },
                     ),
                   ),
