@@ -8,7 +8,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import LongTable, Paragraph, SimpleDocTemplate, Spacer, TableStyle
 
-from .formatting import fcfa, fcfa_total, fr_date
+from .formatting import fcfa, fcfa_total, fr_date, ledger_counterpart_text, ledger_third_party_text
 from .models import AgedBalanceDocument, DocumentHeader, FinancialStatementsDocument, JournalDocument, LedgerDocument, ReconciliationDocument, StatementPostRow, TrialBalanceDocument
 
 INK = colors.HexColor("#1A1A18")
@@ -87,8 +87,8 @@ def trial_balance_pdf(d: TrialBalanceDocument) -> bytes:
 
 
 def general_ledger_pdf(d: LedgerDocument) -> bytes:
-    head = ["Date", "Jal", "N°", "Référence", "Libellé", "Tiers", "Débit", "Crédit", "Solde", "Let."]
-    widths = [18 * mm, 10 * mm, 14 * mm, 24 * mm, 92 * mm, 18 * mm, 26 * mm, 26 * mm, 28 * mm, 10 * mm]
+    head = ["Date", "Jal", "N°", "Référence", "Libellé", "Tiers", "Contrepartie", "Débit", "Crédit", "Solde", "Let."]
+    widths = [18 * mm, 10 * mm, 14 * mm, 22 * mm, 56 * mm, 30 * mm, 28 * mm, 26 * mm, 26 * mm, 28 * mm, 10 * mm]
     story = _header_block(d.header)
     current = None
     rows: list[list] = []
@@ -97,8 +97,8 @@ def general_ledger_pdf(d: LedgerDocument) -> bytes:
     def flush():
         nonlocal rows, sub_d, sub_c
         if rows:
-            rows.append(["", "", "", "", "Total compte", "", fcfa_total(sub_d), fcfa_total(sub_c), fcfa_total(sub_d - sub_c), ""])
-            story.append(_table([head] + rows, widths, 6, True))
+            rows.append(["", "", "", "", "Total compte", "", "", fcfa_total(sub_d), fcfa_total(sub_c), fcfa_total(sub_d - sub_c), ""])
+            story.append(_table([head] + rows, widths, 7, True))
             story.append(Spacer(1, 3 * mm))
         rows, sub_d, sub_c = [], 0, 0
 
@@ -109,7 +109,8 @@ def general_ledger_pdf(d: LedgerDocument) -> bytes:
             current = key
             story.append(Paragraph(f"<b>{line.account_code}</b> — {line.account_label}", META))
         rows.append([fr_date(line.entry_date), line.journal_code, str(line.number), line.reference or "",
-                     Paragraph(line.label, CELL), line.third_party_code or "", fcfa(line.debit), fcfa(line.credit),
+                     Paragraph(line.label, CELL), Paragraph(ledger_third_party_text(line), CELL),
+                     Paragraph(ledger_counterpart_text(line, d.counterpart_mode), CELL), fcfa(line.debit), fcfa(line.credit),
                      fcfa_total(line.running_balance), line.letter_code or ""])
         sub_d += line.debit
         sub_c += line.credit

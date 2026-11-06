@@ -45,6 +45,9 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
   bool _compare = false;
   bool _exporting = false;
 
+  /// Export du grand livre : toutes les contreparties (sinon la principale seule, suivie de « + n »).
+  bool _allCounterparts = false;
+
   /// Relit vraiment les données du serveur (et pas seulement l'écran).
   void _reload() {
     ref.invalidate(generalLedgerProvider);
@@ -202,13 +205,24 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
     return PopupMenuButton<String>(
       tooltip: 'Exporter',
       enabled: !_exporting,
-      onSelected: _export,
-      itemBuilder: (_) => const [
-        PopupMenuItem(value: 'trial_balance:pdf', child: Text('Balance — PDF')),
-        PopupMenuItem(value: 'trial_balance:xlsx', child: Text('Balance — Excel')),
-        PopupMenuItem(value: 'general_ledger:pdf', child: Text('Grand livre — PDF')),
-        PopupMenuItem(value: 'general_ledger:xlsx', child: Text('Grand livre — Excel')),
-        PopupMenuItem(value: 'aged_balance:pdf', child: Text('Balance âgée — PDF')),
+      onSelected: (choice) {
+        if (choice == 'opt:all-counterparts') {
+          setState(() => _allCounterparts = !_allCounterparts);
+        } else {
+          _export(choice);
+        }
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: 'trial_balance:pdf', child: Text('Balance — PDF')),
+        const PopupMenuItem(value: 'trial_balance:xlsx', child: Text('Balance — Excel')),
+        const PopupMenuItem(value: 'general_ledger:pdf', child: Text('Grand livre — PDF')),
+        const PopupMenuItem(value: 'general_ledger:xlsx', child: Text('Grand livre — Excel')),
+        CheckedPopupMenuItem(
+          value: 'opt:all-counterparts',
+          checked: _allCounterparts,
+          child: const Text('Grand livre : toutes les contreparties'),
+        ),
+        const PopupMenuItem(value: 'aged_balance:pdf', child: Text('Balance âgée — PDF')),
       ],
       child: Container(
         height: h,
@@ -239,7 +253,7 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
     final parts = choice.split(':');
     setState(() => _exporting = true);
     try {
-      final (name, bytes) = await ref.read(consultationServiceProvider).export(p: p, kind: parts[0], format: parts[1]);
+      final (name, bytes) = await ref.read(consultationServiceProvider).export(p: p, kind: parts[0], format: parts[1], allCounterparts: _allCounterparts);
       final uri = await saveExportedFile(dialogTitle: 'Enregistrer l\'export', fileName: name, bytes: bytes);
       if (mounted && uri != null) {
         showAkToast(context, 'Export enregistré : ${uri.scheme == 'file' ? uri.toFilePath() : uri}');

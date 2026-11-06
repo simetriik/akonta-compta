@@ -14,6 +14,8 @@ export interface ExportRequest {
   account_to?: string;
   class?: number;
   side?: "debit" | "credit";
+  /** Grand livre : contrepartie principale seule (« 6011 + 1 », défaut) ou liste complète des comptes opposés. */
+  counterpart?: "main" | "all";
 }
 
 export interface HeaderInfo {
@@ -60,6 +62,7 @@ export function validateRequest(r: Partial<ExportRequest>): string | null {
   if (!r.kind || !(r.kind in TITLES)) return "kind invalide";
   if (r.format !== "pdf" && r.format !== "xlsx" && r.format !== "xlsm") return "format invalide (pdf | xlsx | xlsm)";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(r.from ?? "") || !/^\d{4}-\d{2}-\d{2}$/.test(r.to ?? "")) return "from et to au format AAAA-MM-JJ";
+  if (r.counterpart !== undefined && r.counterpart !== "main" && r.counterpart !== "all") return "counterpart invalide (main | all)";
   if ((r.kind === "journal" || r.kind === "reconciliation") && !r.journal_id) return "journal_id requis pour un livre-journal ou un rapprochement";
   if (!servicePath(r.kind, r.format)) return `format ${r.format} indisponible pour ${r.kind}`;
   return null;
@@ -85,7 +88,11 @@ export function buildPayload(r: ExportRequest, header: HeaderInfo, rows: Record<
     case "aged_balance":
       return { ...base, ...extra, rows };
     case "general_ledger":
-      return { ...base, lines: rows.map((l) => ({ ...l, reference: l.reference ?? null, third_party_code: l.third_party_code ?? null, letter_code: l.letter_code ?? null })) };
+      return {
+        ...base,
+        counterpart_mode: r.counterpart ?? "main",
+        lines: rows.map((l) => ({ ...l, reference: l.reference ?? null, third_party_code: l.third_party_code ?? null, third_party_name: l.third_party_name ?? null, letter_code: l.letter_code ?? null })),
+      };
     case "journal":
       return { ...base, ...extra, lines: rows };
     case "reconciliation":

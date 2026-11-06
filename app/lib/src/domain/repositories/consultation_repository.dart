@@ -13,5 +13,5 @@ abstract interface class ConsultationRepository {
   Future<List<CentralizationRow>> centralization(ConsultationParams p);
 
   /// Export PDF / Excel : renvoie le nom du fichier et son contenu.
-  Future<(String, Uint8List)> export({required ConsultationParams p, required String kind, required String format});
+  Future<(String, Uint8List)> export({required ConsultationParams p, required String kind, required String format, bool allCounterparts = false});
 }

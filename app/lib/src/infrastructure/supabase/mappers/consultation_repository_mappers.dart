@@ -12,10 +12,15 @@ LedgerLine ledgerLineFromJson(Map<String, dynamic> j) => LedgerLine(
         reference: j['reference'] as String?,
         label: j['label'] as String,
         thirdPartyCode: j['third_party_code'] as String?,
+        thirdPartyName: j['third_party_name'] as String?,
         debit: (j['debit'] as num).toInt(),
         credit: (j['credit'] as num).toInt(),
         runningBalance: (j['running_balance'] as num).toInt(),
         letterCode: j['letter_code'] as String?,
+        counterparts: [
+          for (final c in (j['counterparts'] as List?) ?? const [])
+            Counterpart(code: (c as Map<String, dynamic>)['code'] as String, label: (c['label'] as String?) ?? '', amount: (c['amount'] as num).toInt()),
+        ],
       );
 
 BalanceRow balanceRowFromJson(Map<String, dynamic> j) => BalanceRow(

@@ -45,7 +45,7 @@ class SupabaseConsultationRepository implements ConsultationRepository {
 
   /// Export PDF / Excel : renvoie le nom du fichier et son contenu.
   @override
-  Future<(String, Uint8List)> export({required ConsultationParams p, required String kind, required String format}) async {
+  Future<(String, Uint8List)> export({required ConsultationParams p, required String kind, required String format, bool allCounterparts = false}) async {
     final res = await _client.functions.invoke('export-document', body: {
       'entity_id': p.entityId,
       'kind': kind,
@@ -57,6 +57,7 @@ class SupabaseConsultationRepository implements ConsultationRepository {
       'account_to': ?p.accountTo,
       'class': ?p.classNo,
       'side': p.side,
+      if (kind == 'general_ledger') 'counterpart': allCounterparts ? 'all' : 'main',
     });
     if (res.status != 200) throw FunctionException(status: res.status, details: res.data);
     final base = switch (kind) { 'trial_balance' => 'balance', 'general_ledger' => 'grand-livre', 'journal' => 'journal', 'reconciliation' => 'rapprochement', 'financial_statements' => 'etats-financiers', 'dgi' => 'liasse-dgi', _ => 'balance-agee' };

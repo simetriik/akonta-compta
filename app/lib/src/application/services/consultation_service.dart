@@ -37,8 +37,8 @@ class ConsultationService {
   }
 
   /// Export PDF / Excel : renvoie le nom du fichier et son contenu.
-  Future<(String, Uint8List)> export({required ConsultationParams p, required String kind, required String format}) async {
+  Future<(String, Uint8List)> export({required ConsultationParams p, required String kind, required String format, bool allCounterparts = false}) async {
     _online.require('L\'export');
-    return _repository.export(p: p, kind: kind, format: format);
+    return _repository.export(p: p, kind: kind, format: format, allCounterparts: allCounterparts);
   }
 }

@@ -1,5 +1,14 @@
+/// Un compte opposé à une ligne d'écriture (contrepartie) et le montant qu'il porte.
+class Counterpart {
+  const Counterpart({required this.code, required this.label, required this.amount});
+
+  final String code;
+  final String label;
+  final int amount;
+}
+
 class LedgerLine {
-  const LedgerLine({required this.accountCode, required this.accountLabel, required this.entryId, required this.entryDate, required this.journalCode, required this.number, this.reference, required this.label, this.thirdPartyCode, required this.debit, required this.credit, required this.runningBalance, this.letterCode});
+  const LedgerLine({required this.accountCode, required this.accountLabel, required this.entryId, required this.entryDate, required this.journalCode, required this.number, this.reference, required this.label, this.thirdPartyCode, this.thirdPartyName, required this.debit, required this.credit, required this.runningBalance, this.letterCode, this.counterparts = const []});
 
   final String accountCode;
   final String accountLabel;
@@ -10,10 +19,27 @@ class LedgerLine {
   final String? reference;
   final String label;
   final String? thirdPartyCode;
+  final String? thirdPartyName;
   final int debit;
   final int credit;
   final int runningBalance;
   final String? letterCode;
+
+  /// Comptes opposés dans la même écriture, le principal en premier (règle du cabinet appliquée par la base).
+  final List<Counterpart> counterparts;
+
+  /// Tiers lisible : son nom, à défaut son code.
+  String get thirdPartyText => thirdPartyName ?? thirdPartyCode ?? '';
+
+  /// Contrepartie affichée : le compte principal, suivi de « + n » s'il y en a d'autres (ex. « 6011000 + 1 »).
+  String get counterpartText {
+    if (counterparts.isEmpty) return '';
+    final more = counterparts.length - 1;
+    return more > 0 ? '${counterparts.first.code} + $more' : counterparts.first.code;
+  }
+
+  /// Liste complète des comptes opposés, un par ligne, pour l'infobulle.
+  String get counterpartDetail => counterparts.map((c) => '${c.code} ${c.label}').join('\n');
 }
 
 class BalanceRow {

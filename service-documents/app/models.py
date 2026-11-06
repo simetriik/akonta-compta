@@ -33,6 +33,12 @@ class TrialBalanceDocument(BaseModel):
     rows: list[TrialBalanceRow] = Field(default_factory=list)
 
 
+class Counterpart(BaseModel):
+    code: str
+    label: str = ""
+    amount: int = 0
+
+
 class LedgerLine(BaseModel):
     account_code: str
     account_label: str
@@ -42,15 +48,22 @@ class LedgerLine(BaseModel):
     reference: str | None = None
     label: str
     third_party_code: str | None = None
+    third_party_name: str | None = None
     debit: int = 0
     credit: int = 0
     running_balance: int = 0
     letter_code: str | None = None
+    # Contrepartie : compte principal, nombre d'autres comptes opposés, liste complète (calculées par PostgreSQL)
+    counterpart_code: str | None = None
+    counterpart_more: int = 0
+    counterparts: list[Counterpart] = Field(default_factory=list)
 
 
 class LedgerDocument(BaseModel):
     header: DocumentHeader
     lines: list[LedgerLine] = Field(default_factory=list)
+    # « main » : contrepartie principale suivie de « + n » ; « all » : liste complète des comptes opposés
+    counterpart_mode: Literal["main", "all"] = "main"
 
 
 class JournalLine(BaseModel):
