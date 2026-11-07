@@ -715,7 +715,12 @@ class AkAutocompleteField<T extends Object> extends StatelessWidget {
     this.unresolvedError,
     this.onCreate,
     this.createLabel,
+    this.isExactMatch,
   });
+
+  /// Une proposition « correspond exactement » à la saisie : la ligne de création est alors masquée.
+  /// Par défaut : texte affiché identique à la saisie (sans casse).
+  final bool Function(T option, String query)? isExactMatch;
 
   /// Création en ligne : quand la saisie ne correspond à aucune proposition, une dernière ligne « Créer … » ouvre
   /// ce rappel avec le texte tapé. Il renvoie l'élément créé (retenu aussitôt) ou null si l'utilisateur renonce.
@@ -760,7 +765,7 @@ class AkAutocompleteField<T extends Object> extends StatelessWidget {
     final found = options(query).toList();
     final text = query.trim();
     final list = [for (final o in found) _AutoOption<T>(o)];
-    final exact = found.any((o) => display(o).trim().toLowerCase() == text.toLowerCase());
+    final exact = found.any((o) => isExactMatch?.call(o, text) ?? display(o).trim().toLowerCase() == text.toLowerCase());
     if (onCreate != null && text.isNotEmpty && !exact) list.add(_AutoOption<T>.create(text));
     return list;
   }
@@ -948,6 +953,12 @@ class AkAccountField extends StatelessWidget {
       onSubmittedPick: onSubmittedPick,
       onCreate: onCreate,
       createLabel: (q) => 'Créer le compte « $q »',
+      // Un numéro saisi est un début de numéro de compte : « 4111 » désigne 4111000, il ne faut pas proposer de le créer.
+      isExactMatch: (a, q) {
+        final s = q.trim().toLowerCase();
+        if (RegExp(r'^\d+$').hasMatch(s)) return a.code.startsWith(s);
+        return a.label.toLowerCase() == s || '${a.code} ${a.label}'.toLowerCase() == s;
+      },
       errorText: invalid ? 'Choisir dans la liste' : null,
       unresolvedError: 'Choisir dans la liste',
       display: (a) => '${a.code} ${a.label}',

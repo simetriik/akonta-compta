@@ -155,6 +155,30 @@ void main() {
     expect(log, ['create:6099', 'select:6099000']);
   });
 
+  testWidgets('champ compte : un début de numéro d\'un compte existant ne propose pas de le créer (UX-13)', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAkontaTheme(),
+        home: Scaffold(
+          body: SizedBox(
+            width: 320,
+            child: AkAccountField(accounts: const [_customers], onSelected: (_) {}, onCreate: (q) async => null),
+          ),
+        ),
+      ),
+    );
+    for (final typed in ['4111', '41', '4111000']) {
+      await tester.enterText(find.byType(EditableText), typed);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('4111000 Clients'), findsWidgets, reason: typed);
+      expect(find.textContaining('Créer le compte'), findsNothing, reason: typed);
+    }
+    // Un numéro plus long que tout compte existant reste créable.
+    await tester.enterText(find.byType(EditableText), '41119999');
+    await tester.pumpAndSettle();
+    expect(find.text('Créer le compte « 41119999 »'), findsOneWidget);
+  });
+
   group('éditeur d\'écriture', () {
     final repo = _FakeReferences();
     Widget app() => ProviderScope(
