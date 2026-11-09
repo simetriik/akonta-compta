@@ -9,10 +9,10 @@ abstract final class TeamRules {
   /// Seul l'associé choisit ou remplace le chef de mission.
   static bool canSetManager(PermissionSet perms) => perms.has('assignments.manage');
 
-  /// Rôles que l'utilisateur peut attribuer sur ce dossier, dans l'ordre d'affichage.
+  /// Rôles que l'utilisateur peut attribuer sur ce dossier, dans l'ordre d'affichage (l'auditeur, en lecture seule, par l'associé seulement).
   static List<RoleDef> assignableRoles(PermissionSet perms, String entityId, List<RoleDef> roles) {
     final allowed = canSetManager(perms)
-        ? const ['manager', 'assistant', 'trainee']
+        ? const ['manager', 'assistant', 'trainee', 'auditor']
         : perms.has('team.assign', entityId: entityId)
         ? const ['assistant', 'trainee']
         : const <String>[];
@@ -21,7 +21,7 @@ abstract final class TeamRules {
 
   /// Équipe du dossier : affectations rattachées à ce dossier, chef de mission d'abord.
   static List<Assignment> teamOf(List<Assignment> all, String entityId) {
-    const order = {'manager': 0, 'assistant': 1, 'trainee': 2};
+    const order = {'manager': 0, 'assistant': 1, 'trainee': 2, 'auditor': 3};
     // Les comptes clients ont leur propre onglet : ils ne font pas partie de l'équipe du cabinet.
     final team = all.where((a) => a.entityId == entityId && !a.roleCode.startsWith('client_')).toList();
     team.sort((a, b) {

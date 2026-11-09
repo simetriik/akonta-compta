@@ -12,6 +12,7 @@ const _roles = [
   RoleDef(id: 'm', code: 'manager', name: 'Chef', isSystem: true, permissions: {}),
   RoleDef(id: 'a', code: 'assistant', name: 'Assistant', isSystem: true, permissions: {}),
   RoleDef(id: 't', code: 'trainee', name: 'Stagiaire', isSystem: true, permissions: {}),
+  RoleDef(id: 'u', code: 'auditor', name: 'Auditeur', isSystem: true, permissions: {}),
 ];
 
 void main() {
@@ -23,7 +24,7 @@ void main() {
     test('l\'associé gère tous les dossiers et choisit le chef de mission', () {
       expect(TeamRules.canManage(partner, 'e9'), isTrue);
       expect(TeamRules.canSetManager(partner), isTrue);
-      expect(TeamRules.assignableRoles(partner, 'e9', _roles).map((r) => r.code), ['manager', 'assistant', 'trainee']);
+      expect(TeamRules.assignableRoles(partner, 'e9', _roles).map((r) => r.code), ['manager', 'assistant', 'trainee', 'auditor']);
     });
 
     test('le chef de mission gère son dossier seulement, assistants et stagiaires', () {
