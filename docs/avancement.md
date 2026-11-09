@@ -103,3 +103,12 @@ Parcours dans le navigateur intégré (`flutter run -d web-server`, fenêtre 144
 - Décision D-044. Rôles client, interrupteur par dossier (audité), lecture étroite (brouillard, factures, pièces déposées), écriture bornée par l'état d'accès, motif « à corriger », invitation des comptes, accueil et onglet « Clients » dans l'application.
 - Faille existante corrigée au passage : trois fonctions `security definer` écrivaient dans n'importe quel dossier sans contrôle de droit (prouvé par un test avant correction) ; et `documents.attach` ouvrait toutes les pièces du dossier à un client.
 - Tests : pgTAP 43 fichiers (707 assertions) dont `370`, `380`, `390`, `400` nouveaux ; Flutter 296 ; Deno 34 ; essai réel par l'API 31 contrôles (`scripts/e2e-client-access.ts`).
+
+## Fiabilisation de la recette : rôle auditeur affectable, Q-016 close (9 nov. 2026, branche `recette-2026-11-05`)
+- Relevé complet de `scripts/test.sh` avant correctif : pgTAP 758 (48 fichiers), Flutter 381, Deno 41, pytest 33, tout vert.
+- **Rôle auditeur** : il ne pouvait pas être affecté, car la liste blanche de `can_assign_role` (et `TeamRules.assignableRoles` côté écran) l'ignorait. Migration `20261109100001_assign_auditor.sql` : seul l'associé l'attribue, le chef de mission reste limité à assistant et stagiaire. Aucune fonction `security definer` nouvelle, droits d'exécution inchangés. Commit `408e772`.
+- **Q-016 close** : l'invitation ne crée pas d'affectation, par décision (D-034) ; le premier associé s'invite via l'option dédiée, les autres rôles s'affectent depuis l'onglet Équipe du dossier. Ce qui manquait réellement était l'auditeur.
+- Tests ajoutés : pgTAP `450` (7 assertions, affectation sous un vrai utilisateur) et un cas Flutter. **Suite complète après correctif** : pgTAP 765 (49 fichiers), Flutter 381, Deno 41, pytest 33.
+- Parcours manuel validé le 9 nov. (invitation, affectation, lecture seule, piste d'audit, retrait) sur la pile de développement.
+- **À faire** : appliquer la migration `20261109100001` à l'instance de recette (accord explicite requis).
+

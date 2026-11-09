@@ -50,7 +50,7 @@ Mis à jour le 31 oct. 2026. Ce fichier rassemble ce qui a été décidé, étud
 - **Erreurs d'inventaire connues** : l'écran Inventaire propose le compte de variation 603 pour les stocks 31 à 33 et 73 sinon ; pour le SYCEBNL le stock 34 (dons en nature) relève plutôt de 6035 (D-025).
 - **Anomalies de solde** : un solde dans le sens anormal (ex. 4991 au débit) reste hors des postes des états ; le contrôle « actif = passif » le signale (D-024).
 - **Plan SYCEBNL** : classe 9 (contributions volontaires en nature) non copiée dans l'entité ; cinq comptes de regroupement (28, 29, 49, 59, 68) confondus avec leur sous-compte une fois complétés (D-022).
-- **Invitation et rôles** : l'invitation ne crée pas d'affectation (Q-016).
+- **Invitation et rôles** : l'invitation ne crée pas d'affectation, par décision (D-034) ; Q-016 close le 9 nov. 2026 (rôle auditeur désormais affectable).
 
 ## 4 bis. Architecture clean et mode hors connexion (D-031)
 - **Écrans** (D-032) : les six écrans de plus de 780 lignes sont découpés (un fichier par onglet, étape ou dialogue) et leur logique est dans `application/` (règles, contrôleur de rapprochement, providers de clôture), avec tests. Restent des écrans de 450 à 550 lignes (`entries_screen`, `entity_detail_screen`, `cabinet_screen`, `app_shell`) et des écrans qui gardent leur état dans le widget (éditeur d'écriture, étapes de clôture) ; un test d'architecture interdit au-delà de 600 lignes.
