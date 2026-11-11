@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects } from "jsr:@std/assert@1";
-import { buildProposal, type Extracted, runScan, ScanError, type ScanPorts } from "./scan.ts";
+import { buildProposal, type Extracted, notAPurchase, runScan, ScanError, type ScanPorts } from "./scan.ts";
 
 const base: Extracted = {
   supplier: "Cimenterie du Golfe", document_date: "2027-01-03", reference: "FA-FCG-0215", currency: "FCFA",
@@ -48,6 +48,8 @@ function fakePorts(over: Partial<ScanPorts> = {}): ScanPorts & { generated: unkn
     generated,
     loadDocument: () => Promise.resolve({ id: "d1", entity_id: "e1", storage_path: "p", mime_type: "application/pdf", file_name: "f.pdf" }),
     existingEntry: () => Promise.resolve(null),
+    duplicateEntry: () => Promise.resolve(null),
+    entityIdentity: () => Promise.resolve({ name: "Comptoir Aïdé Négoce SARL", tax_id: "3202012345678" }),
     download: () => Promise.resolve(new Uint8Array([1])),
     extract: () => Promise.resolve(base),
     findThirdParty: () => Promise.resolve("t1"),
@@ -82,4 +84,32 @@ Deno.test("runScan : pièce déjà proposée, aucune lecture ni écriture", asyn
 Deno.test("runScan : pièce inaccessible et plan sans compte fournisseur", async () => {
   await assertRejects(() => runScan("d1", fakePorts({ loadDocument: () => Promise.resolve(null) })), ScanError, "inaccessible");
   await assertRejects(() => runScan("d1", fakePorts({ accountIdByCode: (_e, c) => Promise.resolve(c === "4011" ? null : "x") })), ScanError, "4011");
+});
+
+const entity = { name: "Comptoir Aïdé Négoce SARL", tax_id: "3202012345678" };
+
+Deno.test("AN-33 : une facture émise par le dossier lui-même n'est pas un achat", () => {
+  assertEquals(notAPurchase({ ...base, supplier: "Comptoir Aïdé Négoce SARL" }, entity)?.includes("vente"), true);
+  assertEquals(notAPurchase({ ...base, supplier: "Autre nom", tax_id: "3202012345678" }, entity)?.includes("vente"), true);
+  assertEquals(notAPurchase(base, entity), null);
+});
+
+Deno.test("AN-28 : paie et avis bancaire ne sont pas des achats", () => {
+  assertEquals(notAPurchase({ ...base, raw_text: "Bulletin de paie janvier 2027" }, entity)?.includes("paie"), true);
+  assertEquals(notAPurchase({ ...base, reference: "PAIE-0127" }, entity)?.includes("paie"), true);
+  assertEquals(notAPurchase({ ...base, raw_text: "Bordereau de retenue à la source (AIB et TVA)" }, entity)?.includes("bancaire"), true);
+  assertEquals(notAPurchase({ ...base, raw_text: "Facture : paiement à 30 jours, bordereau de livraison joint" }, entity), null);
+});
+
+Deno.test("runScan : une vente du dossier est refusée sans brouillard", async () => {
+  const ports = fakePorts({ extract: () => Promise.resolve({ ...base, supplier: "Comptoir Aïdé Négoce SARL" }) });
+  await assertRejects(() => runScan("d1", ports), ScanError, "vente");
+  assertEquals(ports.generated.length, 0);
+});
+
+Deno.test("AN-34 : le même fichier déjà traité renvoie son écriture, sans lecture ni second brouillard", async () => {
+  let extracted = false;
+  const ports = fakePorts({ duplicateEntry: () => Promise.resolve("first"), extract: () => { extracted = true; return Promise.resolve(base); } });
+  const out = await runScan("d1", ports);
+  assertEquals([out.entry_id, out.existing, extracted, ports.generated.length, out.warnings.length], ["first", true, false, 0, 1]);
 });

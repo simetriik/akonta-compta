@@ -40,6 +40,19 @@ function ports(caller: SupabaseClient): ScanPorts {
       const { data } = await caller.from("entries").select("id").eq("generated_source", `document:${documentId}`).maybeSingle();
       return (data?.id as string | undefined) ?? null;
     },
+    async duplicateEntry(documentId) {
+      const { data: doc } = await caller.from("documents").select("entity_id, sha256").eq("id", documentId).maybeSingle();
+      if (!doc?.sha256) return null;
+      const { data: twins } = await caller.from("documents").select("id").eq("entity_id", doc.entity_id).eq("sha256", doc.sha256).neq("id", documentId);
+      const ids = ((twins ?? []) as { id: string }[]).map((t) => t.id);
+      if (ids.length === 0) return null;
+      const { data: links } = await caller.from("entry_documents").select("entry_id").in("document_id", ids).limit(1);
+      return ((links ?? [])[0]?.entry_id as string | undefined) ?? null;
+    },
+    async entityIdentity(entityId) {
+      const { data } = await caller.from("entities").select("name, tax_id").eq("id", entityId).maybeSingle();
+      return { name: (data?.name as string | undefined) ?? "", tax_id: (data?.tax_id as string | null | undefined) ?? null };
+    },
     async download(path) {
       const { data, error: err } = await caller.storage.from("documents").download(path);
       if (err || !data) throw new ScanError("Fichier de la pièce introuvable", 404);
@@ -59,7 +72,7 @@ function ports(caller: SupabaseClient): ScanPorts {
       return await res.json() as Extracted;
     },
     async findThirdParty(entityId, taxId, name) {
-      const { data } = await caller.from("third_parties").select("id, name, tax_id").eq("entity_id", entityId).eq("is_active", true);
+      const { data } = await caller.from("third_parties").select("id, name, tax_id").eq("entity_id", entityId).eq("is_active", true).in("type", ["supplier", "other"]); // jamais un client (AN-33)
       const rows = (data ?? []) as { id: string; name: string; tax_id: string | null }[];
       const byIfu = taxId ? rows.find((t) => t.tax_id === taxId) : undefined;
       const byName = name ? rows.find((t) => t.name.trim().toLowerCase() === name.trim().toLowerCase()) : undefined;

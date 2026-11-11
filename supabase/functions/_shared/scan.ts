@@ -17,9 +17,13 @@ export interface Extracted {
   tax_id: string | null;
   consistent: boolean | null;
   method: string | null;
+  /** Texte lu sur la pièce, utilisé pour reconnaître son genre (paie, avis bancaire…). */
+  raw_text?: string | null;
 }
 
 export interface ScanDocument { id: string; entity_id: string; storage_path: string; mime_type: string; file_name: string }
+/** Identité du dossier : sert à reconnaître une facture émise par le dossier lui-même (vente). */
+export interface EntityIdentity { name: string; tax_id: string | null }
 export interface ProposalLine { account_id: string; third_party_id?: string | null; debit?: number; credit?: number; label: string }
 export interface Proposal { date: string; label: string; reference: string | null; journal_type: "purchases"; lines: ProposalLine[] }
 
@@ -31,6 +35,9 @@ export class ScanError extends Error {
 export interface ScanPorts {
   loadDocument(id: string): Promise<ScanDocument | null>;
   existingEntry(documentId: string): Promise<string | null>;
+  /** Écriture déjà liée à une autre pièce de même empreinte (même fichier déposé deux fois). */
+  duplicateEntry(documentId: string): Promise<string | null>;
+  entityIdentity(entityId: string): Promise<EntityIdentity>;
   download(path: string): Promise<Uint8Array>;
   extract(bytes: Uint8Array, mimeType: string): Promise<Extracted>;
   findThirdParty(entityId: string, taxId: string | null, name: string | null): Promise<string | null>;
@@ -88,6 +95,28 @@ export function buildProposal(
   };
 }
 
+const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/**
+ * Reconnaît ce que la pièce n'est pas : une facture d'achat. Le scan ne propose une écriture d'achat que pour un achat ;
+ * une vente du dossier, une paie ou un avis bancaire se saisissent autrement (vente, paie, relevé). Renvoie le motif du refus, sinon null.
+ */
+export function notAPurchase(x: Extracted, entity: EntityIdentity): string | null {
+  const supplier = normalize(x.supplier ?? "");
+  const own = normalize(entity.name);
+  if ((x.tax_id && entity.tax_id && x.tax_id === entity.tax_id) || (supplier.length >= 3 && own.length >= 3 && (supplier.includes(own) || own.includes(supplier)))) {
+    return "Cette pièce est émise par le dossier lui-même (facture de vente) : saisissez-la en vente, le scan ne propose que des achats.";
+  }
+  const text = normalize(`${x.raw_text ?? ""} ${x.reference ?? ""}`);
+  if (/\b(bulletin de paie|fiche de paie|salaires?|paie)\b/.test(text)) {
+    return "Cette pièce est une paie, pas une facture d'achat : saisissez-la dans le journal de paie.";
+  }
+  if (/\b(avis de (debit|credit|virement)|avis de prelevement|bordereau de (retenue|versement|remise)|releve (de compte|bancaire)|retenue a la source)\b/.test(text)) {
+    return "Cette pièce est un avis ou un bordereau bancaire, pas une facture d'achat : créez l'écriture depuis le rapprochement bancaire.";
+  }
+  return null;
+}
+
 export async function runScan(documentId: string, ports: ScanPorts): Promise<ScanOutcome> {
   const doc = await ports.loadDocument(documentId);
   if (!doc) throw new ScanError("Pièce inaccessible", 403);
@@ -95,7 +124,13 @@ export async function runScan(documentId: string, ports: ScanPorts): Promise<Sca
   const existing = await ports.existingEntry(documentId);
   if (existing) return { entry_id: existing, existing: true, warnings: [] };
 
+  // Même fichier déjà traité : on renvoie son écriture au lieu d'en créer une seconde (AN-34).
+  const duplicate = await ports.duplicateEntry(documentId);
+  if (duplicate) return { entry_id: duplicate, existing: true, warnings: ["Cette pièce est identique à une pièce déjà traitée : aucun second brouillard n'a été créé."] };
+
   const extracted = await ports.extract(await ports.download(doc.storage_path), doc.mime_type);
+  const refusal = notAPurchase(extracted, await ports.entityIdentity(doc.entity_id));
+  if (refusal) throw new ScanError(refusal, 422, extracted);
   const thirdParty = await ports.findThirdParty(doc.entity_id, extracted.tax_id, extracted.supplier);
   const supplierAccount = await ports.accountIdByCode(doc.entity_id, "4011");
   const vatAccount = await ports.accountIdByCode(doc.entity_id, "4452");
