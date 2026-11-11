@@ -218,3 +218,20 @@ class InvoiceDocument(BaseModel):
     payments: list[InvoicePaymentDoc] = Field(default_factory=list)
     security: InvoiceSecurity
     commercial_message: str | None = None
+
+
+class ExtractedDocument(BaseModel):
+    """Champs lus sur une pièce scannée. Tout champ non trouvé vaut `None` : c'est une proposition à valider."""
+    supplier: str | None = None
+    document_date: date | None = None
+    reference: str | None = None
+    currency: str | None = None
+    amount_excl_tax: float | None = None
+    vat_amount: float | None = None
+    total: float | None = None
+    exchange_rate: float | None = None
+    counter_value: float | None = None
+    tax_id: str | None = None
+    consistent: bool | None = None
+    method: str | None = None
+    raw_text: str | None = None
