@@ -1,3 +1,4 @@
+import 'fiscal_year_partners.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
@@ -319,6 +320,8 @@ class _FiscalYearCard extends ConsumerWidget {
                 style: AkText.table.copyWith(color: t.textMuted),
               ),
             ],
+            const SizedBox(height: AkSpace.s2),
+            FiscalYearPartnersSection(entityId: entity.id, fiscalYear: fiscalYear),
             const SizedBox(height: AkSpace.s3),
             periods.when(
               loading: () => const AkLoading(),
