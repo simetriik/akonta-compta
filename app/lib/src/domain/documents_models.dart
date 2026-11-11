@@ -16,3 +16,14 @@ class DocumentModel {
   bool get isInInbox => entryIds.isEmpty;
   bool get isImage => mimeType.startsWith('image/');
 }
+
+/// Résultat de la lecture d'une pièce : brouillard proposé (ou déjà existant) et points à vérifier par le comptable.
+class ScanProposal {
+  const ScanProposal({required this.entryId, required this.existing, this.warnings = const []});
+
+  final String entryId;
+
+  /// Vrai quand la pièce avait déjà un brouillard : il est rouvert tel quel, sans être réécrit.
+  final bool existing;
+  final List<String> warnings;
+}
