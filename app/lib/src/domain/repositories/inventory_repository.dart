@@ -22,6 +22,7 @@ abstract interface class InventoryRepository {
   Future<int> proposeReceivableProvisions(String entityId, String fiscalYearId, {required double rate91to180, required double rateOver180, Map<String, double> byThirdParty = const {}});
 
   Future<void> updateProvisionAmount(String id, int amount);
+  Future<void> deleteProvision(String id);
 
   Future<void> addRiskProvision(String cabinetId, String entityId, String fiscalYearId, {required String provisionAccountId, required String expenseAccountId, required String reversalAccountId, required int amount, required int previousAmount, String? note});
 

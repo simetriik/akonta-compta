@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:akonta/design/design.dart';
-
+import 'journal_hint_banner.dart';
 import '../../core/errors/errors.dart';
 import '../../core/formatting.dart';
 import '../../domain/entry_models.dart';
@@ -561,6 +561,7 @@ class _EditorState extends ConsumerState<_Editor> {
                                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final message in _errors) Text('• $message')]),
                                 ),
                               ),
+                            JournalHintBanner(journals: journals, journalId: _draft.journalId, lines: _draft.lines),
                             if (_loaded?.reviewComment != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: AkSpace.s3),

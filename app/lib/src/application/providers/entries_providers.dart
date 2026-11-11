@@ -20,7 +20,8 @@ final notificationsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) {
 
 class EntryFilterNotifier extends Notifier<EntryFilter> {
   @override
-  EntryFilter build() => EntryFilter(month: DateTime(DateTime.now().year, DateTime.now().month, 1));
+  // Par défaut, tout l'exercice du dossier : le mois du jour ne correspond pas forcément à l'exercice (AN-08).
+  EntryFilter build() => const EntryFilter();
 
   void set(EntryFilter f) => state = f;
 }

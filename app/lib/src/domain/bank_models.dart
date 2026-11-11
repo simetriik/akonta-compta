@@ -139,14 +139,14 @@ StatementParseResult parseStatementCsv(String text, StatementTemplate t) {
     String col(int? n) => (n == null || n < 1 || n > cols.length) ? '' : cols[n - 1];
     final date = _parseDate(col(t.dateColumn), t.dateFormat);
     if (date == null) {
-      errors.add('ligne ${i + 1} : date illisible « ${col(t.dateColumn)} »');
+      errors.add('ligne ${i + 1} : la colonne ${t.dateColumn} (date) contient « ${col(t.dateColumn)} », qui n\'est pas une date au format ${t.dateFormat}');
       continue;
     }
     int debit = 0, credit = 0;
     if (t.amountColumn != null) {
       final a = _parseAmount(col(t.amountColumn), t.decimalSeparator);
       if (a == null) {
-        errors.add('ligne ${i + 1} : montant illisible « ${col(t.amountColumn)} »');
+        errors.add('ligne ${i + 1} : la colonne ${t.amountColumn} (montant) contient « ${col(t.amountColumn)} », qui n\'est pas un montant');
         continue;
       }
       final signed = t.amountSignInverted ? -a : a;
@@ -159,7 +159,9 @@ StatementParseResult parseStatementCsv(String text, StatementTemplate t) {
       final d = _parseAmount(col(t.debitColumn), t.decimalSeparator);
       final c = _parseAmount(col(t.creditColumn), t.decimalSeparator);
       if (d == null || c == null) {
-        errors.add('ligne ${i + 1} : montant illisible');
+        final bad = d == null ? 'débit, colonne ${t.debitColumn}' : 'crédit, colonne ${t.creditColumn}';
+        final value = d == null ? col(t.debitColumn) : col(t.creditColumn);
+        errors.add('ligne ${i + 1} : ($bad) contient « $value », qui n\'est pas un montant');
         continue;
       }
       debit = d.abs();

@@ -26,4 +26,12 @@ void main() {
     expect(r.errors.length, 1);
     expect(r.lines.single.credit, 10);
   });
+
+  test('un montant illisible nomme la colonne et son contenu (AN-12)', () {
+    // Gabarit par défaut 1/2/3/4 sur un relevé à 7 colonnes : la colonne 3 est le libellé, pas un montant.
+    const t = StatementTemplate(bankName: 'Ecobank', label: 'Défaut', delimiter: ';', dateColumn: 1, labelColumn: 2, debitColumn: 3, creditColumn: 4);
+    final r = parseStatementCsv('Date;Valeur;Libellé;Débit;Crédit;Réf;Solde\n05/01/2027;05/01/2027;VIR RECU;0;1 770 000;R1;1 770 000\n', t);
+    expect(r.lines, isEmpty);
+    expect(r.errors.single, allOf(contains('colonne 3'), contains('VIR RECU'), contains('débit')));
+  });
 }
