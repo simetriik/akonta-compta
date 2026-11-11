@@ -43,12 +43,12 @@ class SupabaseImportRepository implements ImportRepository {
 
   @override
   Future<void> updateMapping(String id, {String? accountCode, String? thirdPartyCode, String? thirdPartyName, bool? createThirdParty}) =>
-      _client.from('import_account_mappings').update({
-        'account_code': accountCode?.trim().isEmpty == true ? null : accountCode?.trim(),
-        'third_party_code': thirdPartyCode?.trim().isEmpty == true ? null : thirdPartyCode?.trim().toUpperCase(),
-        'third_party_name': thirdPartyName?.trim().isEmpty == true ? null : thirdPartyName?.trim(),
-        'create_third_party': ?createThirdParty,
-      }).eq('id', id);
+      _client.from('import_account_mappings').update(mappingUpdatePayload(
+        accountCode: accountCode,
+        thirdPartyCode: thirdPartyCode,
+        thirdPartyName: thirdPartyName,
+        createThirdParty: createThirdParty,
+      )).eq('id', id);
 
   @override
   Future<Map<String, dynamic>> apply(String batchId, {required bool dryRun}) async =>
@@ -56,4 +56,20 @@ class SupabaseImportRepository implements ImportRepository {
 
   @override
   Future<void> setTargetJournal(String batchId, String? journalId) => _client.from('import_batches').update({'target_journal_id': journalId}).eq('id', batchId);
+}
+
+/// Champs à écrire pour une modification de correspondance : seuls les champs fournis sont envoyés, un champ vide
+/// est remis à `null`. Un champ absent ne doit jamais être écrasé (chaque cellule de l'écran n'enregistre que le sien).
+Map<String, dynamic> mappingUpdatePayload({String? accountCode, String? thirdPartyCode, String? thirdPartyName, bool? createThirdParty}) {
+  String? clean(String v, {bool upper = false}) {
+    final t = v.trim();
+    return t.isEmpty ? null : (upper ? t.toUpperCase() : t);
+  }
+
+  return {
+    if (accountCode != null) 'account_code': clean(accountCode),
+    if (thirdPartyCode != null) 'third_party_code': clean(thirdPartyCode, upper: true),
+    if (thirdPartyName != null) 'third_party_name': clean(thirdPartyName),
+    'create_third_party': ?createThirdParty,
+  };
 }
