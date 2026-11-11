@@ -133,5 +133,18 @@ void main() {
       expect(read.lines.map((l) => l.isCollective), [true, false]);
       expect(EntryDraft.fromEntry(read).lines.first.isCollective, isTrue);
     });
+
+    test('journal de banque : la contrepartie automatique propose le compte de trésorerie du journal (AN-10)', () {
+      final d = EntryDraft(journalId: 'bq', label: 'Loyer', lines: [DraftLine(accountId: 'a62', accountCode: '6221000', debit: 250000), DraftLine()]);
+      d.treasuryAccount = (id: 'a52', code: '5210000');
+      d.autoBalance();
+      expect((d.lines[1].accountCode, d.lines[1].credit, d.isBalanced), ('5210000', 250000, true));
+    });
+
+    test('sans journal de trésorerie, la contrepartie ne choisit pas de compte', () {
+      final d = EntryDraft(journalId: 'od', label: 'OD', lines: [DraftLine(accountId: 'a62', accountCode: '6221000', debit: 100), DraftLine()]);
+      d.autoBalance();
+      expect((d.lines[1].accountId, d.lines[1].credit), (null, 100));
+    });
   });
 }

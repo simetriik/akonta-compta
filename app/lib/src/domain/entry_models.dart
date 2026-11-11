@@ -157,6 +157,9 @@ class EntryDraft {
   /// Pièce en devise, ou `null` pour une écriture en FCFA.
   ForeignAmount? foreign;
 
+  /// Compte de trésorerie du journal choisi (journal de banque ou de caisse) : proposé par la contrepartie automatique (AN-10).
+  ({String id, String code})? treasuryAccount;
+
   int get totalDebit => lines.fold(0, (s, l) => s + l.debit);
   int get totalCredit => lines.fold(0, (s, l) => s + l.credit);
   int get balance => totalDebit - totalCredit;
@@ -169,6 +172,19 @@ class EntryDraft {
   /// Contrepartie automatique : place le solde sur la première ligne vide (ou une nouvelle).
   void autoBalance() {
     if (balance == 0) return;
+    // Journal de banque ou de caisse : la contrepartie est d'abord le compte de trésorerie du journal, sur une nouvelle ligne
+    // (une ligne neuve, pour que la grille affiche le compte), tant qu'aucune ligne ne l'utilise déjà.
+    final treasury = treasuryAccount;
+    if (treasury != null && !lines.any((l) => l.accountId == treasury.id)) {
+      final emptyAt = lines.indexWhere((l) => l.isEmpty);
+      final line = DraftLine(accountId: treasury.id, accountCode: treasury.code, debit: balance < 0 ? -balance : 0, credit: balance > 0 ? balance : 0);
+      if (emptyAt >= 0) {
+        lines[emptyAt] = line;
+      } else {
+        lines.add(line);
+      }
+      return;
+    }
     final target = lines.firstWhere((l) => l.debit == 0 && l.credit == 0, orElse: () {
       final l = DraftLine();
       lines.add(l);
