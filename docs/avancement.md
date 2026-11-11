@@ -112,3 +112,7 @@ Parcours dans le navigateur intégré (`flutter run -d web-server`, fenêtre 144
 - Parcours manuel validé le 9 nov. (invitation, affectation, lecture seule, piste d'audit, retrait) sur la pile de développement.
 - **À faire** : appliquer la migration `20261109100001` à l'instance de recette (accord explicite requis).
 
+## Saisie par scan de pièce (11 nov. 2026, branche `feat/scan-entry`)
+- Décision D-050 : lecture locale (Tesseract, texte natif des PDF) et brouillard proposé à valider. Livré : route `/extract/document` (pytest 7), migration `20261111100001` et `generate_scan_entry` (pgTAP `470`, joué sur une base jetable), Edge Function `extract-document` (Deno 9), action « Proposer une écriture » dans les pièces (Flutter 2).
+- Reste : essai de bout en bout sur la recette (étape 16, accord requis pour appliquer la migration), suite complète `scripts/test.sh`, règles sur de vraies pièces.
+

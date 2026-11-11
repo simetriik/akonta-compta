@@ -114,6 +114,16 @@ Prérequis : jeton de test et NIM du point de vente fournis par la DGI (sinon, s
 7. Piste d'audit : les changements d'état (`client_access`) et les renvois (`return_draft`) y figurent.
 8. Points à trancher pendant la recette : TOTP pour un saisisseur qui émet ; création de tiers par le client ; visibilité des brouillards du cabinet.
 
+### Étape 16 — Saisie par scan de pièce (assistant, chef de mission) — D-050
+Prérequis : migration `20261111100001` appliquée, fonction `extract-document` déployée, service de documents lancé avec Tesseract.
+1. Déposer dans la boîte de réception les pièces de `recette/pieces/` (01, 04, 07, 12 en PDF ; 06 en JPEG), puis **Proposer une écriture** : brouillard ouvert, marqué « générée », pièce liée.
+2. Contrôler : date, référence, HT, TVA récupérable, fournisseur au crédit avec son tiers (par IFU ou nom) ; avertissements affichés (tiers non retrouvé, compte 4711).
+3. Pièce en devise (10, 11) : montant en FCFA par la contre-valeur, sans TVA. Pièce 05 (avis de retenue) : noter que l'achat proposé n'est pas le bon traitement.
+4. Relancer l'action sur la même pièce : le brouillard retouché est rouvert, rien n'est écrasé.
+5. Corriger le compte de charge, valider : la validation passe par les règles habituelles.
+6. Rôle client saisie : sa propre pièce oui, une pièce du cabinet non ; rôle auditeur : action refusée ; hors connexion : message clair.
+7. **Pièces réelles** : essayer 5 à 10 vraies pièces d'ABC (photos, scans), noter les champs mal lus pour ajuster les règles.
+
 ## 4. Fiche d'anomalie
 
 | N° | Étape | Rôle | Description | Gravité (bloquante / majeure / mineure / ergonomie) | Capture | Statut |

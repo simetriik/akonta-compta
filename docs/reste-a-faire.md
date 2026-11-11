@@ -61,7 +61,7 @@ Mis à jour le 31 oct. 2026. Ce fichier rassemble ce qui a été décidé, étud
 ## 5. IA locale (à analyser avant tout code)
 - **Palier 0 livré** (D-026) : suggestions par ressemblance de texte, sans modèle.
 - **Palier 1** (vecteurs : `pgvector`, embeddings légers type EmbeddingGemma ou multilingual-e5-small) : à décider après usage réel du palier 0 ; recoupement sémantique (« loyer » ↔ « bail »).
-- **Palier 2** (OCR des pièces : Tesseract, PaddleOCR ou RapidOCR + règles), **palier 3** (LLM de 3 à 4 milliards de paramètres quantifié, environ 2 à 2,5 Go de mémoire, quelques jetons par seconde sur CPU de bureau) : non commencés.
+- **Palier 2 livré en première version** (D-050) : OCR local Tesseract + règles, brouillard proposé depuis une pièce d'achat. À faire : règles sur de vraies pièces d'ABC, factures de vente et avis bancaires, PDF scannés, bouton dans l'éditeur et lancement au dépôt, RapidOCR si la précision manque. **Palier 3** (LLM de 3 à 4 milliards de paramètres quantifié, environ 2 à 2,5 Go de mémoire, quelques jetons par seconde sur CPU de bureau) : non commencés.
 - **Note de cadrage IA** : à rédiger dans `outputs/` après l'analyse conjointe. Questions ouvertes : où tourne le serveur, quelle machine minimale, quel cas d'usage d'abord, tolérance à la lenteur, contrainte de licence (Apache 2.0 ou MIT préférés, Akonta étant revendable), V1 ou V2. Aucun modèle en ligne ni abonnement.
 - Si on veut mesurer l'usage des suggestions : ajouter une table de compteurs sans contenu comptable (écartée pour l'instant, D-026).
 
