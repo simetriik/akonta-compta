@@ -1,12 +1,12 @@
 import 'package:akonta/src/application/rules/asset_form.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-AssetInput input({bool isNew = true, String? accountId = 'a2', String gross = '1 200 000', String months = '60', String method = 'linear', String coef = '', String acq = '15/03/2026'}) => AssetInput(
+AssetInput input({bool isNew = true, String? accountId = 'a2', String gross = '1 200 000', String months = '60', String method = 'linear', String coef = '', String acq = '15/03/2026', String service = '01/04/2026'}) => AssetInput(
   code: 'VEH-01',
   designation: ' Camion ',
   accountId: accountId,
   acquisition: acq,
-  service: '01/04/2026',
+  service: service,
   gross: gross,
   salvage: '',
   months: months,
@@ -48,5 +48,11 @@ void main() {
   test('dégressif : coefficient saisi avec virgule, sinon 1,5', () {
     expect(AssetForm.build(input(method: 'declining', coef: '2,25')).fields!['declining_coefficient'], 2.25);
     expect(AssetForm.build(input(method: 'declining')).fields!['declining_coefficient'], 1.5);
+  });
+
+  test('refuse une mise en service antérieure à l\'acquisition, avec un message précis (AN-18)', () {
+    final r = AssetForm.build(input(acq: '15/03/2026', service: '01/01/2025'));
+    expect(r.error, contains('mise en service'));
+    expect(AssetForm.build(input(acq: '15/03/2026', service: '15/03/2026')).error, isNull);
   });
 }

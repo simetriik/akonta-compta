@@ -65,6 +65,7 @@ class AssetForm {
         (i.isNew && i.accountId == null)) {
       return const AssetBuild.error('Code, désignation, compte, dates, valeur brute et durée requis');
     }
+    if (svc.isBefore(acq)) return const AssetBuild.error('La mise en service ne peut pas précéder la date d\'acquisition : corrigez l\'une des deux dates.');
     return AssetBuild.ok({
       if (i.isNew) 'code': i.code.trim(),
       'designation': i.designation.trim(),
