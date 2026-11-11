@@ -46,12 +46,13 @@ EntryModel entryModelFromJson(Map<String, dynamic> j) {
   }
 
 extension DraftLineJson on DraftLine {
-  Map<String, dynamic> toJson(int lineNo) => {
+  Map<String, dynamic> toJson(int lineNo, {ForeignAmount? foreign}) => {
         'line_no': lineNo,
         'account_id': accountId,
         'third_party_id': thirdPartyId,
         'label': label.trim().isEmpty ? null : label.trim(),
         'debit': debit,
         'credit': credit,
+        if (foreign != null && foreign.carries(this)) ...{'currency_code': foreign.currency, 'amount_currency': foreign.amount, 'exchange_rate': foreign.rate},
       };
 }

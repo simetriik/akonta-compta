@@ -117,8 +117,33 @@ class DraftLine {
   }
 }
 
+/// Montant d'une pièce en devise : seules les lignes qui portent la contre-valeur en FCFA sont enregistrées en devise (AN-25).
+class ForeignAmount {
+  const ForeignAmount({required this.currency, required this.amount, required this.rate});
+
+  final String currency;
+  final double amount;
+  final double rate;
+
+  /// Parité fixe de l'euro au FCFA.
+  static const euroRate = 655.957;
+
+  /// Contre-valeur en FCFA, arrondie à l'unité comme le calcule la base.
+  int get counterValue => (amount * rate).round();
+
+  /// Vrai si la ligne porte cette contre-valeur (au débit ou au crédit) et s'enregistre donc en devise.
+  bool carries(DraftLine l) => (l.debit == counterValue && l.debit > 0) || (l.credit == counterValue && l.credit > 0);
+
+  String? validate() {
+    if (amount <= 0) return 'Montant en devise requis';
+    if (rate <= 0) return 'Cours requis';
+    if (currency == 'EUR' && (rate - euroRate).abs() > 0.0000001) return 'L\'euro est à parité fixe : 655,957';
+    return null;
+  }
+}
+
 class EntryDraft {
-  EntryDraft({this.id, this.journalId, DateTime? date, this.reference = '', this.label = '', List<DraftLine>? lines})
+  EntryDraft({this.id, this.journalId, DateTime? date, this.reference = '', this.label = '', this.foreign, List<DraftLine>? lines})
       : entryDate = date ?? DateTime.now(),
         lines = lines ?? [DraftLine(), DraftLine()];
 
@@ -128,6 +153,9 @@ class EntryDraft {
   String reference;
   String label;
   final List<DraftLine> lines;
+
+  /// Pièce en devise, ou `null` pour une écriture en FCFA.
+  ForeignAmount? foreign;
 
   int get totalDebit => lines.fold(0, (s, l) => s + l.debit);
   int get totalCredit => lines.fold(0, (s, l) => s + l.credit);
@@ -168,6 +196,15 @@ class EntryDraft {
       if (e != null) errors.add('Ligne ${i + 1} : $e');
     }
     if (active.isNotEmpty && totalDebit != totalCredit) errors.add('Écriture déséquilibrée : ${totalDebit - totalCredit}');
+    final fx = foreign;
+    if (fx != null) {
+      final problem = fx.validate();
+      if (problem != null) {
+        errors.add('Devise : $problem');
+      } else if (!active.any(fx.carries)) {
+        errors.add('Devise : aucune ligne ne porte la contre-valeur de ${fx.amount} ${fx.currency} (${fx.counterValue} FCFA)');
+      }
+    }
     return errors;
   }
 
@@ -177,6 +214,7 @@ class EntryDraft {
         date: e.entryDate,
         reference: e.reference ?? '',
         label: e.label,
+        foreign: e.lines.where((l) => l.currencyCode != 'XOF' && l.amountCurrency != null && l.exchangeRate != null).map((l) => ForeignAmount(currency: l.currencyCode, amount: l.amountCurrency!, rate: l.exchangeRate!)).firstOrNull,
         lines: [
           for (final l in e.lines)
             DraftLine(accountId: l.accountId, accountCode: l.accountCode, accountLabel: l.accountLabel, isCollective: l.isCollective, thirdPartyId: l.thirdPartyId, thirdPartyCode: l.thirdPartyCode ?? '', label: l.label ?? '', debit: l.debit, credit: l.credit),

@@ -21,6 +21,7 @@ Map<String, dynamic> encodeEntryDraft({required String cabinetId, required Strin
   'entry_date': draft.entryDate.toIso8601String(),
   'reference': draft.reference,
   'label': draft.label,
+  'foreign': draft.foreign == null ? null : {'currency': draft.foreign!.currency, 'amount': draft.foreign!.amount, 'rate': draft.foreign!.rate},
   'lines': [
     for (final l in draft.lines)
       {
@@ -43,6 +44,7 @@ EntryDraft decodeEntryDraft(Map<String, dynamic> p, {String? id}) => EntryDraft(
   date: DateTime.parse(p['entry_date'] as String),
   reference: (p['reference'] as String?) ?? '',
   label: (p['label'] as String?) ?? '',
+  foreign: p['foreign'] == null ? null : ForeignAmount(currency: (p['foreign'] as Map)['currency'] as String, amount: ((p['foreign'] as Map)['amount'] as num).toDouble(), rate: ((p['foreign'] as Map)['rate'] as num).toDouble()),
   lines: [
     for (final l in (p['lines'] as List))
       DraftLine(

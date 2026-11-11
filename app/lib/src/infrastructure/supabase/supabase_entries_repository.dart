@@ -62,6 +62,7 @@ class SupabaseEntriesRepository implements EntriesRepository {
       'entry_date': _d(d.entryDate),
       'reference': d.reference.trim().isEmpty ? null : d.reference.trim(),
       'label': d.label.trim(),
+      'currency_code': d.foreign?.currency ?? 'XOF',
     };
     String id;
     if (d.id == null) {
@@ -77,7 +78,7 @@ class SupabaseEntriesRepository implements EntriesRepository {
       await _client.from('entry_lines').delete().eq('entry_id', id);
     }
     final lines = d.nonEmptyLines;
-    await _client.from('entry_lines').insert([for (var i = 0; i < lines.length; i++) {'cabinet_id': cabinetId, 'entity_id': entityId, 'entry_id': id, ...lines[i].toJson(i + 1)}]);
+    await _client.from('entry_lines').insert([for (var i = 0; i < lines.length; i++) {'cabinet_id': cabinetId, 'entity_id': entityId, 'entry_id': id, ...lines[i].toJson(i + 1, foreign: d.foreign)}]);
     return id;
   }
 
