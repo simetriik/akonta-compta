@@ -1,6 +1,6 @@
 -- Module 10 — Import Perfecto : analyse du texte tabulé, scission des tiers collés, négatifs inversés, correspondances, essai, application (§10.10, D-004).
 begin;
-select plan(25);
+select plan(26);
 
 select tests.create_cabinet('Cabinet A') as id \gset a_
 select tests.create_user('manager@a.test', :'a_id') as id \gset manager_
@@ -30,6 +30,7 @@ select is((select source_journal from public.import_batches where id = :'batch_i
 select is((select period_from::text || '→' || period_to::text from public.import_batches where id = :'batch_id'), '2026-01-01→2026-10-22', 'période lue');
 select is((select count(*) from public.import_lines where batch_id = :'batch_id'), 10::bigint, '10 lignes de données (sous-totaux et totaux exclus)');
 select is((select (:'parse_report'::jsonb ->> 'pieces')::int), 4, '4 pièces');
+select is((select jsonb_array_length(:'parse_report'::jsonb -> 'parse_errors')), 0, 'AN-06 : la ligne de tabulations et le total de fin ne sont pas des erreurs');
 select is((select debit || '/' || credit from public.import_lines where batch_id = :'batch_id' and raw_account = '6311000'), '0/2500', 'débit négatif converti en crédit');
 select is((select debit || '/' || credit from public.import_lines where batch_id = :'batch_id' and raw_account = '5210ECO' and piece_ref = '000004'), '2500/0', 'crédit négatif converti en débit');
 select is((select (:'parse_report'::jsonb ->> 'subtotal_errors')::int), 0, 'sous-totaux cohérents après normalisation');
