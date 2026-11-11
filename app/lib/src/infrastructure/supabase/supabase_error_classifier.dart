@@ -87,6 +87,8 @@ ClassifiedError _fromAuth(AuthException e) {
   final status = e.statusCode ?? '';
   bool any(List<String> words) => words.any(m.contains);
   if (e is AuthRetryableFetchException) return _offline;
+  // Compte verrouillé après 5 échecs (AN-01) : le message de la base, en français, dit quand réessayer.
+  if (m.contains('compte verrouillé')) return ClassifiedError(AppErrorKind.forbidden, e.message);
   if (any(['invalid login credentials', 'invalid_credentials'])) return const ClassifiedError(AppErrorKind.forbidden, 'E-mail ou mot de passe incorrect.');
   if (any(['too many requests', 'rate limit', 'rate_limit']) || status == '429') {
     return const ClassifiedError(AppErrorKind.forbidden, 'Trop de tentatives : patientez quelques minutes avant de réessayer.');

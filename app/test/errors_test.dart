@@ -93,6 +93,7 @@ void main() {
 
     test('connexion : identifiants, trop de tentatives, code TOTP, mot de passe faible', () {
       expect(h(const AuthException('Invalid login credentials', statusCode: '400', code: 'invalid_credentials')).message, 'E-mail ou mot de passe incorrect.');
+      expect(h(const AuthException('Compte verrouillé après 5 échecs de connexion. Réessayez à 21:21 UTC.', statusCode: '400', code: 'invalid_credentials')).message, contains('Compte verrouillé'));
       expect(h(const AuthException('Request rate limit reached', statusCode: '429')).message, startsWith('Trop de tentatives'));
       expect(h(const AuthException('Invalid TOTP code entered', code: 'mfa_verification_failed')).message, startsWith('Le code saisi est invalide'));
       expect(h(const AuthException('Password should be at least 12 characters', code: 'weak_password')).message, 'Le mot de passe est trop court ou trop simple.');
