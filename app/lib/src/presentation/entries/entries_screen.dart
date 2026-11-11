@@ -569,7 +569,8 @@ class ReversalDialog extends StatefulWidget {
 
 class _ReversalDialogState extends State<ReversalDialog> {
   final _reason = TextEditingController();
-  final _date = TextEditingController(text: Fmt.date(DateTime.now()));
+  // Par défaut, la date de l'écriture d'origine : elle reste dans l'exercice du dossier, quelle que soit la date du jour (AN-11).
+  late final _date = TextEditingController(text: Fmt.date(widget.entry.entryDate));
 
   @override
   Widget build(BuildContext context) {
@@ -584,7 +585,7 @@ class _ReversalDialogState extends State<ReversalDialog> {
           const SizedBox(height: AkSpace.s3),
           AkTextField(controller: _reason, key: const Key('reversal-reason'), label: 'Motif (obligatoire)', onChanged: (_) => setState(() {}), autofocus: true),
           const SizedBox(height: AkSpace.s3),
-          AkDateField(controller: _date, label: 'Date (jj/mm/aaaa)', onChanged: (_) => setState(() {})),
+          AkDateField(controller: _date, label: 'Date de la contre-passation (par défaut : celle de l\'écriture)', onChanged: (_) => setState(() {})),
         ],
       ),
       actions: [

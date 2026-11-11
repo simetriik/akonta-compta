@@ -56,7 +56,17 @@ class ClientAccessTab extends ConsumerWidget {
           onRetry: () => ref.invalidate(clientMembersProvider(entityId)),
           builder: (list) => list.isEmpty
               ? const AkBanner(kind: AkBannerKind.info, child: Text('Aucun compte client sur ce dossier.'))
-              : Column(children: [for (final a in list) _MemberRow(assignment: a, entityId: entityId, canManage: canInvite)]),
+              : Column(
+                  children: [
+                    // Les comptes existent mais l'accès du dossier est fermé : les clients ne verraient rien (AN-32).
+                    if (status.value == 'disabled')
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: AkSpace.s3),
+                        child: AkBanner(kind: AkBannerKind.warning, child: Text('L\'accès des clients à ce dossier est fermé : ouvrez-le ci-dessus pour qu\'ils puissent se connecter et saisir.')),
+                      ),
+                    for (final a in list) _MemberRow(assignment: a, entityId: entityId, canManage: canInvite),
+                  ],
+                ),
         ),
       ],
     );
@@ -153,7 +163,13 @@ class _MemberRow extends ConsumerWidget {
       title: Text(assignment.userName),
       subtitle: Text(assignment.roleName),
       trailing: canManage
-          ? AkButton.ghost(
+          ? Row(mainAxisSize: MainAxisSize.min, children: [
+              AkButton.ghost(
+                isManager ? 'Passer en saisie' : 'Passer en gérant',
+                key: Key('client-switch-role-${assignment.userId}'),
+                onPressed: () => _switchRole(context, ref),
+              ),
+              AkButton.ghost(
               'Retirer',
               onPressed: () async {
                 if (!await showAkConfirm(context, title: 'Retirer ce client ?', message: 'Son accès à ce dossier est supprimé. Le compte reste, désactivez-le dans « Collaborateurs » si besoin.', danger: true)) return;
@@ -164,9 +180,30 @@ class _MemberRow extends ConsumerWidget {
                   if (context.mounted) showError(context, e, action: 'Le retrait');
                 }
               },
-            )
+            ),
+            ])
           : null,
     );
+  }
+
+  bool get isManager => assignment.roleCode == 'client_gerant';
+
+  /// Change le rôle du client : la nouvelle affectation est créée avant de retirer l'ancienne, pour ne jamais laisser le client sans accès (AN-32).
+  Future<void> _switchRole(BuildContext context, WidgetRef ref) async {
+    final target = isManager ? 'client_saisie' : 'client_gerant';
+    try {
+      final admin = ref.read(adminServiceProvider);
+      final roles = await admin.roles();
+      final role = roles.where((r) => r.code == target).firstOrNull;
+      final cabinet = await ref.read(currentCabinetProvider.future);
+      if (role == null || cabinet == null) throw StateError('Rôle $target introuvable');
+      await admin.addAssignment(cabinetId: cabinet.id, userId: assignment.userId, roleId: role.id, entityId: entityId);
+      await admin.removeAssignment(assignment.id);
+      ref.invalidate(clientMembersProvider(entityId));
+      if (context.mounted) showAkToast(context, '${assignment.userName} : rôle « ${role.name} ».');
+    } catch (e) {
+      if (context.mounted) showError(context, e, action: 'Le changement de rôle');
+    }
   }
 }
 
