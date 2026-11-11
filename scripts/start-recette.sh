@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Relance la pile Supabase de RECETTE (projet « akonta-recette », ports 55xxx) SANS la réinitialiser :
-# les données (cabinet, utilisateurs, dossier, écritures) sont conservées, aucune migration n'est rejouée.
+# aucune migration n'est rejouée et aucune donnée n'est effacée par ce script. Si la pile a été arrêtée proprement
+# (scripts/reset-recette.sh --stop), la CLI relance la base depuis sa sauvegarde ; le contrôle final montre les effectifs.
 # Usage : scripts/start-recette.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 require supabase "Supabase CLI"
@@ -16,7 +17,7 @@ DB_URL="postgresql://postgres:postgres@127.0.0.1:55322/postgres"
 [ -f "$CONFIG" ] || { echo "Erreur : pile de recette absente ; lancer d'abord scripts/reset-recette.sh (efface les données)." >&2; exit 1; }
 grep -q "^project_id = \"${PROJECT_ID}\"" "$CONFIG" || { echo "Erreur : configuration de recette inattendue." >&2; exit 1; }
 
-echo "== Démarrage de la pile de recette (données conservées) =="
+echo "== Démarrage de la pile de recette  =="
 supabase --workdir "$STACK_DIR" start >/dev/null
 
 echo "== Contrôle (cabinets, utilisateurs, dossiers, écritures) =="
