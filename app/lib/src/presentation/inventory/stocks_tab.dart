@@ -62,6 +62,7 @@ class StocksTab extends ConsumerWidget {
               openingValue: opening[a.code] ?? 0,
               warning: StockHint.wrongAccount(a.code, opening),
               variationAccounts: AccountSelection.stockVariation(accounts),
+              allCodes: [for (final a in accounts) a.code],
             ),
           if (stockAccounts.isEmpty) Text('Aucun compte de stock imputable dans le plan.', style: AkText.body.copyWith(color: t.textMuted)),
         ],
@@ -79,6 +80,7 @@ class _StockRow extends ConsumerStatefulWidget {
     required this.openingValue,
     required this.warning,
     required this.variationAccounts,
+    required this.allCodes,
   });
 
   final EntitySummary entity;
@@ -93,6 +95,9 @@ class _StockRow extends ConsumerStatefulWidget {
   final String? warning;
   final List<Account> variationAccounts;
 
+  /// Codes de tous les comptes du plan, pour reconnaître un compte de regroupement.
+  final List<String> allCodes;
+
   @override
   ConsumerState<_StockRow> createState() => _StockRowState();
 }
@@ -103,15 +108,11 @@ class _StockRowState extends ConsumerState<_StockRow> {
 
   @override
   Widget build(BuildContext context) {
-    final def = widget.variationAccounts
-        .where(
-          (v) => widget.existing != null
-              ? v.code == widget.existing!.variationAccountCode
-              : v.code.startsWith(
-                  widget.account.code.startsWith('31') || widget.account.code.startsWith('32') || widget.account.code.startsWith('33') ? '603' : '73',
-                ),
-        )
-        .firstOrNull;
+    final prefix = StockHint.variationPrefix(widget.account.code);
+    final def = widget.existing != null
+        ? widget.variationAccounts.where((v) => v.code == widget.existing!.variationAccountCode).firstOrNull
+        : widget.variationAccounts.where((v) => v.code.startsWith(prefix)).firstOrNull ??
+            widget.variationAccounts.where((v) => v.code.startsWith(prefix.substring(0, prefix.length == 4 ? 3 : 2))).firstOrNull;
     _variation ??= def?.id;
     final t = context.ak;
     return Padding(
@@ -188,13 +189,20 @@ class _StockRowState extends ConsumerState<_StockRow> {
             ),
           ],
           ),
-          if (widget.warning != null)
+          for (final message in [widget.warning, _groupingWarning()].whereType<String>())
             Padding(
               padding: const EdgeInsets.only(top: AkSpace.s2),
-              child: AkBanner(kind: AkBannerKind.warning, child: Text(widget.warning!)),
+              child: AkBanner(kind: AkBannerKind.warning, child: Text(message)),
             ),
         ]),
       ),
     );
+  }
+
+  /// Avertissement si le compte de variation choisi est un compte de regroupement (AN-37).
+  String? _groupingWarning() {
+    final chosen = widget.variationAccounts.where((v) => v.id == _variation).firstOrNull;
+    if (chosen == null) return null;
+    return StockHint.groupingVariation(chosen.code, widget.allCodes);
   }
 }
