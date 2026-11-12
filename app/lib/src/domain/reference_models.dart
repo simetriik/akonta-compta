@@ -44,6 +44,26 @@ String? validateThirdPartyCode(String? v) {
   return null;
 }
 
+/// Code proposé pour un tiers créé à la volée : lettres et chiffres du nom, sans accents, 6 caractères au plus,
+/// rendu unique parmi les codes [existing] par un suffixe numérique (CHU, CHU2, CHU3…). Valide pour [validateThirdPartyCode].
+String suggestThirdPartyCode(String name, Iterable<String> existing) {
+  const from = 'àâäáãçéèêëíìîïñóòôöõúùûüýÿ';
+  const to = 'aaaaaceeeeiiiinooooouuuuyy';
+  final folded = name.toLowerCase().split('').map((c) {
+    final i = from.indexOf(c);
+    return i < 0 ? c : to[i];
+  }).join();
+  final letters = folded.replaceAll(RegExp(r'[^a-z0-9]'), '').toUpperCase();
+  final base = letters.length >= 2 ? letters.substring(0, letters.length < 6 ? letters.length : 6) : 'TIERS';
+  final taken = existing.map((c) => c.toUpperCase()).toSet();
+  if (!taken.contains(base)) return base;
+  for (var n = 2; n < 1000; n++) {
+    final candidate = '$base$n';
+    if (!taken.contains(candidate)) return candidate;
+  }
+  return base;
+}
+
 String? validateJournalCode(String? v) {
   final s = (v ?? '').trim().toUpperCase();
   if (!RegExp(r'^[A-Z0-9]{2,6}$').hasMatch(s)) return 'Code : 2 à 6 lettres majuscules ou chiffres';

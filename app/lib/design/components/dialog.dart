@@ -25,24 +25,30 @@ class AkDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
-    return AlertDialog(
-      title: Text(title, style: AkText.heading.copyWith(color: t.textStrong)),
-      titlePadding: const EdgeInsets.fromLTRB(AkSpace.s6, AkSpace.s6, AkSpace.s6, AkSpace.s3),
-      contentPadding: const EdgeInsets.symmetric(horizontal: AkSpace.s6),
-      actionsPadding: const EdgeInsets.all(AkSpace.s4),
-      actionsOverflowButtonSpacing: AkSpace.s2,
-      insetPadding: const EdgeInsets.all(AkSpace.s4),
-      elevation: 0,
-      content: SizedBox(
-        width: size.width,
-        child: SingleChildScrollView(
-          child: DefaultTextStyle.merge(
-            style: AkText.body.copyWith(color: t.text),
-            child: content,
+    // Un dialogue ouvert depuis un contexte au thème local (cellule de la grille de saisie : champs sans bordure) en
+    // hérite par `showDialog`. On revient au thème de l'application, celui du navigateur racine.
+    final appTheme = Theme.of(Navigator.of(context, rootNavigator: true).context);
+    return Theme(
+      data: appTheme,
+      child: AlertDialog(
+        title: Text(title, style: AkText.heading.copyWith(color: t.textStrong)),
+        titlePadding: const EdgeInsets.fromLTRB(AkSpace.s6, AkSpace.s6, AkSpace.s6, AkSpace.s3),
+        contentPadding: const EdgeInsets.symmetric(horizontal: AkSpace.s6),
+        actionsPadding: const EdgeInsets.all(AkSpace.s4),
+        actionsOverflowButtonSpacing: AkSpace.s2,
+        insetPadding: const EdgeInsets.all(AkSpace.s4),
+        elevation: 0,
+        content: SizedBox(
+          width: size.width,
+          child: SingleChildScrollView(
+            child: DefaultTextStyle.merge(
+              style: AkText.body.copyWith(color: t.text),
+              child: content,
+            ),
           ),
         ),
+        actions: [for (final a in actions) a],
       ),
-      actions: [for (final a in actions) a],
     );
   }
 }

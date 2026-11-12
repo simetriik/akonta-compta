@@ -6,6 +6,8 @@ import '../../core/formatting.dart';
 import '../../domain/entry_models.dart';
 import '../../domain/reference_models.dart';
 import '../../application/providers/references_providers.dart';
+import '../../application/providers/session_providers.dart';
+import 'quick_create_dialogs.dart';
 
 const double kEntryIndexWidth = AkEntryGridCols.index;
 
@@ -144,6 +146,8 @@ class _LineRowState extends ConsumerState<EntryLineRow> {
   Widget build(BuildContext context) {
     final accounts = (ref.watch(accountsProvider(widget.entityId)).value ?? const <Account>[]).where((a) => a.isActive && a.allowPosting).toList();
     final thirdParties = (ref.watch(thirdPartiesProvider(widget.entityId)).value ?? const <ThirdParty>[]).where((t) => t.isActive).toList();
+    // Création en ligne d'un tiers ou d'un compte manquant : réservée à qui gère les référentiels.
+    final canCreate = !widget.readOnly && (ref.watch(permissionsProvider).value?.has('references.manage', entityId: widget.entityId) ?? false);
     final l = widget.line;
     final t = context.ak;
     final mobile = akIsTouch(context);
@@ -169,6 +173,7 @@ class _LineRowState extends ConsumerState<EntryLineRow> {
             ),
       resolved: l.accountId != null,
       onSelected: (a) => _selectAccount(l, a),
+      onCreate: canCreate ? (q) => showAccountQuickCreate(context, entityId: widget.entityId, query: q) : null,
       onCleared: () {
         if (l.accountId != null) {
           l.accountId = null;
@@ -185,6 +190,7 @@ class _LineRowState extends ConsumerState<EntryLineRow> {
       enabled: !widget.readOnly,
       initialCode: l.thirdPartyCode,
       resolved: l.thirdPartyId != null,
+      onCreate: canCreate ? (name) => showThirdPartyQuickCreate(context, entityId: widget.entityId, name: name) : null,
       onSelected: (t) {
         l.thirdPartyId = t.id;
         l.thirdPartyCode = t.code;

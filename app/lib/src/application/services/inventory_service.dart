@@ -86,6 +86,11 @@ class InventoryService {
     return _repository.proposeReceivableProvisions(entityId, fiscalYearId, rate91to180: rate91to180, rateOver180: rateOver180, byThirdParty: byThirdParty);
   }
 
+  Future<void> deleteProvision(String id) async {
+    _online.require('L\'inventaire');
+    return _repository.deleteProvision(id);
+  }
+
   Future<void> updateProvisionAmount(String id, int amount) async {
     _online.require('L\'inventaire');
     return _repository.updateProvisionAmount(id, amount);

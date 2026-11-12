@@ -63,3 +63,15 @@ Deno.test("la réponse d'un export est toujours en octets, quel que soit le form
   assertEquals(h["content-type"], "application/octet-stream");
   assertEquals(h["content-disposition"], 'attachment; filename="balance.xlsx"');
 });
+
+Deno.test("grand livre : contrepartie principale par défaut, liste complète sur demande, valeur invalide refusée", () => {
+  const header = { cabinet_name: "ABC", entity_name: "SARL Démo", entity_tax_id: null, fiscal_year_label: "2026", generated_by: "Awa" };
+  const rows = [{ account_code: "4011000", third_party_name: "NSIA Assurances", counterpart_code: "6011000", counterpart_more: 1 }];
+  const base = { entity_id: "e", kind: "general_ledger" as const, format: "xlsx" as const, from: "2026-01-01", to: "2026-12-31" };
+  const main = buildPayload(base, header, rows) as { counterpart_mode: string; lines: { third_party_name: string }[] };
+  assertEquals(main.counterpart_mode, "main");
+  assertEquals(main.lines[0].third_party_name, "NSIA Assurances");
+  assertEquals((buildPayload({ ...base, counterpart: "all" }, header, rows) as { counterpart_mode: string }).counterpart_mode, "all");
+  assertEquals(validateRequest({ ...base, counterpart: "tous" as never }), "counterpart invalide (main | all)");
+  assertEquals(validateRequest({ ...base, counterpart: "all" }), null);
+});

@@ -15,6 +15,7 @@ import '../../application/providers/services.dart';
 import 'inventory_widgets.dart';
 import '../../application/rules/account_selection.dart';
 import '../../application/rules/inventory_forms.dart';
+import '../../application/rules/stock_hint.dart';
 import '../../core/errors/error_mapper.dart';
 
 class StocksTab extends ConsumerWidget {
@@ -59,6 +60,7 @@ class StocksTab extends ConsumerWidget {
               account: a,
               existing: list.where((s) => s.stockAccountCode == a.code).firstOrNull,
               openingValue: opening[a.code] ?? 0,
+              warning: StockHint.wrongAccount(a.code, opening),
               variationAccounts: AccountSelection.stockVariation(accounts),
             ),
           if (stockAccounts.isEmpty) Text('Aucun compte de stock imputable dans le plan.', style: AkText.body.copyWith(color: t.textMuted)),
@@ -75,6 +77,7 @@ class _StockRow extends ConsumerStatefulWidget {
     required this.account,
     required this.existing,
     required this.openingValue,
+    required this.warning,
     required this.variationAccounts,
   });
 
@@ -85,6 +88,9 @@ class _StockRow extends ConsumerStatefulWidget {
 
   /// Stock initial lu dans les à-nouveaux (balance à l'ouverture).
   final int openingValue;
+
+  /// Avertissement de cohérence du compte (AN-19), `null` si rien à signaler.
+  final String? warning;
   final List<Account> variationAccounts;
 
   @override
@@ -112,7 +118,8 @@ class _StockRowState extends ConsumerState<_StockRow> {
       padding: const EdgeInsets.only(bottom: AkSpace.s2),
       child: AkCard(
         padding: const EdgeInsets.all(AkSpace.s3),
-        child: Wrap(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Wrap(
           spacing: AkSpace.s3,
           runSpacing: AkSpace.s2,
           crossAxisAlignment: WrapCrossAlignment.end,
@@ -180,7 +187,13 @@ class _StockRowState extends ConsumerState<_StockRow> {
               },
             ),
           ],
-        ),
+          ),
+          if (widget.warning != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AkSpace.s2),
+              child: AkBanner(kind: AkBannerKind.warning, child: Text(widget.warning!)),
+            ),
+        ]),
       ),
     );
   }

@@ -247,10 +247,21 @@ class DocumentTile extends ConsumerWidget {
                       );
                       if (entryId == null) return;
                       await ref.read(documentsServiceProvider).attach(entryId, d.id);
+                    case 'scan':
+                      await _proposeEntry(context, ref, d);
+                      return;
                     case 'draft':
                       if (context.mounted) context.go('/saisie/nouvelle?document=${d.id}');
                       return;
                     case 'delete':
+                      final ok = await showAkConfirm(
+                        context,
+                        title: 'Supprimer cette pièce ?',
+                        message: 'La pièce « ${d.fileName} » sera supprimée de la boîte de réception. Cette action est irréversible.',
+                        confirmLabel: 'Supprimer',
+                        danger: true,
+                      );
+                      if (!ok || !context.mounted) return;
                       try {
                         await ref.read(documentsServiceProvider).delete(d);
                       } catch (e) {
@@ -264,6 +275,7 @@ class DocumentTile extends ConsumerWidget {
                 },
                 itemBuilder: (_) => [
                   const PopupMenuItem(value: 'attach', child: Text('Rattacher à une écriture…')),
+                  if (d.isInInbox) const PopupMenuItem(value: 'scan', child: Text('Proposer une écriture (lecture de la pièce)')),
                   if (d.isInInbox) const PopupMenuItem(value: 'draft', child: Text('Créer un brouillard avec cette pièce')),
                   if (d.isInInbox) const PopupMenuItem(value: 'delete', child: Text('Supprimer')),
                 ],
@@ -274,6 +286,21 @@ class DocumentTile extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Lit la pièce et ouvre le brouillard proposé ; les points douteux sont rappelés, rien n'est validé automatiquement.
+Future<void> _proposeEntry(BuildContext context, WidgetRef ref, DocumentModel d) async {
+  showAkToast(context, 'Lecture de « ${d.fileName} »…');
+  try {
+    final result = await ref.read(documentsServiceProvider).proposeEntry(d.id);
+    ref.invalidate(documentsProvider(d.entityId));
+    if (!context.mounted) return;
+    final note = result.existing ? 'Brouillard déjà proposé pour cette pièce.' : 'Brouillard proposé : à vérifier avant validation.';
+    showAkToast(context, result.warnings.isEmpty ? note : '$note ${result.warnings.join(' ')}', kind: result.warnings.isEmpty ? AkToastKind.info : AkToastKind.warning);
+    context.go('/saisie/${result.entryId}');
+  } catch (e) {
+    if (context.mounted) showError(context, e, action: 'Lecture de la pièce impossible');
   }
 }
 

@@ -73,4 +73,9 @@ class DocumentsService {
     _online.require('La gestion des pièces');
     return _repository.download(d);
   }
+
+  Future<ScanProposal> proposeEntry(String documentId) async {
+    _online.require('La lecture automatique des pièces');
+    return _repository.proposeEntry(documentId);
+  }
 }

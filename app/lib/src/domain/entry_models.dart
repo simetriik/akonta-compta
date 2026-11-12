@@ -117,8 +117,33 @@ class DraftLine {
   }
 }
 
+/// Montant d'une pièce en devise : seules les lignes qui portent la contre-valeur en FCFA sont enregistrées en devise (AN-25).
+class ForeignAmount {
+  const ForeignAmount({required this.currency, required this.amount, required this.rate});
+
+  final String currency;
+  final double amount;
+  final double rate;
+
+  /// Parité fixe de l'euro au FCFA.
+  static const euroRate = 655.957;
+
+  /// Contre-valeur en FCFA, arrondie à l'unité comme le calcule la base.
+  int get counterValue => (amount * rate).round();
+
+  /// Vrai si la ligne porte cette contre-valeur (au débit ou au crédit) et s'enregistre donc en devise.
+  bool carries(DraftLine l) => (l.debit == counterValue && l.debit > 0) || (l.credit == counterValue && l.credit > 0);
+
+  String? validate() {
+    if (amount <= 0) return 'Montant en devise requis';
+    if (rate <= 0) return 'Cours requis';
+    if (currency == 'EUR' && (rate - euroRate).abs() > 0.0000001) return 'L\'euro est à parité fixe : 655,957';
+    return null;
+  }
+}
+
 class EntryDraft {
-  EntryDraft({this.id, this.journalId, DateTime? date, this.reference = '', this.label = '', List<DraftLine>? lines})
+  EntryDraft({this.id, this.journalId, DateTime? date, this.reference = '', this.label = '', this.foreign, List<DraftLine>? lines})
       : entryDate = date ?? DateTime.now(),
         lines = lines ?? [DraftLine(), DraftLine()];
 
@@ -128,6 +153,12 @@ class EntryDraft {
   String reference;
   String label;
   final List<DraftLine> lines;
+
+  /// Pièce en devise, ou `null` pour une écriture en FCFA.
+  ForeignAmount? foreign;
+
+  /// Compte de trésorerie du journal choisi (journal de banque ou de caisse) : proposé par la contrepartie automatique (AN-10).
+  ({String id, String code})? treasuryAccount;
 
   int get totalDebit => lines.fold(0, (s, l) => s + l.debit);
   int get totalCredit => lines.fold(0, (s, l) => s + l.credit);
@@ -141,6 +172,19 @@ class EntryDraft {
   /// Contrepartie automatique : place le solde sur la première ligne vide (ou une nouvelle).
   void autoBalance() {
     if (balance == 0) return;
+    // Journal de banque ou de caisse : la contrepartie est d'abord le compte de trésorerie du journal, sur une nouvelle ligne
+    // (une ligne neuve, pour que la grille affiche le compte), tant qu'aucune ligne ne l'utilise déjà.
+    final treasury = treasuryAccount;
+    if (treasury != null && !lines.any((l) => l.accountId == treasury.id)) {
+      final emptyAt = lines.indexWhere((l) => l.isEmpty);
+      final line = DraftLine(accountId: treasury.id, accountCode: treasury.code, debit: balance < 0 ? -balance : 0, credit: balance > 0 ? balance : 0);
+      if (emptyAt >= 0) {
+        lines[emptyAt] = line;
+      } else {
+        lines.add(line);
+      }
+      return;
+    }
     final target = lines.firstWhere((l) => l.debit == 0 && l.credit == 0, orElse: () {
       final l = DraftLine();
       lines.add(l);
@@ -168,6 +212,15 @@ class EntryDraft {
       if (e != null) errors.add('Ligne ${i + 1} : $e');
     }
     if (active.isNotEmpty && totalDebit != totalCredit) errors.add('Écriture déséquilibrée : ${totalDebit - totalCredit}');
+    final fx = foreign;
+    if (fx != null) {
+      final problem = fx.validate();
+      if (problem != null) {
+        errors.add('Devise : $problem');
+      } else if (!active.any(fx.carries)) {
+        errors.add('Devise : aucune ligne ne porte la contre-valeur de ${fx.amount} ${fx.currency} (${fx.counterValue} FCFA)');
+      }
+    }
     return errors;
   }
 
@@ -177,6 +230,7 @@ class EntryDraft {
         date: e.entryDate,
         reference: e.reference ?? '',
         label: e.label,
+        foreign: e.lines.where((l) => l.currencyCode != 'XOF' && l.amountCurrency != null && l.exchangeRate != null).map((l) => ForeignAmount(currency: l.currencyCode, amount: l.amountCurrency!, rate: l.exchangeRate!)).firstOrNull,
         lines: [
           for (final l in e.lines)
             DraftLine(accountId: l.accountId, accountCode: l.accountCode, accountLabel: l.accountLabel, isCollective: l.isCollective, thirdPartyId: l.thirdPartyId, thirdPartyCode: l.thirdPartyCode ?? '', label: l.label ?? '', debit: l.debit, credit: l.credit),
@@ -186,7 +240,8 @@ class EntryDraft {
 
 /// Application d'un modèle d'écriture : montants calculés depuis la saisie de base, les taux et le solde.
 /// `resolveAccount` fait correspondre le numéro de référence du modèle (ex. 4452) au compte de l'entité.
-List<DraftLine> applyTemplate(EntryTemplate template, {required int baseAmount, required double? Function(String code) rateOf, required Account? Function(String referenceCode) resolveAccount}) {
+/// [thirdParty] : tiers choisi à l'appel, placé sur les lignes du modèle marquées « tiers » (comptes collectifs génériques).
+List<DraftLine> applyTemplate(EntryTemplate template, {required int baseAmount, required double? Function(String code) rateOf, required Account? Function(String referenceCode) resolveAccount, ThirdParty? thirdParty}) {
   final amounts = <int, int>{};
   final result = <DraftLine>[];
   // Première passe : saisie et pourcentages (dans l'ordre des lignes)
@@ -227,6 +282,8 @@ List<DraftLine> applyTemplate(EntryTemplate template, {required int baseAmount, 
       accountCode: account?.code ?? l.accountCode,
       accountLabel: account?.label ?? '',
       isCollective: account?.isCollective ?? l.usesThirdParty,
+      thirdPartyId: l.usesThirdParty ? thirdParty?.id : null,
+      thirdPartyCode: l.usesThirdParty ? (thirdParty?.code ?? '') : '',
       label: l.label ?? template.label,
       debit: side == 'debit' ? amount : 0,
       credit: side == 'credit' ? amount : 0,

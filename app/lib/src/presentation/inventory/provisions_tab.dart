@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
 
-import '../../core/errors/errors.dart';
+import '../widgets/error_display.dart';
 import '../../core/formatting.dart';
 import '../../domain/entity_models.dart';
 import '../../domain/models.dart';
@@ -121,10 +121,32 @@ class _ProvisionsTabState extends ConsumerState<ProvisionsTab> {
               ),
               AkColumn<ProvisionRow>(
                 label: '',
-                width: 48,
+                width: 96,
                 cell: (context, p) => p.entryId != null
                     ? Icon(Icons.check_circle_outline, color: t.success)
-                    : AkIconButton(
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        AkIconButton(
+                          icon: Icons.delete_outline,
+                          tooltip: 'Retirer cette provision',
+                          dense: true,
+                          onPressed: () async {
+                            final ok = await showAkConfirm(
+                              context,
+                              title: 'Retirer cette provision ?',
+                              message: 'La ligne est supprimée de la liste. Aucune écriture n\'a encore été générée pour elle.',
+                              confirmLabel: 'Retirer',
+                              danger: true,
+                            );
+                            if (!ok || !context.mounted) return;
+                            try {
+                              await ref.read(inventoryServiceProvider).deleteProvision(p.id);
+                              ref.invalidate(provisionsProvider(widget.fy.id));
+                            } catch (e) {
+                              if (context.mounted) showError(context, e, action: 'Retrait impossible');
+                            }
+                          },
+                        ),
+                        AkIconButton(
                         icon: Icons.edit_outlined,
                         tooltip: 'Modifier le montant',
                         dense: true,
@@ -147,6 +169,7 @@ class _ProvisionsTabState extends ConsumerState<ProvisionsTab> {
                           ref.invalidate(provisionsProvider(widget.fy.id));
                         },
                       ),
+                      ]),
               ),
             ],
           ),

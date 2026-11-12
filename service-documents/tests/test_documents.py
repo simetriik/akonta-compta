@@ -180,3 +180,65 @@ def test_invoice_pdf_rejects_unknown_tax_group(client, auth):
     payload = _invoice_payload()
     payload["lines"][0]["tax_group"] = "C"   # hors périmètre déclaré à la DGI (seuls A et B)
     assert client.post("/pdf/invoice", json=payload, headers=auth).status_code == 422
+
+
+# --- Contrepartie et nom du tiers au grand livre (recette 05/11/2026, point 2) ---------------------------------------------------
+
+from datetime import date  # noqa: E402
+
+from app.formatting import ledger_counterpart_text, ledger_third_party_text  # noqa: E402
+from app.models import LedgerLine  # noqa: E402
+
+_CP = [{"code": "6011000", "label": "Achats", "amount": 1000}, {"code": "4452000", "label": "TVA récupérable", "amount": 180}]
+
+
+def _line(**kw):
+    base = dict(account_code="4011000", account_label="Fournisseurs", entry_date=date(2026, 3, 10), journal_code="OD", number=1, label="OD 1")
+    return LedgerLine(**{**base, **kw})
+
+
+def test_counterpart_main_shows_principal_then_count():
+    assert ledger_counterpart_text(_line(counterpart_code="6011000", counterpart_more=1, counterparts=_CP), "main") == "6011000 + 1"
+
+
+def test_counterpart_single_has_no_suffix():
+    assert ledger_counterpart_text(_line(counterpart_code="4011000", counterpart_more=0, counterparts=[_CP[0]]), "main") == "4011000"
+
+
+def test_counterpart_all_lists_every_account_in_order():
+    assert ledger_counterpart_text(_line(counterpart_code="6011000", counterpart_more=1, counterparts=_CP), "all") == "6011000, 4452000"
+
+
+def test_counterpart_absent_is_empty():
+    assert ledger_counterpart_text(_line(), "main") == ""
+
+
+def test_third_party_shows_name_not_the_code():
+    assert ledger_third_party_text(_line(third_party_code="NSIA", third_party_name="NSIA Assurances")) == "NSIA Assurances"
+    assert ledger_third_party_text(_line(third_party_code="NSIA")) == "NSIA"
+    assert ledger_third_party_text(_line()) == ""
+
+
+def test_general_ledger_xlsx_has_counterpart_and_tiers_name(client, auth, header):
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    line = {"account_code": "4011000", "account_label": "Fournisseurs", "entry_date": "2026-03-10", "journal_code": "OD", "number": 1,
+            "label": "OD 1", "third_party_code": "NSIA", "third_party_name": "NSIA Assurances", "credit": 1180,
+            "counterpart_code": "6011000", "counterpart_more": 1, "counterparts": _CP}
+    for mode, expected in (("main", "6011000 + 1"), ("all", "6011000, 4452000")):
+        r = client.post("/excel/general-ledger", json={"header": header, "lines": [line], "counterpart_mode": mode}, headers=auth)
+        assert r.status_code == 200
+        ws = load_workbook(BytesIO(r.content)).active
+        titles = [c.value for c in ws[next(i for i in range(1, 15) if ws.cell(i, 1).value == "Compte")]]
+        row = [c.value for c in ws[next(i for i in range(1, 20) if ws.cell(i, 1).value == "4011000")]]
+        assert row[titles.index("Tiers")] == "NSIA Assurances"
+        assert row[titles.index("Contrepartie")] == expected
+
+
+def test_general_ledger_pdf_with_counterpart(client, auth, header):
+    line = {"account_code": "4011000", "account_label": "Fournisseurs", "entry_date": "2026-03-10", "journal_code": "OD", "number": 1,
+            "label": "OD 1", "third_party_name": "NSIA Assurances", "credit": 1180, "counterpart_code": "6011000", "counterpart_more": 1, "counterparts": _CP}
+    r = client.post("/pdf/general-ledger", json={"header": {**header, "title": "Grand livre"}, "lines": [line], "counterpart_mode": "all"}, headers=auth)
+    assert r.status_code == 200 and r.content.startswith(b"%PDF")

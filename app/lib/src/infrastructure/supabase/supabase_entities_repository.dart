@@ -19,10 +19,21 @@ class SupabaseEntitiesRepository implements EntitiesRepository {
   Future<EntityDetail> get(String id) async => entityDetailFromJson(await _client.from('entities').select().eq('id', id).single());
 
   @override
-  Future<EntityDetail> create(String cabinetId, EntityInput input) async {
-    final row = await _client.from('entities').insert({'cabinet_id': cabinetId, ...input.toJson()}).select().single();
-    return entityDetailFromJson(row);
+  Future<EntityDetail> create(String cabinetId, EntityInput input, {String? requestId}) async {
+    try {
+      final row = await _client.from('entities').insert({'cabinet_id': cabinetId, 'request_id': ?requestId, ...input.toJson()}).select().single();
+      return entityDetailFromJson(row);
+    } on PostgrestException catch (e) {
+      // Même demande reçue deux fois : le dossier existe déjà, on le renvoie au lieu d'échouer.
+      if (requestId != null && isRequestReplay(e)) {
+        return entityDetailFromJson(await _client.from('entities').select().eq('request_id', requestId).single());
+      }
+      rethrow;
+    }
   }
+
+  @override
+  Future<void> deleteEmptyDuplicate(String id) => _client.rpc('delete_empty_duplicate_entity', params: {'p_entity': id});
 
   @override
   Future<void> update(String id, EntityInput input) => _client.from('entities').update(input.toJson()).eq('id', id);
@@ -126,3 +137,6 @@ class SupabaseEntitiesRepository implements EntitiesRepository {
     return r;
   }
 }
+
+/// Vrai quand l'erreur vient de l'index d'idempotence des dossiers (demande de création déjà traitée).
+bool isRequestReplay(PostgrestException e) => e.code == '23505' && (e.message.contains('entities_request_unique') || (e.details?.toString().contains('request_id') ?? false));

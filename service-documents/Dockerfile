@@ -4,6 +4,10 @@ FROM python:3.13-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
+# OCR des pièces scannées : Tesseract avec le français
+RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /srv
 
 # Dépendances d'abord (couche mise en cache tant que le verrou ne change pas)

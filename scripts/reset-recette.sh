@@ -3,8 +3,11 @@
 # de développement (« akonta », ports 54xxx) et de toute base destinée au cabinet ABC.
 # Migrations rejouées, toutes données supprimées ; restent le plan de référence SYSCOHADA (migration) et l'administrateur technique.
 # Usage : scripts/reset-recette.sh            remise à zéro (démarre la pile si besoin)
-#         scripts/reset-recette.sh --stop     arrête la pile de recette (données conservées)
+#         scripts/reset-recette.sh --stop     arrête la pile de recette (la CLI sauvegarde la base dans ses volumes)
 #         scripts/reset-recette.sh --hard     arrête la pile, supprime ses volumes (y compris les fichiers du Storage), puis remet à zéro
+#         --yes                               saute la question de confirmation (la sauvegarde automatique reste faite)
+# GARDE-FOU : si la base contient des dossiers ou des écritures, la remise à zéro exige de taper EFFACER (ou --yes) et
+# commence par une sauvegarde pg_dump dans extrants/sauvegarde-recette-<date>/ ; sans terminal, elle refuse sans --yes.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 require supabase "Supabase CLI"
 require psql "client PostgreSQL"
@@ -47,11 +50,37 @@ check_target() {
 prepare_stack
 check_target
 
-case "${1:-}" in
+# Sauvegarde et confirmation avant tout effacement d'une base qui contient des données.
+guard_existing_data() {
+  local assume_yes="$1" count dir answer
+  count=$(psql "$DB_URL" -At -c "select (select count(*) from public.entities) + (select count(*) from public.entries)" 2>/dev/null || true)
+  if [ -z "$count" ] || [ "$count" = "0" ]; then return 0; fi   # base absente ou sans donnée de travail : rien à perdre
+  require pg_dump "sauvegarde PostgreSQL"
+  dir="$ROOT_DIR/extrants/sauvegarde-recette-$(date +%Y-%m-%d-%H%M%S)"
+  mkdir -p "$dir"
+  pg_dump "$DB_URL" -Fc -f "$dir/recette.dump" || { echo "Erreur : sauvegarde impossible, remise à zéro annulée." >&2; exit 1; }
+  echo "Sauvegarde faite : $dir/recette.dump"
+  if [ "$assume_yes" != "1" ]; then
+    [ -t 0 ] || { echo "Erreur : la base contient des données ; sans terminal, relancer avec --yes pour les effacer." >&2; exit 1; }
+    echo "ATTENTION : la base de recette contient des données (dossiers, écritures). La remise à zéro les EFFACE (voir la sauvegarde ci-dessus)."
+    read -r -p "Taper EFFACER pour continuer : " answer
+    [ "$answer" = "EFFACER" ] || { echo "Annulé : rien n'a été effacé."; exit 1; }
+  fi
+}
+
+mode=""; assume_yes=0
+for arg in "$@"; do
+  case "$arg" in
+    --stop|--hard) mode="$arg" ;;
+    --yes) assume_yes=1 ;;
+    *) echo "Usage : $0 [--stop|--hard] [--yes]" >&2; exit 2 ;;
+  esac
+done
+
+case "$mode" in
   --stop) "${SB[@]}" stop; echo "Pile de recette arrêtée."; exit 0 ;;
-  --hard) "${SB[@]}" stop --no-backup || true ;;
-  "" ) ;;
-  *) echo "Usage : $0 [--stop|--hard]" >&2; exit 2 ;;
+  --hard) guard_existing_data "$assume_yes"; "${SB[@]}" stop --no-backup || true ;;
+  "" ) guard_existing_data "$assume_yes" ;;
 esac
 
 echo "== Démarrage de la pile de recette ($PROJECT_ID) =="

@@ -1,6 +1,6 @@
 -- Module 4 — Saisie : contrôles, validation et numérotation sans trou, immutabilité, contre-passation, revue, devises (§4, §10.4, §11.2).
 begin;
-select plan(46);
+select plan(47);
 
 select tests.create_cabinet('Cabinet A') as id \gset a_
 select tests.create_cabinet('Cabinet B') as id \gset b_
@@ -96,6 +96,7 @@ select is((select status::text from public.entries where id = :'rev_id'), 'valid
 select is((select reversed_by from public.entries where id = :'v1_id'), :'rev_id'::uuid, 'l''originale pointe vers sa contre-passation');
 select is((select sum(credit)::bigint from public.entry_lines where entry_id = :'rev_id' and account_id = (select account_id from public.entry_lines where entry_id = :'v1_id' and debit > 0)), 1180000::bigint, 'les sens sont inversés');
 select throws_ok(format('select public.reverse_entry(%L, ''encore'')', :'v1_id'), '23514', null, 'pas de double contre-passation');
+select throws_ok(format('select public.reverse_entry(%L, ''annuler l''''annulation'')', :'rev_id'), '23514', null, 'AN-20 : une contre-passation ne se contre-passe pas');
 select tests.authenticate_as(:'trainee_id');
 select throws_ok(format('select public.reverse_entry(%L, ''x'')', :'v2_id'), '42501', null, 'stagiaire : ne contre-passe pas');
 

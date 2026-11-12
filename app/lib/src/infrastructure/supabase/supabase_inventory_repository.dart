@@ -65,6 +65,9 @@ class SupabaseInventoryRepository implements InventoryRepository {
       ((await _client.rpc('propose_receivable_provisions', params: {'p_entity': entityId, 'p_fiscal_year': fiscalYearId, 'p_bucket_rates': {'d91_180': rate91to180, 'over_180': rateOver180}, 'p_third_party_rates': byThirdParty})) as num).toInt();
 
   @override
+  Future<void> deleteProvision(String id) => _client.from('provisions').delete().eq('id', id);
+
+  @override
   Future<void> updateProvisionAmount(String id, int amount) => _client.from('provisions').update({'amount': amount}).eq('id', id);
 
   @override

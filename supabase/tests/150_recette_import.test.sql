@@ -54,10 +54,9 @@ select is((select period_from::text || '→' || period_to::text from public.impo
 select is((:'parse_report'::jsonb ->> 'lines')::int, 22, '22 lignes de données lues');
 select is((:'parse_report'::jsonb ->> 'pieces')::int, 1, 'une pièce (à-nouveaux)');
 select is((:'parse_report'::jsonb ->> 'subtotal_errors')::int, 0, 'sous-total cohérent');
--- Comme sur le vrai JOURNAL BANQUE.TXT (vérifié), l'analyse signale deux « Date illisible » bénins : la ligne d'en-tête faite de seules
--- tabulations et la ligne « Total Journal » finale (Q-007). Ce sont les seules : aucune ligne de données n'est rejetée.
-select is((select jsonb_agg(e ->> 'error' order by (e ->> 'line')::int)::text from jsonb_array_elements(:'parse_report'::jsonb -> 'parse_errors') e),
-          '["Date illisible : ", "Date illisible : Total"]', 'seules les deux lignes d''en-tête et de total sont signalées (comme sur l''export réel)');
+-- Comme sur le vrai JOURNAL BANQUE.TXT (Q-007), la ligne d'en-tête faite de seules tabulations et la ligne « Total Journal » finale
+-- ne sont plus signalées comme des dates illisibles (AN-06, recette du 11/11/2026) : aucune erreur d'analyse.
+select is((select jsonb_array_length(:'parse_report'::jsonb -> 'parse_errors')), 0, 'AN-06 : aucune erreur d''analyse sur l''export réel (en-tête de tabulations et total ignorés)');
 
 select public.import_propose_mappings(:'batch_id') as report \gset map_
 select is((select account_code || '|' || third_party_code from public.import_account_mappings where entity_id = :'e1_id' and raw_account = '4111CBM'), '4111000|CBM', '4111CBM → collectif 4111000 + tiers CBM');

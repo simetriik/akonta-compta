@@ -34,13 +34,34 @@ class EntryEditorLogic {
     required List<Account> accounts,
     required List<TaxRate> rates,
     required DateTime today,
+    ThirdParty? thirdParty,
   }) {
     final length = accounts.isEmpty ? 0 : accounts.first.code.length;
     Account? resolve(String code) => accounts.where((a) => a.code == padAccountCode(code, length)).firstOrNull;
     draft.lines
       ..clear()
-      ..addAll(applyTemplate(template, baseAmount: baseAmount, rateOf: (code) => rateOn(rates, code, today), resolveAccount: resolve))
+      ..addAll(applyTemplate(template, baseAmount: baseAmount, rateOf: (code) => rateOn(rates, code, today), resolveAccount: resolve, thirdParty: thirdParty))
       ..add(DraftLine());
+  }
+
+  /// Lignes d'un modèle tirées de l'écriture en cours (« Enregistrer comme modèle ») : comptes génériques (zéros de
+  /// complément retirés, ils sont recomplétés à la longueur du dossier à l'appel), tiers à choisir à l'appel, montant libre.
+  static List<TemplateLine> templateLinesFrom(EntryDraft draft) {
+    final lines = <TemplateLine>[];
+    for (final l in draft.nonEmptyLines.where((l) => l.accountCode.isNotEmpty)) {
+      final generic = l.accountCode.replaceFirst(RegExp(r'0+$'), '');
+      lines.add(
+        TemplateLine(
+          lineNo: lines.length + 1,
+          accountCode: generic.isEmpty ? l.accountCode : generic,
+          usesThirdParty: l.isCollective || l.thirdPartyId != null,
+          side: l.debit > 0 ? 'debit' : 'credit',
+          formula: 'input',
+          label: l.label.trim().isEmpty ? null : l.label.trim(),
+        ),
+      );
+    }
+    return lines;
   }
 
   /// Reprend les comptes, tiers et libellés d'une écriture passée, sans les montants.

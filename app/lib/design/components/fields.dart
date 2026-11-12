@@ -713,7 +713,21 @@ class AkAutocompleteField<T extends Object> extends StatelessWidget {
     this.pickOnBlur = false,
     this.onSubmittedPick,
     this.unresolvedError,
+    this.onCreate,
+    this.createLabel,
+    this.isExactMatch,
   });
+
+  /// Une proposition « correspond exactement » à la saisie : la ligne de création est alors masquée.
+  /// Par défaut : texte affiché identique à la saisie (sans casse).
+  final bool Function(T option, String query)? isExactMatch;
+
+  /// Création en ligne : quand la saisie ne correspond à aucune proposition, une dernière ligne « Créer … » ouvre
+  /// ce rappel avec le texte tapé. Il renvoie l'élément créé (retenu aussitôt) ou null si l'utilisateur renonce.
+  final Future<T?> Function(String query)? onCreate;
+
+  /// Libellé de la ligne de création (par défaut « Créer “saisie” »).
+  final String Function(String query)? createLabel;
 
   /// Message affiché quand le champ a perdu le focus avec une saisie non résolue.
   final String? unresolvedError;
@@ -746,50 +760,75 @@ class AkAutocompleteField<T extends Object> extends StatelessWidget {
   final String Function(T)? optionLabel;
   final double? optionsWidth;
 
+  /// Propositions + ligne de création : celle-ci n'apparaît que si rien ne correspond exactement à la saisie.
+  List<_AutoOption<T>> _allOptions(String query) {
+    final found = options(query).toList();
+    final text = query.trim();
+    final list = [for (final o in found) _AutoOption<T>(o)];
+    final exact = found.any((o) => isExactMatch?.call(o, text) ?? display(o).trim().toLowerCase() == text.toLowerCase());
+    if (onCreate != null && text.isNotEmpty && !exact) list.add(_AutoOption<T>.create(text));
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.ak;
+    // Contrôleur du champ, capté pour y écrire l'élément qui vient d'être créé.
+    TextEditingController? fieldController;
     return LayoutBuilder(
       builder: (context, c) {
         final width = optionsWidth ?? (c.maxWidth.isFinite ? c.maxWidth.clamp(280.0, 520.0) : 360.0);
-        return RawAutocomplete<T>(
+        return RawAutocomplete<_AutoOption<T>>(
           initialValue: TextEditingValue(text: initialText),
-          displayStringForOption: display,
-          optionsBuilder: (v) => options(v.text),
-          onSelected: onSelected,
-          fieldViewBuilder: (context, controller, focus, onSubmit) => Focus(
-            canRequestFocus: false,
-            skipTraversal: true,
-            onFocusChange: (has) {
-              if (has || !pickOnBlur || resolved || controller.text.trim().isEmpty) return;
-              final first = options(controller.text).firstOrNull;
-              if (first == null) return;
-              controller.text = display(first);
-              onSelected(first);
-            },
-            child: ListenableBuilder(
-              listenable: Listenable.merge([controller, focus]),
-              builder: (context, _) => AkTextField(
-                controller: controller,
-                focusNode: focus,
-                label: label,
-                hint: hint,
-                helper: helper,
-                errorText: errorText ?? (unresolvedError != null && !resolved && !focus.hasFocus && controller.text.trim().isNotEmpty ? unresolvedError : null),
-                required: required,
-                enabled: enabled,
-                dense: dense,
-                mono: mono,
-                textInputAction: TextInputAction.next,
-                onChanged: onChanged,
-                onSubmitted: (_) {
-                  final has = options(controller.text).isNotEmpty;
-                  onSubmit();
-                  if (has) onSubmittedPick?.call();
-                },
+          displayStringForOption: (o) => o.isCreate ? o.query! : display(o.value as T),
+          optionsBuilder: (v) => _allOptions(v.text),
+          onSelected: (o) async {
+            if (!o.isCreate) {
+              onSelected(o.value as T);
+              return;
+            }
+            final created = await onCreate!(o.query!);
+            if (created == null) return;
+            fieldController?.text = display(created);
+            onSelected(created);
+            onSubmittedPick?.call();
+          },
+          fieldViewBuilder: (context, controller, focus, onSubmit) {
+            fieldController = controller;
+            return Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              onFocusChange: (has) {
+                if (has || !pickOnBlur || resolved || controller.text.trim().isEmpty) return;
+                final first = options(controller.text).firstOrNull;
+                if (first == null) return;
+                controller.text = display(first);
+                onSelected(first);
+              },
+              child: ListenableBuilder(
+                listenable: Listenable.merge([controller, focus]),
+                builder: (context, _) => AkTextField(
+                  controller: controller,
+                  focusNode: focus,
+                  label: label,
+                  hint: hint,
+                  helper: helper,
+                  errorText: errorText ?? (unresolvedError != null && !resolved && !focus.hasFocus && controller.text.trim().isNotEmpty ? unresolvedError : null),
+                  required: required,
+                  enabled: enabled,
+                  dense: dense,
+                  mono: mono,
+                  textInputAction: TextInputAction.next,
+                  onChanged: onChanged,
+                  onSubmitted: (_) {
+                    final has = options(controller.text).isNotEmpty;
+                    onSubmit();
+                    if (has) onSubmittedPick?.call();
+                  },
+                ),
               ),
-            ),
-          ),
+            );
+          },
           optionsViewBuilder: (context, onSelect, opts) => Align(
             alignment: Alignment.topLeft,
             child: Material(
@@ -809,15 +848,23 @@ class AkAutocompleteField<T extends Object> extends StatelessWidget {
                   itemBuilder: (context, i) {
                     final o = opts.elementAt(i);
                     final highlighted = AutocompleteHighlightedOption.of(context) == i;
+                    final text = o.isCreate ? (createLabel?.call(o.query!) ?? 'Créer « ${o.query} »') : (optionLabel ?? display)(o.value as T);
                     return InkWell(
                       onTap: () => onSelect(o),
                       child: Container(
                         color: highlighted ? t.rowSelected : null,
                         padding: const EdgeInsets.symmetric(horizontal: AkSpace.s3, vertical: AkSpace.s2),
-                        child: Text(
-                          (optionLabel ?? display)(o),
-                          overflow: TextOverflow.ellipsis,
-                          style: (mono ? AkText.code : AkText.body).copyWith(color: t.text),
+                        child: Row(
+                          children: [
+                            if (o.isCreate) ...[Icon(Icons.add_circle_outline, size: 18, color: t.textStrong), const SizedBox(width: AkSpace.s2)],
+                            Expanded(
+                              child: Text(
+                                text,
+                                overflow: TextOverflow.ellipsis,
+                                style: (mono && !o.isCreate ? AkText.code : AkText.body).copyWith(color: o.isCreate ? t.textStrong : t.text, fontWeight: o.isCreate ? FontWeight.w600 : null),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -830,6 +877,17 @@ class AkAutocompleteField<T extends Object> extends StatelessWidget {
       },
     );
   }
+}
+
+/// Une ligne de la liste d'un [AkAutocompleteField] : une proposition, ou la ligne « Créer … ».
+class _AutoOption<T extends Object> {
+  const _AutoOption(T this.value) : query = null;
+  const _AutoOption.create(String this.query) : value = null;
+
+  final T? value;
+  final String? query;
+
+  bool get isCreate => query != null;
 }
 
 /// Champ compte : autocomplétion par numéro ou intitulé ; un numéro complet tapé sélectionne directement le compte.
@@ -849,7 +907,11 @@ class AkAccountField extends StatelessWidget {
     this.invalid = false,
     this.resolved,
     this.onSubmittedPick,
+    this.onCreate,
   });
+
+  /// Création d'un compte manquant sans quitter l'écran : reçoit le numéro tapé, renvoie le compte créé.
+  final Future<Account?> Function(String code)? onCreate;
 
   /// Un compte est retenu (par défaut : [selected] non nul).
   final bool? resolved;
@@ -889,6 +951,14 @@ class AkAccountField extends StatelessWidget {
       pickOnBlur: true,
       resolved: resolved ?? selected != null,
       onSubmittedPick: onSubmittedPick,
+      onCreate: onCreate,
+      createLabel: (q) => 'Créer le compte « $q »',
+      // Un numéro saisi est un début de numéro de compte : « 4111 » désigne 4111000, il ne faut pas proposer de le créer.
+      isExactMatch: (a, q) {
+        final s = q.trim().toLowerCase();
+        if (RegExp(r'^\d+$').hasMatch(s)) return a.code.startsWith(s);
+        return a.label.toLowerCase() == s || '${a.code} ${a.label}'.toLowerCase() == s;
+      },
       errorText: invalid ? 'Choisir dans la liste' : null,
       unresolvedError: 'Choisir dans la liste',
       display: (a) => '${a.code} ${a.label}',
@@ -923,7 +993,11 @@ class AkThirdPartyField extends StatelessWidget {
     this.dense = false,
     this.resolved = false,
     this.onSubmittedPick,
+    this.onCreate,
   });
+
+  /// Création d'un tiers manquant sans quitter l'écran : reçoit le nom tapé, renvoie le tiers créé.
+  final Future<ThirdParty?> Function(String name)? onCreate;
 
   final bool resolved;
   final VoidCallback? onSubmittedPick;
@@ -947,6 +1021,8 @@ class AkThirdPartyField extends StatelessWidget {
       pickOnBlur: true,
       resolved: resolved,
       onSubmittedPick: onSubmittedPick,
+      onCreate: onCreate,
+      createLabel: (q) => 'Créer ce tiers « $q »',
       display: (t) => t.code,
       optionLabel: (t) => '${t.code} · ${t.name}',
       options: (q) {

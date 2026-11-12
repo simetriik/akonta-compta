@@ -15,8 +15,8 @@ select tests.create_entity(:'a_id', 'Dossier 1') as id \gset dossier1_
 select tests.create_entity(:'a_id', 'Dossier 2') as id \gset dossier2_
 
 -- 1. Rôles par défaut créés avec le cabinet
-select is((select count(*) from public.roles where cabinet_id = :'a_id'), 7::bigint, '7 rôles par défaut créés pour un nouveau cabinet (5 du cabinet + client_gerant et client_saisie, D-044)');
-select is((select count(*) from public.permissions), 27::bigint, '27 permissions unitaires au catalogue (invoices.issue et emcf.manage, D-043 ; drafts.read_all et client_access.manage, D-044)');
+select is((select count(*) from public.roles where cabinet_id = :'a_id'), 8::bigint, '8 rôles par défaut créés pour un nouveau cabinet (5 du cabinet + client_gerant et client_saisie, D-044 ; auditeur, recette du 05/11)');
+select is((select count(*) from public.permissions), 29::bigint, '29 permissions unitaires au catalogue (invoices.issue et emcf.manage, D-043 ; drafts.read_all et client_access.manage, D-044 ; templates.manage_common et templates.manage_entity, recette du 05/11)');
 select ok((select requires_mfa from public.roles where cabinet_id = :'a_id' and code = 'partner'), 'l''associé exige le TOTP');
 select ok((select requires_mfa from public.roles where cabinet_id = :'a_id' and code = 'tech_admin'), 'l''administrateur exige le TOTP');
 select ok(not (select accounting_access from public.roles where cabinet_id = :'a_id' and code = 'tech_admin'), 'l''administrateur n''a pas accès aux données comptables');

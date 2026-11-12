@@ -33,6 +33,12 @@ class TrialBalanceDocument(BaseModel):
     rows: list[TrialBalanceRow] = Field(default_factory=list)
 
 
+class Counterpart(BaseModel):
+    code: str
+    label: str = ""
+    amount: int = 0
+
+
 class LedgerLine(BaseModel):
     account_code: str
     account_label: str
@@ -42,15 +48,22 @@ class LedgerLine(BaseModel):
     reference: str | None = None
     label: str
     third_party_code: str | None = None
+    third_party_name: str | None = None
     debit: int = 0
     credit: int = 0
     running_balance: int = 0
     letter_code: str | None = None
+    # Contrepartie : compte principal, nombre d'autres comptes opposés, liste complète (calculées par PostgreSQL)
+    counterpart_code: str | None = None
+    counterpart_more: int = 0
+    counterparts: list[Counterpart] = Field(default_factory=list)
 
 
 class LedgerDocument(BaseModel):
     header: DocumentHeader
     lines: list[LedgerLine] = Field(default_factory=list)
+    # « main » : contrepartie principale suivie de « + n » ; « all » : liste complète des comptes opposés
+    counterpart_mode: Literal["main", "all"] = "main"
 
 
 class JournalLine(BaseModel):
@@ -205,3 +218,20 @@ class InvoiceDocument(BaseModel):
     payments: list[InvoicePaymentDoc] = Field(default_factory=list)
     security: InvoiceSecurity
     commercial_message: str | None = None
+
+
+class ExtractedDocument(BaseModel):
+    """Champs lus sur une pièce scannée. Tout champ non trouvé vaut `None` : c'est une proposition à valider."""
+    supplier: str | None = None
+    document_date: date | None = None
+    reference: str | None = None
+    currency: str | None = None
+    amount_excl_tax: float | None = None
+    vat_amount: float | None = None
+    total: float | None = None
+    exchange_rate: float | None = None
+    counter_value: float | None = None
+    tax_id: str | None = None
+    consistent: bool | None = None
+    method: str | None = None
+    raw_text: str | None = None

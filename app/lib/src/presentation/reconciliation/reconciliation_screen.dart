@@ -311,7 +311,10 @@ class _ReconciliationBodyState extends ConsumerState<_ReconciliationBody> {
     final parsed = parseStatementCsv(text, template);
     if (!mounted) return;
     if (parsed.lines.isEmpty) {
-      showErrorSnack(context, 'Aucune ligne lue. ${parsed.errors.take(3).join(' · ')}');
+      // On montre la première ligne de données du fichier pour choisir les bonnes colonnes (AN-12).
+      final firstRows = text.replaceAll('\r', '').split('\n').where((r) => r.trim().isNotEmpty).skip(template.hasHeader ? 1 : 0).take(1);
+      final sample = firstRows.isEmpty ? '' : ' Première ligne du fichier : « ${firstRows.first} ». Vérifiez les numéros de colonnes du gabarit « ${template.label} ».';
+      showErrorSnack(context, 'Aucune ligne lue. ${parsed.errors.take(3).join(' · ')}.$sample');
       return;
     }
     final dates = parsed.lines.map((l) => l.date).toList()..sort();

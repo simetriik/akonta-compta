@@ -26,6 +26,7 @@ class _TemplateDialogState extends State<ReconciliationTemplateDialog> {
   final _credit = TextEditingController(text: '4');
   final _amount = TextEditingController();
   final _ref = TextEditingController();
+  final _valueDate = TextEditingController();
   bool _header = true;
   String _dateFormat = 'DD/MM/YYYY';
   String _decimal = ',';
@@ -93,6 +94,7 @@ class _TemplateDialogState extends State<ReconciliationTemplateDialog> {
                 _col('Crédit', _credit),
                 _col('Montant signé', _amount),
                 _col('Référence', _ref),
+                _col('Date valeur', _valueDate),
               ],
             ),
             const SizedBox(height: AkSpace.s2),
@@ -147,6 +149,7 @@ class _TemplateDialogState extends State<ReconciliationTemplateDialog> {
                 creditColumn: amount == null ? n(_credit) : null,
                 amountColumn: amount,
                 referenceColumn: n(_ref),
+                valueDateColumn: n(_valueDate),
                 dateFormat: _dateFormat,
                 decimalSeparator: _decimal,
                 amountSignInverted: _inverted,

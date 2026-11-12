@@ -16,3 +16,6 @@ final directorsProvider = FutureProvider.family<List<Director>, String>((ref, en
 final entityHistoryProvider = FutureProvider.family<List<EntityHistoryItem>, String>((ref, entityId) => ref.watch(entitiesServiceProvider).history(entityId));
 
 final journalTemplatesProvider = FutureProvider<List<JournalTemplate>>((ref) => ref.watch(entitiesServiceProvider).journalTemplates());
+
+/// Associés d'un exercice et répartition du capital (AN-04).
+final fiscalYearPartnersProvider = FutureProvider.autoDispose.family<List<FiscalYearPartner>, String>((ref, fyId) => ref.watch(entitiesServiceProvider).partners(fyId));

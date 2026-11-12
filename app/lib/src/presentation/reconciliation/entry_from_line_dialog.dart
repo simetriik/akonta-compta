@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:akonta/design/design.dart';
 
+import '../../application/rules/statement_line_hint.dart';
 import '../../core/formatting.dart';
 import '../../domain/bank_models.dart';
 import '../../domain/reference_models.dart';
@@ -32,6 +33,7 @@ class _EntryFromLineDialogState extends State<EntryFromLineDialog> {
   @override
   Widget build(BuildContext context) {
     final l = widget.line;
+    final hint = _account == null ? null : StatementLineHint.counterpartWarning(isInflow: l.credit > 0, accountClass: _account!.classNo);
     return AkDialog(
       title: 'Créer l\'écriture depuis le relevé',
       size: AkDialogSize.m,
@@ -50,6 +52,7 @@ class _EntryFromLineDialogState extends State<EntryFromLineDialog> {
               if (_account != null) setState(() => _account = null);
             },
           ),
+          if (hint != null) Padding(padding: const EdgeInsets.only(top: AkSpace.s2), child: AkBanner(kind: AkBannerKind.warning, child: Text(hint))),
           const SizedBox(height: AkSpace.s2),
           AkDateField(
             key: const Key('entry-from-line-date'),

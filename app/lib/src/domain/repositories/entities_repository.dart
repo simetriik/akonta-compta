@@ -5,7 +5,11 @@ abstract interface class EntitiesRepository {
 
   Future<EntityDetail> get(String id);
 
-  Future<EntityDetail> create(String cabinetId, EntityInput input);
+  /// [requestId] rend la création idempotente : rejouée, elle renvoie le dossier déjà créé.
+  Future<EntityDetail> create(String cabinetId, EntityInput input, {String? requestId});
+
+  /// Supprime un dossier en double qui ne contient aucune donnée de travail.
+  Future<void> deleteEmptyDuplicate(String id);
 
   Future<void> update(String id, EntityInput input);
 

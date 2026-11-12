@@ -10,7 +10,9 @@ import '../../domain/models.dart';
 import '../../domain/reference_models.dart';
 import '../widgets/async_view.dart';
 import '../widgets/require_entity.dart';
+import '../../application/providers/entities_providers.dart';
 import '../../application/providers/entries_providers.dart';
+import '../../domain/entity_models.dart';
 import '../../application/providers/references_providers.dart';
 import '../../application/providers/session_providers.dart';
 import '../../application/providers/services.dart';
@@ -47,7 +49,10 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
     final canValidate = perms.has('entries.validate', entityId: widget.entity.id);
     final canReview = perms.has('entries.review', entityId: widget.entity.id);
     final canReverse = perms.has('entries.reverse', entityId: widget.entity.id);
-    final month = filter.month ?? DateTime(DateTime.now().year, DateTime.now().month, 1);
+    // Sans filtre de mois (tout l'exercice), les flèches partent du début de l'exercice du dossier.
+    final fiscalYears = ref.watch(fiscalYearsProvider(widget.entity.id)).value ?? const <FiscalYear>[];
+    final currentFy = fiscalYears.where((f) => f.id == ref.watch(currentEntityProvider)?.fiscalYearId).firstOrNull;
+    final month = filter.month ?? DateTime(currentFy?.startDate.year ?? DateTime.now().year, currentFy?.startDate.month ?? DateTime.now().month, 1);
 
     final t = context.ak;
     final mobile = MediaQuery.sizeOf(context).width < 600;
@@ -117,13 +122,13 @@ class _EntriesBodyState extends ConsumerState<_EntriesBody> {
           tooltip: 'Mois précédent',
           onPressed: () => notifier.set(filter.copyWith(month: DateTime(month.year, month.month - 1, 1))),
         ),
-        Text(Fmt.month(month), style: AkText.bodyStrong.copyWith(color: context.ak.text)),
+        Text(filter.month == null ? 'Tout l\'exercice' : Fmt.month(month), style: AkText.bodyStrong.copyWith(color: context.ak.text)),
         AkIconButton(
           icon: Icons.chevron_right,
           tooltip: 'Mois suivant',
           onPressed: () => notifier.set(filter.copyWith(month: DateTime(month.year, month.month + 1, 1))),
         ),
-        AkButton.ghost('Tout l\'exercice', onPressed: () => notifier.set(filter.copyWith(clearMonth: true))),
+        if (filter.month != null) AkButton.ghost('Tout l\'exercice', onPressed: () => notifier.set(filter.copyWith(clearMonth: true))),
       ],
     );
     final status = AkSegmented<String>(
@@ -564,7 +569,8 @@ class ReversalDialog extends StatefulWidget {
 
 class _ReversalDialogState extends State<ReversalDialog> {
   final _reason = TextEditingController();
-  final _date = TextEditingController(text: Fmt.date(DateTime.now()));
+  // Par défaut, la date de l'écriture d'origine : elle reste dans l'exercice du dossier, quelle que soit la date du jour (AN-11).
+  late final _date = TextEditingController(text: Fmt.date(widget.entry.entryDate));
 
   @override
   Widget build(BuildContext context) {
@@ -579,7 +585,7 @@ class _ReversalDialogState extends State<ReversalDialog> {
           const SizedBox(height: AkSpace.s3),
           AkTextField(controller: _reason, key: const Key('reversal-reason'), label: 'Motif (obligatoire)', onChanged: (_) => setState(() {}), autofocus: true),
           const SizedBox(height: AkSpace.s3),
-          AkDateField(controller: _date, label: 'Date (jj/mm/aaaa)', onChanged: (_) => setState(() {})),
+          AkDateField(controller: _date, label: 'Date de la contre-passation (par défaut : celle de l\'écriture)', onChanged: (_) => setState(() {})),
         ],
       ),
       actions: [

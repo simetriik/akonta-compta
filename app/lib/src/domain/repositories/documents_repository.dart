@@ -19,4 +19,7 @@ abstract interface class DocumentsRepository {
   Future<String> signedUrl(DocumentModel d);
 
   Future<Uint8List> download(DocumentModel d);
+
+  /// Lit la pièce (service local, sans modèle en ligne) et crée une écriture proposée en brouillard, liée à la pièce.
+  Future<ScanProposal> proposeEntry(String documentId);
 }

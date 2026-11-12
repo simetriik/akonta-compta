@@ -1,3 +1,4 @@
+import '../../application/rules/third_party_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:akonta/design/design.dart';
@@ -139,6 +140,7 @@ class _ThirdPartyDialogState extends ConsumerState<ThirdPartyDialog> {
   late final _phone = TextEditingController(text: widget.initial?.phone);
   late final _email = TextEditingController(text: widget.initial?.email);
   late String _type = widget.initial?.type ?? 'customer';
+  bool _typeChosen = false; // le type choisi à la main n'est plus déduit du collectif (AN-05)
   final Set<String> _collectives = {};
   bool _loaded = false;
   String? _error;
@@ -191,7 +193,10 @@ class _ThirdPartyDialogState extends ConsumerState<ThirdPartyDialog> {
               value: _type,
               label: 'Type',
               items: [for (final e in ThirdParty.typeLabels.entries) AkOption(e.key, e.value)],
-              onChanged: (v) => setState(() => _type = v ?? 'other'),
+              onChanged: (v) => setState(() {
+                _type = v ?? 'other';
+                _typeChosen = true;
+              }),
             ),
             const SizedBox(height: AkSpace.s3),
             AkTextField(controller: _taxId, label: 'IFU'),
@@ -221,7 +226,11 @@ class _ThirdPartyDialogState extends ConsumerState<ThirdPartyDialog> {
                   FilterChip(
                     label: Text('${a.code} ${a.label}'),
                     selected: _collectives.contains(a.id),
-                    onSelected: (v) => setState(() => v ? _collectives.add(a.id) : _collectives.remove(a.id)),
+                    onSelected: (v) => setState(() {
+                      v ? _collectives.add(a.id) : _collectives.remove(a.id);
+                      final inferred = ThirdPartyType.forCollective(a.code);
+                      if (v && !_typeChosen && widget.initial == null && inferred != null) _type = inferred;
+                    }),
                   ),
               ],
             ),

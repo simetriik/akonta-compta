@@ -91,7 +91,8 @@ class LedgerGrid extends StatelessWidget {
             consultationCode(context, '${line.journalCode}-${line.number}'),
             consultationCode(context, line.reference ?? ''),
             consultationText(context, line.label),
-            consultationCode(context, line.thirdPartyCode ?? ''),
+            Tooltip(message: line.thirdPartyCode ?? '', child: consultationText(context, line.thirdPartyText)),
+            Tooltip(message: line.counterpartDetail, child: consultationCode(context, line.counterpartText)),
             consultationAmount(Fmt.fcfa(line.debit)),
             consultationAmount(Fmt.fcfa(line.credit)),
             consultationAmount(Fmt.balance(line.runningBalance)),
@@ -102,6 +103,7 @@ class LedgerGrid extends StatelessWidget {
             const SizedBox.shrink(),
             const SizedBox.shrink(),
             consultationText(context, 'Total compte', bold: true),
+            const SizedBox.shrink(),
             const SizedBox.shrink(),
             consultationAmount(Fmt.fcfa(tot.debit, showZero: true), bold: true),
             consultationAmount(Fmt.fcfa(tot.credit, showZero: true), bold: true),
@@ -115,7 +117,8 @@ class LedgerGrid extends StatelessWidget {
         AkGridColumn('Pièce', 124),
         AkGridColumn('Référence', 110),
         AkGridColumn('Libellé', 240, grow: true),
-        AkGridColumn('Tiers', 90),
+        AkGridColumn('Tiers', 150),
+        AkGridColumn('Contrepartie', 130),
         AkGridColumn('Débit', 120, numeric: true),
         AkGridColumn('Crédit', 120, numeric: true),
         AkGridColumn('Solde', 130, numeric: true),
@@ -192,7 +195,8 @@ class LedgerList extends StatelessWidget {
             final meta = [
               '${line.journalCode}-${line.number}',
               if (line.reference != null && line.reference!.isNotEmpty) line.reference!,
-              if (line.thirdPartyCode != null) line.thirdPartyCode!,
+              if (line.thirdPartyText.isNotEmpty) line.thirdPartyText,
+              if (line.counterpartText.isNotEmpty) 'contre ${line.counterpartText}',
               if (line.letterCode != null) 'lettre ${line.letterCode}',
             ].join(' · ');
             return InkWell(

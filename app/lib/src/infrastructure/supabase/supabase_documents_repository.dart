@@ -77,6 +77,20 @@ class SupabaseDocumentsRepository implements DocumentsRepository {
   @override
   Future<Uint8List> download(DocumentModel d) => _client.storage.from(bucket).download(d.storagePath);
 
+  /// Appelle l'Edge Function `extract-document` ; un refus (pièce illisible, date absente…) porte son motif en français.
+  @override
+  Future<ScanProposal> proposeEntry(String documentId) async {
+    final res = await _client.functions.invoke('extract-document', body: {'document_id': documentId});
+    final data = res.data;
+    if (res.status < 200 || res.status >= 300) {
+      final message = data is Map<String, dynamic> ? data['error'] as String? : null;
+      if (res.status == 422 && message != null) throw AppError.business(message);
+      throw FunctionException(status: res.status, details: res.data);
+    }
+    if (data is! Map<String, dynamic> || data['entry_id'] is! String) throw const AppError.business('Réponse inattendue du service de lecture des pièces.');
+    return ScanProposal(entryId: data['entry_id'] as String, existing: data['existing'] == true, warnings: [for (final w in (data['warnings'] as List? ?? const [])) w as String]);
+  }
+
   static String _uuid() {
     final r = DateTime.now().microsecondsSinceEpoch;
     final rand = List.generate(16, (i) => (r >> (i * 3) ^ (i * 7919) ^ DateTime.now().millisecond) & 0xff);

@@ -1,11 +1,11 @@
 """API du service de documents. Appelée par l'Edge Function `export-document` avec une clé partagée."""
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 
-from . import dgi, excel, pdf, pdf_invoice, pdf_sycebnl
+from . import dgi, excel, extraction, pdf, pdf_invoice, pdf_sycebnl
 from .config import Settings, get_settings
-from .models import AgedBalanceDocument, FinancialStatementsDocument, InvoiceDocument, JournalDocument, LedgerDocument, ReconciliationDocument, SycebnlStatementsDocument, TrialBalanceDocument
+from .models import AgedBalanceDocument, FinancialStatementsDocument, ExtractedDocument, InvoiceDocument, JournalDocument, LedgerDocument, ReconciliationDocument, SycebnlStatementsDocument, TrialBalanceDocument
 
 app = FastAPI(title="Akonta — service de documents", version="0.1.0")
 
@@ -31,6 +31,24 @@ def _file(content: bytes, media_type: str, filename: str) -> Response:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "service": "akonta-documents"}
+
+
+MAX_SCAN_BYTES = 20 * 1024 * 1024  # même plafond que le Storage des pièces
+
+
+@app.post("/extract/document", dependencies=[Depends(require_service_key)])
+async def extract_document(request: Request) -> ExtractedDocument:
+    """Lit une pièce (corps = octets du fichier, `Content-Type` = son type) et propose les champs comptables."""
+    content = await request.body()
+    if not content:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Fichier vide")
+    if len(content) > MAX_SCAN_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="Fichier trop volumineux (20 Mo maximum)")
+    mime_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    try:
+        return extraction.extract_document(content, mime_type)
+    except extraction.UnsupportedDocument as error:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(error)) from error
 
 
 @app.post("/pdf/invoice", dependencies=[Depends(require_service_key)])
