@@ -6,7 +6,9 @@ import 'package:akonta/design/design.dart';
 import '../../core/formatting.dart';
 import '../../domain/entity_models.dart';
 import '../../domain/models.dart';
+import '../../application/providers/closing_providers.dart';
 import '../../application/providers/entities_providers.dart';
+import '../../application/rules/result_allocation.dart';
 import '../../application/providers/services.dart';
 import '../inventory/inventory_widgets.dart';
 import 'closing_widgets.dart';
@@ -34,6 +36,8 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
     final repo = ref.read(closingServiceProvider);
     final next = widget.next;
     final t = context.ak;
+    final pending = next == null ? 0 : (ref.watch(pendingResultProvider((entityId: widget.entity.id, fyId: next.id))).value ?? 0);
+    final kind = ResultAllocation.kind(pending);
     final nonProfit = ref.watch(entityProvider(widget.entity.id)).value?.accountingSystem == 'sycebnl';
     return ListView(
       padding: closingBodyPadding(context),
@@ -59,12 +63,22 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
                 AkButton.primary(
                   'Générer les à-nouveaux ${next.label}',
                   icon: Icons.auto_awesome,
-                  onPressed: () => runGeneration(context, ref, () => repo.generateOpeningBalances(widget.entity.id, widget.fy.id), 'À-nouveaux ${next.label}'),
+                  onPressed: () => runGeneration(context, ref, () => repo.generateOpeningBalances(widget.entity.id, widget.fy.id), 'À-nouveaux ${next.label}')
+                      .whenComplete(() => ref.invalidate(pendingResultProvider)),
                 ),
                 Divider(height: AkSpace.s6, color: t.border),
                 Text('Affectation du résultat de ${widget.fy.label} (en ${next.label})', style: AkText.bodyStrong.copyWith(color: t.text)),
                 const SizedBox(height: AkSpace.s2),
-                Wrap(
+                AkBanner(
+                  kind: kind == ResultKind.loss ? AkBannerKind.warning : AkBannerKind.info,
+                  child: Text(switch (kind) {
+                    ResultKind.profit => 'Résultat en instance : bénéfice de ${Fmt.fcfa(pending, showZero: true)}, à répartir en totalité.',
+                    ResultKind.loss => 'Résultat en instance : perte de ${Fmt.fcfa(-pending, showZero: true)}. Elle se reporte à nouveau (compte 129), sans réserve ni dividende.',
+                    ResultKind.none => 'Aucun résultat en instance : générez puis validez les à-nouveaux ${next.label} avant l\'affectation.',
+                  }),
+                ),
+                const SizedBox(height: AkSpace.s2),
+                if (kind != ResultKind.loss) Wrap(
                   spacing: AkSpace.s2,
                   runSpacing: AkSpace.s2,
                   children: [
@@ -101,25 +115,24 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
                 ),
                 const SizedBox(height: AkSpace.s2),
                 AkButton.secondary(
-                  'Générer l\'écriture d\'affectation',
+                  kind == ResultKind.loss ? 'Reporter la perte à nouveau' : 'Générer l\'écriture d\'affectation',
                   icon: Icons.call_split,
                   onPressed: () {
                     final d = Fmt.parseDate(_date.text);
                     if (d == null) return;
+                    final legal = Fmt.parseAmount(_legal.text) ?? 0, free = Fmt.parseAmount(_free.text) ?? 0;
+                    final dividends = Fmt.parseAmount(_div.text) ?? 0, carry = Fmt.parseAmount(_carry.text) ?? 0;
+                    final problem = ResultAllocation.check(pending, legal: legal, free: free, dividends: dividends, carry: carry);
+                    if (problem != null) {
+                      showErrorSnack(context, problem);
+                      return;
+                    }
                     runGeneration(
                       context,
                       ref,
-                      () => repo.allocateResult(
-                        widget.entity.id,
-                        next.id,
-                        d,
-                        legalReserve: Fmt.parseAmount(_legal.text) ?? 0,
-                        freeReserve: Fmt.parseAmount(_free.text) ?? 0,
-                        dividends: Fmt.parseAmount(_div.text) ?? 0,
-                        carryForward: Fmt.parseAmount(_carry.text) ?? 0,
-                      ),
+                      () => repo.allocateResult(widget.entity.id, next.id, d, legalReserve: legal, freeReserve: free, dividends: dividends, carryForward: carry),
                       'Affectation du résultat',
-                    );
+                    ).whenComplete(() => ref.invalidate(pendingResultProvider));
                   },
                 ),
               ],

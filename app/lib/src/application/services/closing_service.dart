@@ -24,6 +24,11 @@ class ClosingService {
     return _repository.accountingResult(entityId, fyId);
   }
 
+  Future<int> pendingResult(String entityId, String nextFyId) async {
+    _online.require('La clôture');
+    return _repository.pendingResult(entityId, nextFyId);
+  }
+
   Future<List<TaxAdjustment>> proposeAdjustments(String entityId, String fyId) async {
     _online.require('La clôture');
     return _repository.proposeAdjustments(entityId, fyId);

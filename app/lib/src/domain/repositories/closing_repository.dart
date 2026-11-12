@@ -7,6 +7,9 @@ abstract interface class ClosingRepository {
 
   Future<int> accountingResult(String entityId, String fyId);
 
+  /// Résultat en instance d'affectation à l'ouverture de l'exercice suivant : bénéfice > 0, perte < 0, 0 si rien.
+  Future<int> pendingResult(String entityId, String nextFyId);
+
   Future<List<TaxAdjustment>> proposeAdjustments(String entityId, String fyId);
 
   Future<TaxComputation> computeTax(String entityId, String fyId, List<TaxAdjustment> adjustments);
