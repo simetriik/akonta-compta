@@ -7,8 +7,11 @@ abstract interface class ClosingRepository {
 
   Future<int> accountingResult(String entityId, String fyId);
 
-  /// Résultat en instance d'affectation à l'ouverture de l'exercice suivant : bénéfice > 0, perte < 0, 0 si rien.
-  Future<int> pendingResult(String entityId, String nextFyId);
+  /// Résultats en instance d'affectation à l'ouverture de l'exercice suivant : bénéfices et pertes, en valeur positive (0 si rien).
+  Future<({int profit, int loss})> pendingResults(String entityId, String nextFyId);
+
+  /// Report à nouveau de la perte en instance (débit 129) ; brouillard créé, `null` si rien.
+  Future<String?> carryForwardLoss(String entityId, String nextFyId, DateTime date);
 
   Future<List<TaxAdjustment>> proposeAdjustments(String entityId, String fyId);
 

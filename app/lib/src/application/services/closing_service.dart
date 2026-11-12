@@ -24,9 +24,14 @@ class ClosingService {
     return _repository.accountingResult(entityId, fyId);
   }
 
-  Future<int> pendingResult(String entityId, String nextFyId) async {
+  Future<({int profit, int loss})> pendingResults(String entityId, String nextFyId) async {
     _online.require('La clôture');
-    return _repository.pendingResult(entityId, nextFyId);
+    return _repository.pendingResults(entityId, nextFyId);
+  }
+
+  Future<String?> carryForwardLoss(String entityId, String nextFyId, DateTime date) async {
+    _online.require('La clôture');
+    return _repository.carryForwardLoss(entityId, nextFyId, date);
   }
 
   Future<List<TaxAdjustment>> proposeAdjustments(String entityId, String fyId) async {
