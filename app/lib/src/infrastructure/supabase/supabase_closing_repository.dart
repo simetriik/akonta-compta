@@ -58,6 +58,10 @@ class SupabaseClosingRepository implements ClosingRepository {
   Future<void> closeProvisional(String entityId, String fyId) => _client.rpc('close_provisional', params: {'p_entity': entityId, 'p_fiscal_year': fyId});
 
   @override
+  Future<int> pendingResult(String entityId, String nextFyId) async =>
+      ((await _client.rpc('pending_result', params: {'p_entity': entityId, 'p_fiscal_year_next': nextFyId})) as num).toInt();
+
+  @override
   Future<void> reopen(String entityId, String fyId, String reason) => _client.rpc('reopen_fiscal_year', params: {'p_entity': entityId, 'p_fiscal_year': fyId, 'p_reason': reason});
 
   @override

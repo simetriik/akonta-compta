@@ -21,6 +21,11 @@ final taxWorksheetProvider = FutureProvider.autoDispose.family<TaxWorksheet, Clo
   return TaxWorksheet(accountingResult: accounting, adjustments: adjustments, computation: computation);
 });
 
+/// Résultat en instance d'affectation à l'ouverture de l'exercice [ClosingKey.fyId] (l'exercice suivant) ; `ref.invalidate` le relit.
+final pendingResultProvider = FutureProvider.autoDispose.family<int, ClosingKey>(
+  (ref, k) => ref.watch(closingServiceProvider).pendingResult(k.entityId, k.fyId),
+);
+
 /// Derniers états financiers générés d'un exercice, ou `null` s'il n'y en a pas.
 final latestStatementsProvider = FutureProvider.autoDispose.family<FinancialStatements?, String>(
   (ref, fyId) => ref.watch(closingServiceProvider).latestStatements(fyId),
