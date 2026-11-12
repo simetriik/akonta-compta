@@ -36,8 +36,8 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
     final repo = ref.read(closingServiceProvider);
     final next = widget.next;
     final t = context.ak;
-    final pending = next == null ? 0 : (ref.watch(pendingResultProvider((entityId: widget.entity.id, fyId: next.id))).value ?? 0);
-    final kind = ResultAllocation.kind(pending);
+    final pending = next == null ? (profit: 0, loss: 0) : (ref.watch(pendingResultsProvider((entityId: widget.entity.id, fyId: next.id))).value ?? (profit: 0, loss: 0));
+    final showAllocation = pending.profit > 0 || pending.loss == 0;
     final nonProfit = ref.watch(entityProvider(widget.entity.id)).value?.accountingSystem == 'sycebnl';
     return ListView(
       padding: closingBodyPadding(context),
@@ -64,21 +64,24 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
                   'Générer les à-nouveaux ${next.label}',
                   icon: Icons.auto_awesome,
                   onPressed: () => runGeneration(context, ref, () => repo.generateOpeningBalances(widget.entity.id, widget.fy.id), 'À-nouveaux ${next.label}')
-                      .whenComplete(() => ref.invalidate(pendingResultProvider)),
+                      .whenComplete(() => ref.invalidate(pendingResultsProvider)),
                 ),
                 Divider(height: AkSpace.s6, color: t.border),
                 Text('Affectation du résultat de ${widget.fy.label} (en ${next.label})', style: AkText.bodyStrong.copyWith(color: t.text)),
                 const SizedBox(height: AkSpace.s2),
-                AkBanner(
-                  kind: kind == ResultKind.loss ? AkBannerKind.warning : AkBannerKind.info,
-                  child: Text(switch (kind) {
-                    ResultKind.profit => 'Résultat en instance : bénéfice de ${Fmt.fcfa(pending, showZero: true)}, à répartir en totalité.',
-                    ResultKind.loss => 'Résultat en instance : perte de ${Fmt.fcfa(-pending, showZero: true)}. Elle se reporte à nouveau (compte 129), sans réserve ni dividende.',
-                    ResultKind.none => 'Aucun résultat en instance : générez puis validez les à-nouveaux ${next.label} avant l\'affectation.',
-                  }),
-                ),
+                if (pending.profit > 0)
+                  AkBanner(kind: AkBannerKind.info, child: Text('Bénéfice en instance : ${Fmt.fcfa(pending.profit, showZero: true)}, à répartir en totalité.')),
+                if (pending.loss > 0) ...[
+                  if (pending.profit > 0) const SizedBox(height: AkSpace.s2),
+                  AkBanner(
+                    kind: AkBannerKind.warning,
+                    child: Text('Perte en instance : ${Fmt.fcfa(pending.loss, showZero: true)}. Elle se reporte à nouveau (compte 129), sans réserve ni dividende, et sans être compensée avec le bénéfice.'),
+                  ),
+                ],
+                if (pending.profit == 0 && pending.loss == 0)
+                  AkBanner(kind: AkBannerKind.info, child: Text('Aucun résultat en instance : générez puis validez les à-nouveaux ${next.label} avant l\'affectation.')),
                 const SizedBox(height: AkSpace.s2),
-                if (kind != ResultKind.loss) Wrap(
+                if (showAllocation) Wrap(
                   spacing: AkSpace.s2,
                   runSpacing: AkSpace.s2,
                   children: [
@@ -107,22 +110,20 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
                         showCurrency: false,
                       ),
                     ),
-                    SizedBox(
-                      width: 160,
-                      child: AkDateField(controller: _date, label: 'Date'),
-                    ),
                   ],
                 ),
                 const SizedBox(height: AkSpace.s2),
-                AkButton.secondary(
-                  kind == ResultKind.loss ? 'Reporter la perte à nouveau' : 'Générer l\'écriture d\'affectation',
+                SizedBox(width: 160, child: AkDateField(controller: _date, label: 'Date')),
+                const SizedBox(height: AkSpace.s2),
+                if (showAllocation) AkButton.secondary(
+                  'Générer l\'écriture d\'affectation',
                   icon: Icons.call_split,
                   onPressed: () {
                     final d = Fmt.parseDate(_date.text);
                     if (d == null) return;
                     final legal = Fmt.parseAmount(_legal.text) ?? 0, free = Fmt.parseAmount(_free.text) ?? 0;
                     final dividends = Fmt.parseAmount(_div.text) ?? 0, carry = Fmt.parseAmount(_carry.text) ?? 0;
-                    final problem = ResultAllocation.check(pending, legal: legal, free: free, dividends: dividends, carry: carry);
+                    final problem = ResultAllocation.check(pending.profit, legal: legal, free: free, dividends: dividends, carry: carry);
                     if (problem != null) {
                       showErrorSnack(context, problem);
                       return;
@@ -132,9 +133,22 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
                       ref,
                       () => repo.allocateResult(widget.entity.id, next.id, d, legalReserve: legal, freeReserve: free, dividends: dividends, carryForward: carry),
                       'Affectation du résultat',
-                    ).whenComplete(() => ref.invalidate(pendingResultProvider));
+                    ).whenComplete(() => ref.invalidate(pendingResultsProvider));
                   },
                 ),
+                if (pending.loss > 0) ...[
+                  if (showAllocation) const SizedBox(height: AkSpace.s2),
+                  AkButton.secondary(
+                    'Reporter la perte à nouveau',
+                    icon: Icons.south_east,
+                    onPressed: () {
+                      final d = Fmt.parseDate(_date.text);
+                      if (d == null) return;
+                      runGeneration(context, ref, () => repo.carryForwardLoss(widget.entity.id, next.id, d), 'Report à nouveau de la perte')
+                          .whenComplete(() => ref.invalidate(pendingResultsProvider));
+                    },
+                  ),
+                ],
               ],
             ],
           ),
