@@ -1,6 +1,6 @@
 -- Module 8 — Travaux d'inventaire : amortissements (linéaire, prorata, dégressif, cession), stocks, provisions, régularisations et extournes, écarts de conversion (§6, §10.8).
 begin;
-select plan(27);
+select plan(30);
 
 select tests.create_cabinet('Cabinet A') as id \gset a_
 select tests.create_user('assist@a.test', :'a_id') as id \gset assist_
@@ -81,6 +81,10 @@ select is((select debit from public.entry_lines l join public.accounts a on a.id
 select public.validate_entry(:'acc_id');
 select public.generate_reversals(:'e1_id', :'fy_id') as ids \gset rev_
 select is((select entry_date || '/' || status from public.entries where generated_source = 'accruals_reversal:' || :'fy_id'), '2027-01-01/draft', 'extourne générée au 1er janvier N+1 en brouillard');
+-- AN-40 : relancer avant validation remplace le brouillard (pas de doublon, lien d'extourne repris)
+select lives_ok(format('select public.generate_reversals(%L, %L)', :'e1_id', :'fy_id'), 'relance des extournes avant validation : sans erreur');
+select is((select count(*) from public.entries where generated_source = 'accruals_reversal:' || :'fy_id'), 1::bigint, 'un seul brouillard d''extourne après relance');
+select is((select count(*) from public.accruals a join public.entries e on e.id = a.reversal_entry_id where a.fiscal_year_id = :'fy_id'), (select count(*) from public.accruals where fiscal_year_id = :'fy_id'), 'chaque régularisation pointe vers le nouveau brouillard');
 
 -- 6. Permission
 select tests.authenticate_as(:'trainee_id');
