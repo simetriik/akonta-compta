@@ -1,6 +1,7 @@
 import 'package:akonta/src/application/providers/consultation_providers.dart';
 import 'package:akonta/src/application/providers/entities_providers.dart';
 import 'package:akonta/src/application/providers/session_providers.dart';
+import 'package:akonta/src/domain/consultation_models.dart';
 import 'package:akonta/src/domain/entity_models.dart';
 import 'package:akonta/src/domain/models.dart';
 import 'package:akonta/src/presentation/consultation/consultation_screen.dart';
@@ -17,6 +18,15 @@ class _Entity2028 extends CurrentEntityNotifier {
 /// AN-43 : la période par défaut de la Consultation est celle de l'exercice du dossier, pas l'année civile en cours.
 void main() {
   setUpAll(setUpGolden);
+
+  test('piste d\'audit : la période de l\'exercice est prolongée jusqu\'à aujourd\'hui, sauf si l\'utilisateur l\'a modifiée', () {
+    final p = ConsultationParams(entityId: 'e1', from: DateTime(2027), to: DateTime(2027, 12, 31));
+    final today = DateTime(2028, 2, 10, 15, 30);
+    expect(auditPeriodFor(p, today, edited: false).to, DateTime(2028, 2, 10));
+    expect(auditPeriodFor(p, today, edited: false).from, DateTime(2027));
+    expect(auditPeriodFor(p, today, edited: true), same(p));
+    expect(auditPeriodFor(p, DateTime(2027, 6, 1), edited: false), same(p)); // exercice en cours : inchangé
+  });
 
   testWidgets('la période par défaut reprend les dates de l\'exercice courant', (tester) async {
     tester.view.physicalSize = const Size(1400, 900);
