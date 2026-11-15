@@ -18,6 +18,24 @@ import 'balance_tab.dart';
 import 'centralization_tab.dart';
 import 'ledger_tab.dart';
 
+/// Période de la piste d'audit : elle filtre sur la date de l'événement, pas sur celle de l'écriture. Tant que la période est celle
+/// de l'exercice (non modifiée), on la prolonge jusqu'à aujourd'hui pour ne pas masquer clôture, revue ou audit faits après la fin de l'exercice.
+ConsultationParams auditPeriodFor(ConsultationParams p, DateTime today, {required bool edited}) {
+  final end = DateTime(today.year, today.month, today.day);
+  if (edited || !end.isAfter(p.to)) return p;
+  return ConsultationParams(
+    entityId: p.entityId,
+    from: p.from,
+    to: end,
+    accountFrom: p.accountFrom,
+    accountTo: p.accountTo,
+    journalId: p.journalId,
+    classNo: p.classNo,
+    side: p.side,
+    fiscalYearId: p.fiscalYearId,
+  );
+}
+
 /// Consultation du dossier courant : grand livre, balances, balance âgée, centralisateur ; période libre, comparaison N-1, exports (§10.6).
 class ConsultationScreen extends StatelessWidget {
   const ConsultationScreen({super.key});
@@ -198,7 +216,7 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
                               AgedTab(params: p, side: _side, onSide: (s) => setState(() => _side = s)),
                               CentralizationTab(params: p),
                               ControlsTab(params: p),
-                              AuditTrailTab(params: p),
+                              AuditTrailTab(params: auditPeriodFor(p, DateTime.now(), edited: _periodEdited)),
                             ],
                           ),
                   ),
