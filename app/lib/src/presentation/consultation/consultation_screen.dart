@@ -39,6 +39,44 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> with Singl
   late final _tabs = TabController(length: 7, vsync: this);
   late final _from = TextEditingController(text: '01/01/${DateTime.now().year}');
   late final _to = TextEditingController(text: Fmt.date(DateTime.now()));
+
+  /// Vrai dès que l'utilisateur a modifié lui-même la période : on ne la remplace plus par celle de l'exercice.
+  bool _periodEdited = false;
+  bool _applyingPeriod = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _from.addListener(_markPeriodEdited);
+    _to.addListener(_markPeriodEdited);
+    // Période par défaut = exercice du dossier courant (et non l'année civile en cours), dès que ses dates sont connues.
+    ref.listenManual(fiscalYearsProvider(widget.entity.id), (_, _) => _applyExercisePeriod(), fireImmediately: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ConsultationBody old) {
+    super.didUpdateWidget(old);
+    if (old.entity.id != widget.entity.id || old.entity.fiscalYearId != widget.entity.fiscalYearId) {
+      _periodEdited = false;
+      _applyExercisePeriod();
+    }
+  }
+
+  void _markPeriodEdited() {
+    if (!_applyingPeriod) _periodEdited = true;
+  }
+
+  void _applyExercisePeriod() {
+    if (_periodEdited) return;
+    final fys = ref.read(fiscalYearsProvider(widget.entity.id)).value;
+    final fy = fys?.where((f) => f.id == widget.entity.fiscalYearId).firstOrNull;
+    if (fy == null) return;
+    _applyingPeriod = true;
+    _from.text = Fmt.date(fy.startDate);
+    _to.text = Fmt.date(fy.endDate);
+    _applyingPeriod = false;
+    if (mounted) setState(() {});
+  }
   final _accountFrom = TextEditingController();
   final _accountTo = TextEditingController();
   int? _classNo;

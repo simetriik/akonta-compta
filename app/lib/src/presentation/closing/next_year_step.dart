@@ -79,7 +79,7 @@ class _NextYearStepState extends ConsumerState<NextYearStep> {
                   ),
                 ],
                 if (pending.profit == 0 && pending.loss == 0)
-                  AkBanner(kind: AkBannerKind.info, child: Text('Aucun résultat en instance : générez puis validez les à-nouveaux ${next.label} avant l\'affectation.')),
+                  AkBanner(kind: AkBannerKind.info, child: Text('Aucun résultat en instance. Soit les à-nouveaux ${next.label} ne sont pas encore générés et validés (à faire avant l\'affectation), soit le résultat de ${widget.fy.label} est déjà affecté.')),
                 const SizedBox(height: AkSpace.s2),
                 if (showAllocation) Wrap(
                   spacing: AkSpace.s2,
