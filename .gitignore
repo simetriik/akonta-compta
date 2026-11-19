@@ -9,3 +9,9 @@ recette/.stack/
 
 # Sorties d'échec des tests golden (régénérées à chaque exécution)
 app/test/golden/failures/
+
+# Sauvegardes de base de données (dumps), jamais versionnées
+sauvegardes/
+
+# Artefacts produits par l'agent et exports (non versionnés)
+extrants/
