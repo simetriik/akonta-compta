@@ -15,3 +15,7 @@ sauvegardes/
 
 # Artefacts produits par l'agent et exports (non versionnés)
 extrants/
+
+# Contexte brut et configuration locale de l'agent
+intrants/
+.claude/
